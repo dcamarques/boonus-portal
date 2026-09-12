@@ -45,14 +45,15 @@
             margin-bottom: 3.5rem;
         }
 
-        /* Ajustes de tamanho e alinhamento para a logomarca em imagem */
         .logo-img {
-            max-width: 250px; /* Você pode aumentar ou diminuir esse valor se precisar */
+            max-width: 260px;
             height: auto;
             margin-bottom: 1.5rem;
             display: block;
             margin-left: auto;
             margin-right: auto;
+            /* Remove o fundo preto e integra perfeitamente ao fundo escuro do site */
+            mix-blend-mode: screen; 
         }
 
         .subtitle {
@@ -171,7 +172,6 @@
 
     <div class="container">
         <header>
-            <!-- A logomarca em imagem é chamada aqui -->
             <img src="LOGO1.png" alt="Logo Boonus" class="logo-img">
             <p class="subtitle">Portal central de serviços, ferramentas analíticas e soluções integradas.</p>
         </header>
