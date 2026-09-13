@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <!-- Ajustes vitais para PWA e usabilidade iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Painel - My Money</title>
+    
+    <!-- Supabase JS Client Oficial -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <style>
+        /* ==========================================================================
+           VARIÁVEIS E RESET (Identidade Visual Boonus)
+           ========================================================================== */
+        :root {
+            --bg-color: #0f172a;
+            --surface-color: #1e293b;
+            --surface-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --primary: #2563eb;
+            --success: #10b981;
+            --danger: #ef4444;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            touch-action: manipulation;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100dvh;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ==========================================================================
+           ESTRUTURA PRINCIPAL
+           ========================================================================== */
+        .container {
+            width: 100%;
+            max-width: 800px;
+            padding: 1.5rem;
+            padding-bottom: 6rem; /* Espaço para o botão flutuante */
+        }
+
+        /* CABEÇALHO */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .user-info h1 { font-size: 1.25rem; font-weight: 600; }
+        .user-info p { font-size: 0.85rem; color: var(--text-secondary); }
+
+        .btn-logout {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background 0.2s;
+        }
+        .btn-logout:hover { background: var(--surface-hover); }
+
+        /* CARDS DE RESUMO */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--surface-color);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+        }
+
+        .summary-card.total {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-color: var(--primary);
+        }
+
+        .summary-title { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .summary-value { font-size: 1.75rem; font-weight: 700; }
+        
+        .val-success { color: var(--success); }
+        .val-danger { color: var(--danger); }
+        .val-total { color: #ffffff; }
+
+        /* LISTA DE TRANSAÇÕES */
+        .section-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .transaction-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .transaction-item {
+            background: var(--surface-color);
+            padding: 1rem;
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .t-info { display: flex; flex-direction: column; gap: 0.25rem; }
+        .t-desc { font-weight: 500; font-size: 1rem; }
+        .t-cat { font-size: 0.8rem; color: var(--text-secondary); }
+        
+        .t-amount { font-weight: 600; font-size: 1.1rem; }
+        
+        /* BOTÃO FLUTUANTE (FAB) */
+        .fab {
+            position: fixed;
+            bottom: max(2rem, env(safe-area-inset-bottom));
+            right: 50%;
+            transform: translateX(50%); /* Centraliza em telas grandes */
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.1s;
+        }
+
+        @media (min-width: 800px) {
+            .fab {
+                right: calc(50% - 360px); /* Alinha à direita do container em desktop */
+                transform: none;
+            }
+        }
+
+        .fab:active { transform: translateX(50%) scale(0.95); }
+        @media (min-width: 800px) { .fab:active { transform: scale(0.95); } }
+
+        /* ==========================================================================
+           MODAL DE NOVA TRANSAÇÃO
+           ========================================================================== */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: flex-end; /* Abre de baixo pra cima no mobile */
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        .modal-content {
+            background: var(--surface-color);
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+
+        @media (min-width: 600px) {
+            .modal-overlay { align-items: center; }
+            .modal-content { border-radius: var(--radius); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-close {
+            background: none; border: none; color: var(--text-secondary);
+            font-size: 1.5rem; cursor: pointer;
+        }
+
+        /* FORMULÁRIO DO MODAL */
+        .type-selector {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+        }
+
+        .type-btn {
+            flex: 1; padding: 0.75rem; border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: transparent; color: var(--text-secondary);
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+
+        .type-btn.active[data-type="receita"] {
+            background: rgba(16, 185, 129, 0.1);
+            border-color: var(--success); color: var(--success);
+        }
+
+        .type-btn.active[data-type="despesa"] {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--danger); color: var(--danger);
+        }
+
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+        
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.85rem;
+            background: var(--bg-color); border: 1px solid var(--border-color);
+            border-radius: 8px; color: var(--text-primary);
+            font-size: 16px; /* Evita zoom iOS */
+            outline: none; -webkit-appearance: none;
+        }
+        
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
+
+        .btn-save {
+            width: 100%; padding: 1rem; border: none; border-radius: 8px;
+            background: var(--primary); color: white; font-size: 16px; font-weight: 600;
+            cursor: pointer; margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- CABEÇALHO -->
+        <header>
+            <div class="user-info">
+                <h1>My Money</h1>
+                <p id="user-email">Carregando...</p>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">Sair</button>
+        </header>
+
+        <!-- RESUMO -->
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Receitas (Mês)</div>
+                <div class="summary-value val-success">R$ 0,00</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Despesas (Mês)</div>
+                <div class="summary-value val-danger">R$ 0,00</div>
+            </div>
+            <div class="summary-card total">
+                <div class="summary-title">Saldo Atual</div>
+                <div class="summary-value val-total">R$ 0,00</div>
+            </div>
+        </div>
+
+        <!-- LISTA DE TRANSAÇÕES -->
+        <h2 class="section-header">Lançamentos Recentes</h2>
+        <div class="transaction-list" id="transaction-list">
+            <!-- Os itens serão injetados via JavaScript após conectarmos ao Supabase -->
+            <div class="transaction-item" style="opacity: 0.5; justify-content: center;">
+                <span class="t-cat">Nenhuma transação cadastrada ainda.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÃO FLUTUANTE -->
+    <button class="fab" onclick="openModal()">
+        <span>+</span> Novo Lançamento
+    </button>
+
+    <!-- MODAL DE NOVA TRANSAÇÃO -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Nova Transação</h2>
+                <button class="btn-close" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <div class="type-selector">
+                <button class="type-btn active" data-type="despesa" onclick="selectType('despesa')">Despesa</button>
+                <button class="type-btn" data-type="receita" onclick="selectType('receita')">Receita</button>
+            </div>
+
+            <form id="form-transaction" onsubmit="saveTransaction(event)">
+                <input type="hidden" id="trans-type" value="despesa">
+                
+                <div class="form-group">
+                    <label>Valor (R$)</label>
+                    <input type="number" id="trans-value" step="0.01" required placeholder="0,00">
+                </div>
+                
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <input type="text" id="trans-desc" required placeholder="Ex: Mercado, Salário, Conta de Luz...">
+                </div>
+
+                <div class="form-group">
+                    <label>Categoria</label>
+                    <select id="trans-cat" required>
+                        <!-- Estas categorias virão do banco de dados na etapa 2 -->
+                        <option value="">Selecione...</option>
+                        <option value="alimentacao">Alimentação</option>
+                        <option value="moradia">Moradia</option>
+                        <option value="transporte">Transporte</option>
+                        <option value="saude">Saúde</option>
+                        <option value="lazer">Lazer</option>
+                        <option value="outros">Outros</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="trans-date" required>
+                </div>
+
+                <button type="submit" class="btn-save">Salvar Lançamento</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           LÓGICA DE AUTENTICAÇÃO E DADOS (SUPABASE)
+           ========================================================================== */
+        const SUPABASE_URL = 'https://kafmnasrqcmbzvzaggap.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_k4w2E4ur7xJR6qd575inBA_sJoXqHoN';
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = null;
+
+        // 1. Catraca de Segurança: Verifica se o usuário está logado ao abrir a página
+        async function checkAuth() {
+            const { data: { session } } = await client.auth.getSession();
+            
+            if (!session) {
+                // Se não tiver sessão, chuta para o login
+                window.location.replace('index.html');
+                return;
+            }
+
+            currentUser = session.user;
+            document.getElementById('user-email').innerText = currentUser.email;
+            
+            // Define a data de hoje como padrão no formulário
+            document.getElementById('trans-date').valueAsDate = new Date();
+
+            // TODO: Na etapa 2, chamaremos aqui a função loadTransactions()
+        }
+
+        async function handleLogout() {
+            await client.auth.signOut();
+            window.location.replace('index.html');
+        }
+
+        /* ==========================================================================
+           CONTROLE DA INTERFACE (MODAL E FORMULÁRIO)
+           ========================================================================== */
+        
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+            document.getElementById('form-transaction').reset();
+            document.getElementById('trans-date').valueAsDate = new Date();
+        }
+
+        // Alterna visualmente entre Receita e Despesa no form
+        function selectType(type) {
+            document.querySelectorAll('.type-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active');
+            document.getElementById('trans-type').value = type;
+        }
+
+        // Fecha o modal se o usuário clicar na área escura (fora da janela)
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if(e.target === this) closeModal();
+        });
+
+        // Função "dummy" para simular o salvamento (será conectada ao Supabase na etapa 2)
+        async function saveTransaction(e) {
+            e.preventDefault();
+            
+            const transData = {
+                tipo: document.getElementById('trans-type').value,
+                valor: document.getElementById('trans-value').value,
+                descricao: document.getElementById('trans-desc').value,
+                categoria: document.getElementById('trans-cat').value,
+                data: document.getElementById('trans-date').value
+            };
+
+            console.log("Transação pronta para o banco de dados:", transData);
+            
+            // Simula o salvamento
+            const btn = document.querySelector('.btn-save');
+            btn.innerText = "Salvando...";
+            
+            setTimeout(() => {
+                alert("Interface pronta! O salvamento real será ativado na Etapa 2 (Banco de Dados).");
+                btn.innerText = "Salvar Lançamento";
+                closeModal();
+            }, 800);
+        }
+
+        // Inicia a verificação de segurança assim que a tela carrega
+        checkAuth();
+    </script>
+</body>
+</html>
