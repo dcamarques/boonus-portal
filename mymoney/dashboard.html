@@ -312,7 +312,7 @@
         
         let currentDate = new Date(); 
         let currentView = 'individual'; 
-        let balanceMode = 'acumulado'; // Pode ser 'acumulado' ou 'mes'
+        let balanceMode = 'acumulado'; // 'acumulado' ou 'mes'
         
         let carteiras = [];
         let categorias = [];
@@ -387,7 +387,6 @@
             document.querySelectorAll('.balance-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(`btn-bal-${mode}`).classList.add('active');
             
-            // Ajusta os rótulos
             document.getElementById('lbl-saldo-corrente').innerText = mode === 'acumulado' ? 'Saldo Real em Contas' : 'Fluxo Corrente (Mês)';
             document.getElementById('lbl-saldo-invest').innerText = mode === 'acumulado' ? 'Total Investido (Acumulado)' : 'Aportes/Rendimentos (Mês)';
             
@@ -400,7 +399,6 @@
 
             const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`;
             
-            // 1. Busca as transações do Mês (Para montar a lista e calcular fatura do cartão)
             let queryMes = client.from('MM_transacoes').select('*, MM_categorias(nome, cor), MM_carteiras!carteira_origem_id(nome)').eq('competencia', compStr).order('data_transacao', { ascending: false });
             
             if (currentView === 'individual') {
@@ -414,11 +412,9 @@
 
             currentMonthTransactions = resMes.data;
 
-            // 2. Lógica Inteligente para o Cálculo de Saldo (Mês vs Acumulado)
             let transacoesParaCalculo = [];
 
             if (balanceMode === 'acumulado') {
-                // Se for acumulado, busca tudo desde o início dos tempos até o último dia do mês visualizado
                 const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
                 let queryGlobal = client.from('MM_transacoes')
                     .select('valor, tipo, carteira_origem_id, carteira_destino_id')
@@ -429,17 +425,12 @@
                 const resGlobal = await queryGlobal;
                 if (!resGlobal.error) transacoesParaCalculo = resGlobal.data;
             } else {
-                // Se for Visão Mês, o cálculo usa estritamente os dados que já baixamos no resMes
                 transacoesParaCalculo = resMes.data;
             }
 
-            // ==========================================
-            // MOTOR DE CÁLCULO DE SALDOS E CORES
-            // ==========================================
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0;
             const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
 
-            // Calcula Saldo Corrente e Investimentos
             transacoesParaCalculo.forEach(t => {
                 const v = parseFloat(t.valor);
                 const tipoOrigem = carteiraTipos[t.carteira_origem_id];
@@ -460,27 +451,22 @@
                 }
             });
 
-            // Fatura do Cartão é SEMPRE calculada apenas no mês visualizado (não existe fatura "acumulada")
             resMes.data.forEach(t => {
                 const v = parseFloat(t.valor);
                 if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') faturaCartaoMes += v;
             });
 
-            // Aplica Cores Dinâmicas (Azul se positivo/zero, Vermelho se negativo)
             const elSaldoCorrente = document.getElementById('saldo-corrente');
             const elSaldoInvest = document.getElementById('saldo-investimento');
 
+            // Ajuste de Cores: Azul para Conta Corrente (se >= 0) e Verde para Investimento (se >= 0). Ambos ficam vermelhos no negativo.
             elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-primary' : 'text-danger');
-            elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-primary' : 'text-danger');
+            elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger');
 
             elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 
-
-            // ==========================================
-            // RENDERIZAÇÃO DA LISTA
-            // ==========================================
             if (resMes.data.length === 0) {
                 listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>';
                 return;
@@ -514,8 +500,6 @@
                 `;
             });
         }
-
-        // ====== FUNÇÕES DO MODAL (CRIAR, EDITAR, EXCLUIR) ======
 
         function openModal() {
             document.getElementById('modal-title').innerText = "Novo Lançamento";
@@ -587,7 +571,7 @@
             else if (type === 'rendimento') {
                 grpDestino.classList.add('hidden-field');
                 grpCat.classList.add('hidden-field');
-                lblOrigem.innerText = 'Qual investimento rendeu?';
+                lblOrigem.innerText = 'Qual investimento rendeu/desvalorizou?';
             }
         }
 
