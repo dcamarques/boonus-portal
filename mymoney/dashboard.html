@@ -18,9 +18,9 @@
             --border-color: #334155;
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
-            --primary: #2563eb;
-            --success: #10b981;
-            --danger: #ef4444;
+            --primary: #2563eb;     /* Azul Institucional */
+            --success: #10b981;     /* Verde */
+            --danger: #ef4444;      /* Vermelho */
             --warning: #f59e0b;
             --info: #0ea5e9;
             --radius: 12px;
@@ -61,7 +61,7 @@
         .controls-row {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--surface-color); padding: 0.5rem; border-radius: var(--radius);
-            margin-bottom: 1.5rem; border: 1px solid var(--border-color);
+            margin-bottom: 1rem; border: 1px solid var(--border-color);
         }
 
         .month-nav { display: flex; align-items: center; gap: 1rem; }
@@ -71,6 +71,20 @@
         .view-toggle { display: flex; background: var(--bg-color); border-radius: 8px; overflow: hidden; }
         .view-btn { background: transparent; border: none; color: var(--text-secondary); padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; transition: 0.3s; }
         .view-btn.active { background: var(--primary); color: white; font-weight: 600; }
+
+        /* LINHA DO FILTRO DE SALDO */
+        .balance-filter-row {
+            display: flex; justify-content: flex-end; margin-bottom: 1.5rem;
+        }
+        .balance-toggle {
+            display: flex; background: var(--surface-color); border: 1px solid var(--border-color);
+            border-radius: 8px; overflow: hidden;
+        }
+        .balance-btn {
+            background: transparent; border: none; color: var(--text-secondary);
+            padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.3s;
+        }
+        .balance-btn.active { background: var(--text-secondary); color: var(--bg-color); }
 
         /* CARDS RESUMO */
         .summary-grid {
@@ -82,7 +96,7 @@
             border-radius: var(--radius); border: 1px solid var(--border-color);
         }
         .summary-title { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
-        .summary-value { font-size: 1.5rem; font-weight: 700; }
+        .summary-value { font-size: 1.5rem; font-weight: 700; transition: color 0.3s ease; }
         
         /* TRANSAÇÕES E AÇÕES */
         .section-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
@@ -103,15 +117,15 @@
         .action-btn { 
             background: var(--bg-color); border: 1px solid var(--border-color); 
             border-radius: 6px; padding: 0.4rem; cursor: pointer; font-size: 0.9rem;
-            display: flex; align-items: center; justify-content: center;
-            transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
         }
         .action-btn:active { transform: scale(0.9); }
         
+        /* CORES DINÂMICAS E DE TEXTO */
+        .text-primary { color: var(--primary); }
         .text-success { color: var(--success); }
         .text-danger { color: var(--danger); }
         .text-info { color: var(--info); }
-        .text-warning { color: var(--warning); }
 
         /* FAB */
         .fab {
@@ -143,9 +157,7 @@
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
         .btn-close { background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; }
 
-        .type-selector {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem;
-        }
+        .type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem; }
         .type-btn {
             padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color);
             background: var(--bg-color); color: var(--text-secondary);
@@ -182,7 +194,7 @@
             <button class="btn-outline" onclick="handleLogout()">Sair</button>
         </header>
 
-        <!-- CONTROLES (MÊS E VISÃO) -->
+        <!-- CONTROLES MÊS / PERFIL -->
         <div class="controls-row">
             <div class="month-nav">
                 <button onclick="changeMonth(-1)">&#10094;</button>
@@ -195,19 +207,27 @@
             </div>
         </div>
 
+        <!-- FILTRO DE CÁLCULO DE SALDO -->
+        <div class="balance-filter-row">
+            <div class="balance-toggle">
+                <button class="balance-btn active" id="btn-bal-acumulado" onclick="setBalanceMode('acumulado')">Saldo Acumulado</button>
+                <button class="balance-btn" id="btn-bal-mes" onclick="setBalanceMode('mes')">Fluxo do Mês</button>
+            </div>
+        </div>
+
         <!-- RESUMO -->
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-title">Saldo Disponível (Contas)</div>
-                <div class="summary-value text-info" id="saldo-corrente">R$ 0,00</div>
+                <div class="summary-title" id="lbl-saldo-corrente">Saldo em Contas</div>
+                <div class="summary-value" id="saldo-corrente">R$ 0,00</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Fatura Cartões (Mês)</div>
                 <div class="summary-value text-danger" id="fatura-cartao">R$ 0,00</div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Total Investido</div>
-                <div class="summary-value text-success" id="saldo-investimento">R$ 0,00</div>
+                <div class="summary-title" id="lbl-saldo-invest">Total Investido</div>
+                <div class="summary-value" id="saldo-investimento">R$ 0,00</div>
             </div>
         </div>
 
@@ -229,7 +249,6 @@
                 <button class="btn-close" onclick="closeModal()">&times;</button>
             </div>
             
-            <!-- Campo Oculto para armazenar o ID quando estiver em modo Edição -->
             <input type="hidden" id="trans-id" value="">
 
             <div class="type-selector">
@@ -293,11 +312,10 @@
         
         let currentDate = new Date(); 
         let currentView = 'individual'; 
+        let balanceMode = 'acumulado'; // Pode ser 'acumulado' ou 'mes'
         
         let carteiras = [];
         let categorias = [];
-        
-        // Memória das transações do mês para carregar os dados na edição
         let currentMonthTransactions = [];
 
         async function init() {
@@ -341,7 +359,6 @@
                 selOrigem.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
                 selDestino.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
             });
-
             selCat.innerHTML = '<option value="">Selecione...</option>';
             categorias.forEach(c => { selCat.innerHTML += `<option value="${c.id}">${c.nome}</option>`; });
         }
@@ -365,32 +382,65 @@
             loadTransactions();
         }
 
+        function setBalanceMode(mode) {
+            balanceMode = mode;
+            document.querySelectorAll('.balance-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-bal-${mode}`).classList.add('active');
+            
+            // Ajusta os rótulos
+            document.getElementById('lbl-saldo-corrente').innerText = mode === 'acumulado' ? 'Saldo Real em Contas' : 'Fluxo Corrente (Mês)';
+            document.getElementById('lbl-saldo-invest').innerText = mode === 'acumulado' ? 'Total Investido (Acumulado)' : 'Aportes/Rendimentos (Mês)';
+            
+            loadTransactions();
+        }
+
         async function loadTransactions() {
             const listEl = document.getElementById('transaction-list');
-            listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Atualizando...</span></div>';
+            listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Atualizando dados...</span></div>';
 
             const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`;
             
+            // 1. Busca as transações do Mês (Para montar a lista e calcular fatura do cartão)
             let queryMes = client.from('MM_transacoes').select('*, MM_categorias(nome, cor), MM_carteiras!carteira_origem_id(nome)').eq('competencia', compStr).order('data_transacao', { ascending: false });
-            let queryGlobal = client.from('MM_transacoes').select('valor, tipo, carteira_origem_id, carteira_destino_id');
             
             if (currentView === 'individual') {
                 queryMes = queryMes.eq('lancado_por', currentUser.id);
-                queryGlobal = queryGlobal.eq('lancado_por', currentUser.id);
             }
 
-            const [resMes, resGlobal] = await Promise.all([queryMes, queryGlobal]);
-
-            if (resMes.error || resGlobal.error) {
+            const resMes = await queryMes;
+            if (resMes.error) {
                 listEl.innerHTML = `<div class="transaction-item"><span class="text-danger">Erro ao carregar dados.</span></div>`; return;
             }
 
-            currentMonthTransactions = resMes.data; // Grava na memória para permitir a edição
+            currentMonthTransactions = resMes.data;
 
+            // 2. Lógica Inteligente para o Cálculo de Saldo (Mês vs Acumulado)
+            let transacoesParaCalculo = [];
+
+            if (balanceMode === 'acumulado') {
+                // Se for acumulado, busca tudo desde o início dos tempos até o último dia do mês visualizado
+                const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0];
+                let queryGlobal = client.from('MM_transacoes')
+                    .select('valor, tipo, carteira_origem_id, carteira_destino_id')
+                    .lte('data_transacao', ultimoDiaDoMes);
+                
+                if (currentView === 'individual') queryGlobal = queryGlobal.eq('lancado_por', currentUser.id);
+                
+                const resGlobal = await queryGlobal;
+                if (!resGlobal.error) transacoesParaCalculo = resGlobal.data;
+            } else {
+                // Se for Visão Mês, o cálculo usa estritamente os dados que já baixamos no resMes
+                transacoesParaCalculo = resMes.data;
+            }
+
+            // ==========================================
+            // MOTOR DE CÁLCULO DE SALDOS E CORES
+            // ==========================================
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0;
             const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
 
-            resGlobal.data.forEach(t => {
+            // Calcula Saldo Corrente e Investimentos
+            transacoesParaCalculo.forEach(t => {
                 const v = parseFloat(t.valor);
                 const tipoOrigem = carteiraTipos[t.carteira_origem_id];
                 const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null;
@@ -410,15 +460,27 @@
                 }
             });
 
+            // Fatura do Cartão é SEMPRE calculada apenas no mês visualizado (não existe fatura "acumulada")
             resMes.data.forEach(t => {
                 const v = parseFloat(t.valor);
                 if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') faturaCartaoMes += v;
             });
 
-            document.getElementById('saldo-corrente').innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            document.getElementById('saldo-investimento').innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            // Aplica Cores Dinâmicas (Azul se positivo/zero, Vermelho se negativo)
+            const elSaldoCorrente = document.getElementById('saldo-corrente');
+            const elSaldoInvest = document.getElementById('saldo-investimento');
 
+            elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-primary' : 'text-danger');
+            elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-primary' : 'text-danger');
+
+            elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+
+
+            // ==========================================
+            // RENDERIZAÇÃO DA LISTA
+            // ==========================================
             if (resMes.data.length === 0) {
                 listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>';
                 return;
@@ -435,7 +497,6 @@
                 const dataFormatada = new Date(t.data_transacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'});
                 const catInfo = t.MM_categorias ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${t.MM_categorias.cor}"></span> ${t.MM_categorias.nome}` : t.MM_carteiras.nome;
 
-                // Injeção dos botões de Ação (Lápis e X) na estrutura de cada card
                 listEl.innerHTML += `
                     <div class="transaction-item">
                         <div class="t-info">
@@ -454,11 +515,11 @@
             });
         }
 
-        // ====== FUNÇÕES DE AÇÃO (CRIAR, EDITAR, EXCLUIR) ======
+        // ====== FUNÇÕES DO MODAL (CRIAR, EDITAR, EXCLUIR) ======
 
         function openModal() {
             document.getElementById('modal-title').innerText = "Novo Lançamento";
-            document.getElementById('trans-id').value = ""; // Limpa o ID oculto (Modo Criação)
+            document.getElementById('trans-id').value = ""; 
             document.getElementById('modal').classList.add('active');
             document.getElementById('trans-date').valueAsDate = new Date();
             setTransType('despesa'); 
@@ -473,37 +534,28 @@
         function editTransaction(id) {
             const t = currentMonthTransactions.find(x => x.id === id);
             if (!t) return;
-
             document.getElementById('modal-title').innerText = "Editar Lançamento";
-            document.getElementById('trans-id').value = t.id; // Salva o ID no campo oculto (Modo Edição)
-            
-            // Preenche o formulário com os dados existentes
+            document.getElementById('trans-id').value = t.id; 
             document.getElementById('trans-value').value = t.valor;
             document.getElementById('trans-desc').value = t.descricao;
             document.getElementById('trans-date').value = t.data_transacao;
             document.getElementById('trans-origem').value = t.carteira_origem_id;
 
-            setTransType(t.tipo); // Isso ajustará as abas Visuais e Lógicas
+            setTransType(t.tipo); 
             
-            // Após a interface se adaptar, injeta os destinos ou categorias
             if (t.tipo === 'despesa' || t.tipo === 'receita') {
                 document.getElementById('trans-cat').value = t.categoria_id;
             } else if (t.tipo === 'transferencia') {
                 document.getElementById('trans-destino').value = t.carteira_destino_id;
             }
-
             document.getElementById('modal').classList.add('active');
         }
 
         async function deleteTransaction(id) {
-            // Trava de segurança nativa
             if (confirm("Tem certeza que deseja excluir este lançamento? O saldo e a fatura serão recalculados automaticamente.")) {
                 const { error } = await client.from('MM_transacoes').delete().eq('id', id);
-                if (error) {
-                    alert("Erro ao excluir: " + error.message);
-                } else {
-                    loadTransactions(); // Recalcula a tela instantaneamente
-                }
+                if (error) { alert("Erro ao excluir: " + error.message); } 
+                else { loadTransactions(); }
             }
         }
 
@@ -545,12 +597,10 @@
             btn.innerText = 'Salvando...';
             btn.disabled = true;
 
-            const transId = document.getElementById('trans-id').value; // Checa se é atualização
+            const transId = document.getElementById('trans-id').value; 
             const tipo = document.getElementById('trans-type').value;
             const dt = document.getElementById('trans-date').value;
             const competencia = dt.substring(0, 7); 
-            
-            // Garantia de formato para números (mesmo que o usuário digite com vírgula no celular)
             const valorTratado = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.'));
 
             const payload = {
@@ -564,7 +614,6 @@
                 carteira_origem_id: document.getElementById('trans-origem').value
             };
 
-            // Trata chaves nulas para não conflitar no banco
             if (tipo === 'despesa' || tipo === 'receita') {
                 payload.categoria_id = document.getElementById('trans-cat').value;
                 payload.carteira_destino_id = null;
@@ -578,11 +627,9 @@
 
             let error;
             if (transId) {
-                // Modo Atualização (Update)
                 const res = await client.from('MM_transacoes').update(payload).eq('id', transId);
                 error = res.error;
             } else {
-                // Modo Criação (Insert)
                 const res = await client.from('MM_transacoes').insert([payload]);
                 error = res.error;
             }
@@ -590,12 +637,8 @@
             btn.innerText = 'Salvar';
             btn.disabled = false;
 
-            if (error) {
-                alert("Erro ao salvar: " + error.message);
-            } else {
-                closeModal();
-                loadTransactions(); // Refaz todos os cálculos na tela
-            }
+            if (error) { alert("Erro ao salvar: " + error.message); } 
+            else { closeModal(); loadTransactions(); }
         }
 
         init();
