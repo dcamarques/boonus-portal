@@ -95,19 +95,32 @@
         .btn-text-info { background: none; border: none; color: var(--info); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 
         .hidden-field { display: none !important; }
+
+        /* Estilo do Badge (Sininho) */
+        .badge {
+            display: none; position: absolute; top: -5px; right: -5px;
+            background-color: var(--danger); color: white;
+            width: 18px; height: 18px; border-radius: 50%;
+            font-size: 10px; font-weight: bold;
+            align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- HEADER -->
+        <!-- HEADER COM NOTIFICAÇÕES -->
         <header>
             <div class="user-info">
                 <h1>💰 My Money</h1>
                 <p id="user-email">Carregando...</p>
             </div>
             <div class="header-actions">
-                <button class="btn-outline" onclick="openCartoesModal()">💳 Contas/Cartões</button>
+                <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.1rem; padding: 0.4rem 0.6rem;">
+                    🔔
+                    <span id="badge-notif" class="badge">0</span>
+                </button>
+                <button class="btn-outline" onclick="openCartoesModal()">💳 Contas</button>
                 <button class="btn-outline" onclick="openCatModal()">🏷️ Categorias</button>
                 <button class="btn-outline" onclick="openFamilyModal()">👨‍👩‍👧 Família</button>
                 <button class="btn-outline" onclick="handleLogout()">Sair</button>
@@ -159,6 +172,19 @@
 
     <button class="fab" onclick="openModal()"><span>+</span> Lançamento</button>
 
+    <!-- MODAL DE NOTIFICAÇÕES (O SININHO) -->
+    <div class="modal-overlay" id="modal-notificacoes">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Notificações</h2>
+                <button class="btn-close" onclick="closeNotificacoesModal()">&times;</button>
+            </div>
+            <div class="invite-list" id="notif-list" style="margin-top: 0; border-top: none;">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL DE TRANSAÇÕES -->
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
@@ -175,17 +201,8 @@
             </div>
             <form id="form-transaction" onsubmit="saveTransaction(event)">
                 <input type="hidden" id="trans-type" value="despesa">
-                
-                <div class="form-group">
-                    <label id="lbl-valor">Valor da Parcela/Transação (R$)</label>
-                    <input type="number" id="trans-value" step="0.01" required placeholder="0,00">
-                </div>
-                
-                <div class="form-group" id="grp-parcelas">
-                    <label>Nº de Parcelas (Deixe 1 se for à vista)</label>
-                    <input type="number" id="trans-parcelas" min="1" max="72" value="1" required>
-                </div>
-
+                <div class="form-group"><label id="lbl-valor">Valor da Parcela/Transação (R$)</label><input type="number" id="trans-value" step="0.01" required placeholder="0,00"></div>
+                <div class="form-group" id="grp-parcelas"><label>Nº de Parcelas (Deixe 1 se for à vista)</label><input type="number" id="trans-parcelas" min="1" max="72" value="1" required></div>
                 <div class="form-group"><label>Descrição</label><input type="text" id="trans-desc" required placeholder="Ex: TV Nova"></div>
                 <div class="form-group" id="grp-origem"><label id="lbl-origem">Meio de Pagamento / Conta</label><select id="trans-origem" required><option value="">Selecione...</option></select></div>
                 <div class="form-group hidden-field" id="grp-destino"><label>Conta/Investimento de Destino</label><select id="trans-destino"><option value="">Selecione...</option></select></div>
@@ -207,7 +224,6 @@
             <form id="form-cartao" onsubmit="saveCartao(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
                 <input type="hidden" id="cartao-id" value="">
                 <h3 id="cartao-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Conta/Cartão</h3>
-                
                 <div class="form-group"><label>Nome</label><input type="text" id="cartao-nome" required placeholder="Ex: Cartão Nubank"></div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label>Tipo</label>
@@ -217,13 +233,11 @@
                         <option value="investimento">Investimentos (Corretora/Banco)</option>
                     </select>
                 </div>
-                
                 <div style="display: flex; gap: 10px;">
                     <button type="submit" class="btn-save" id="btn-cartao-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button>
                     <button type="button" class="btn-outline" onclick="resetCartaoForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button>
                 </div>
             </form>
-
             <div class="invite-list">
                 <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Suas Contas e Cartões Existentes</label>
                 <div id="cartoes-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
@@ -291,21 +305,96 @@
             const { data: { session } } = await client.auth.getSession();
             if (!session) { window.location.replace('index.html'); return; }
             currentUser = session.user; document.getElementById('user-email').innerText = currentUser.email;
+            
             let { data: membros } = await client.from('MM_membros').select('familia_id').eq('user_id', currentUser.id).single();
+            
             if (!membros) {
-                const { data: convitePendente } = await client.from('MM_convites').select('*').eq('email_convidado', currentUser.email).single();
-                if (convitePendente) {
-                    await client.from('MM_membros').insert([{ familia_id: convitePendente.familia_id, user_id: currentUser.id, perfil: 'convidado' }]);
-                    await client.from('MM_convites').delete().eq('id', convitePendente.id); 
-                    membros = { familia_id: convitePendente.familia_id };
-                } else {
-                    alert("Aguarde a configuração da sua conta ou peça um convite."); return;
-                }
+                // Prevenção de Segurança: Se o usuário por algum motivo entrou antes do Trigger SQL ter criado a família básica dele, o app cria uma agora.
+                const { data: novaF } = await client.from('MM_familias').insert({nome: 'Minha Família'}).select().single();
+                await client.from('MM_membros').insert({familia_id: novaF.id, user_id: currentUser.id, perfil: 'titular'});
+                membros = { familia_id: novaF.id };
             }
-            if(membros) { currentFamilyId = membros.familia_id; await loadBaseData(); updateMonthDisplay(); loadTransactions(); }
+            
+            currentFamilyId = membros.familia_id; 
+            
+            // Verifica o Sininho de Convites
+            await checkNotifications();
+
+            await loadBaseData(); updateMonthDisplay(); loadTransactions(); 
         }
 
         async function handleLogout() { await client.auth.signOut(); window.location.replace('index.html'); }
+
+
+        // ==========================================
+        // SISTEMA DE NOTIFICAÇÕES (O SININHO B2C)
+        // ==========================================
+        async function checkNotifications() {
+            const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email);
+            const badge = document.getElementById('badge-notif');
+            
+            if (convites && convites.length > 0) {
+                badge.style.display = 'flex';
+                badge.innerText = convites.length;
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        async function openNotificacoesModal() {
+            document.getElementById('modal-notificacoes').classList.add('active');
+            const listEl = document.getElementById('notif-list');
+            listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando convites...</span>';
+            
+            const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email);
+            
+            if (!convites || convites.length === 0) {
+                listEl.innerHTML = '<span style="font-size:0.9rem; color:gray;">Você não tem nenhum convite pendente.</span>';
+                return;
+            }
+
+            listEl.innerHTML = '';
+            convites.forEach(c => {
+                listEl.innerHTML += `
+                    <div class="invite-item" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                        <span>📢 Você recebeu um convite para ingressar em um orçamento compartilhado.</span>
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <button class="btn-save" style="margin-top:0; flex:1; font-size: 0.9rem;" onclick="acceptInvite('${c.id}', '${c.familia_id}')">✅ Aceitar</button>
+                            <button class="btn-outline" style="flex:1; justify-content:center; border-color: var(--danger); color: var(--danger);" onclick="rejectInvite('${c.id}')">❌ Recusar</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function closeNotificacoesModal() { document.getElementById('modal-notificacoes').classList.remove('active'); }
+
+        async function acceptInvite(conviteId, novaFamiliaId) {
+            if(confirm("Ao aceitar, seu perfil será movido para esta nova família. Deseja continuar?")) {
+                // Atualiza o ID da família no cadastro do usuário
+                await client.from('MM_membros').update({ familia_id: novaFamiliaId, perfil: 'convidado' }).eq('user_id', currentUser.id);
+                // Apaga o convite
+                await client.from('MM_convites').delete().eq('id', conviteId);
+                
+                currentFamilyId = novaFamiliaId;
+                closeNotificacoesModal();
+                checkNotifications();
+                
+                // Recarrega todos os dados do painel instantaneamente
+                await loadBaseData(); 
+                loadTransactions();
+                alert("Pronto! Você agora faz parte do orçamento compartilhado.");
+            }
+        }
+
+        async function rejectInvite(conviteId) {
+            if(confirm("Deseja realmente recusar e excluir este convite?")) {
+                await client.from('MM_convites').delete().eq('id', conviteId);
+                checkNotifications();
+                openNotificacoesModal(); // Atualiza a tela do modal
+            }
+        }
+
 
         // ==========================================
         // GESTÃO DE CONTAS E CARTÕES
@@ -318,43 +407,12 @@
             const listEl = document.getElementById('cartoes-list'); listEl.innerHTML = '';
             carteiras.forEach(c => {
                 let ic = c.tipo === 'cartao_credito' ? '💳' : (c.tipo === 'investimento' ? '📈' : '🏦');
-                listEl.innerHTML += `
-                    <div class="invite-item">
-                        <span>${ic} ${c.nome}</span>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-text-info" onclick="editCartaoUI('${c.id}')">Editar</button>
-                            <button class="btn-text-danger" onclick="deleteCartao('${c.id}')">Excluir</button>
-                        </div>
-                    </div>
-                `;
+                listEl.innerHTML += `<div class="invite-item"><span>${ic} ${c.nome}</span><div style="display: flex; gap: 8px;"><button class="btn-text-info" onclick="editCartaoUI('${c.id}')">Editar</button><button class="btn-text-danger" onclick="deleteCartao('${c.id}')">Excluir</button></div></div>`;
             });
         }
-
-        function editCartaoUI(id) {
-            const c = carteiras.find(x => x.id === id);
-            if(c) { document.getElementById('cartao-id').value = c.id; document.getElementById('cartao-nome').value = c.nome; document.getElementById('cartao-tipo').value = c.tipo; document.getElementById('cartao-form-title').innerText = "Editando: " + c.nome; }
-        }
-
-        async function saveCartao(e) {
-            e.preventDefault(); const btn = document.getElementById('btn-cartao-submit'); btn.innerText = 'Salvando...'; btn.disabled = true;
-            const cId = document.getElementById('cartao-id').value;
-            const payload = { familia_id: currentFamilyId, nome: document.getElementById('cartao-nome').value, tipo: document.getElementById('cartao-tipo').value, ativo: true };
-            let error;
-            if (cId) { const res = await client.from('MM_carteiras').update(payload).eq('id', cId); error = res.error; } 
-            else { const res = await client.from('MM_carteiras').insert([payload]); error = res.error; }
-            btn.innerText = 'Salvar'; btn.disabled = false;
-            if (error) { alert("Erro ao salvar: " + error.message); } else { resetCartaoForm(); await loadBaseData(); renderCartoesList(); }
-        }
-
-        async function deleteCartao(id) {
-            const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).or(`carteira_origem_id.eq.${id},carteira_destino_id.eq.${id}`);
-            if (count > 0) {
-                alert(`❌ Esta conta/cartão possui ${count} lançamentos atrelados.\nPara não perder seu histórico financeiro, apenas edite o nome dela.`);
-            } else {
-                if (confirm("Deseja realmente excluir esta conta?")) { await client.from('MM_carteiras').delete().eq('id', id); await loadBaseData(); renderCartoesList(); }
-            }
-        }
-
+        function editCartaoUI(id) { const c = carteiras.find(x => x.id === id); if(c) { document.getElementById('cartao-id').value = c.id; document.getElementById('cartao-nome').value = c.nome; document.getElementById('cartao-tipo').value = c.tipo; document.getElementById('cartao-form-title').innerText = "Editando: " + c.nome; } }
+        async function saveCartao(e) { e.preventDefault(); const btn = document.getElementById('btn-cartao-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const cId = document.getElementById('cartao-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cartao-nome').value, tipo: document.getElementById('cartao-tipo').value, ativo: true }; let error; if (cId) { const res = await client.from('MM_carteiras').update(payload).eq('id', cId); error = res.error; } else { const res = await client.from('MM_carteiras').insert([payload]); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { resetCartaoForm(); await loadBaseData(); renderCartoesList(); } }
+        async function deleteCartao(id) { const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).or(`carteira_origem_id.eq.${id},carteira_destino_id.eq.${id}`); if (count > 0) { alert(`❌ Esta conta/cartão possui ${count} lançamentos atrelados.\nPara não perder seu histórico financeiro, apenas edite o nome dela.`); } else { if (confirm("Deseja realmente excluir esta conta?")) { await client.from('MM_carteiras').delete().eq('id', id); await loadBaseData(); renderCartoesList(); } } }
 
         // ==========================================
         // GESTÃO DE CATEGORIAS
@@ -362,38 +420,10 @@
         function openCatModal() { document.getElementById('modal-categorias').classList.add('active'); renderCategoryList(); }
         function closeCatModal() { document.getElementById('modal-categorias').classList.remove('active'); resetCatForm(); }
         function resetCatForm() { document.getElementById('form-category').reset(); document.getElementById('cat-id').value = ""; document.getElementById('cat-form-title').innerText = "Nova Categoria"; document.getElementById('cat-cor').value = "#2563eb"; }
-
-        function renderCategoryList() {
-            const listEl = document.getElementById('category-list'); listEl.innerHTML = '';
-            categorias.forEach(c => {
-                const tipoIcon = c.tipo === 'receita' ? '📈' : '🛒';
-                listEl.innerHTML += `<div class="invite-item"><div style="display: flex; align-items: center; gap: 8px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c.cor}"></span><span>${tipoIcon} ${c.nome}</span></div><div style="display: flex; gap: 8px;"><button class="btn-text-info" onclick="editCategoryUI('${c.id}')">Editar</button><button class="btn-text-danger" onclick="deleteCategory('${c.id}')">Excluir</button></div></div>`;
-            });
-        }
-
+        function renderCategoryList() { const listEl = document.getElementById('category-list'); listEl.innerHTML = ''; categorias.forEach(c => { const tipoIcon = c.tipo === 'receita' ? '📈' : '🛒'; listEl.innerHTML += `<div class="invite-item"><div style="display: flex; align-items: center; gap: 8px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c.cor}"></span><span>${tipoIcon} ${c.nome}</span></div><div style="display: flex; gap: 8px;"><button class="btn-text-info" onclick="editCategoryUI('${c.id}')">Editar</button><button class="btn-text-danger" onclick="deleteCategory('${c.id}')">Excluir</button></div></div>`; }); }
         function editCategoryUI(id) { const cat = categorias.find(c => c.id === id); if(cat) { document.getElementById('cat-id').value = cat.id; document.getElementById('cat-nome').value = cat.nome; document.getElementById('cat-cor').value = cat.cor; document.getElementById('cat-tipo').value = cat.tipo; document.getElementById('cat-form-title').innerText = "Editando: " + cat.nome; } }
-
-        async function saveCategory(e) {
-            e.preventDefault(); const btn = document.getElementById('btn-cat-submit'); btn.innerText = 'Salvando...'; btn.disabled = true;
-            const catId = document.getElementById('cat-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cat-nome').value, cor: document.getElementById('cat-cor').value, tipo: document.getElementById('cat-tipo').value };
-            let error; if (catId) { const res = await client.from('MM_categorias').update(payload).eq('id', catId); error = res.error; } else { const res = await client.from('MM_categorias').insert([payload]); error = res.error; }
-            btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { resetCatForm(); await loadBaseData(); renderCategoryList(); loadTransactions(); }
-        }
-
-        async function deleteCategory(id) {
-            const catToDelete = categorias.find(c => c.id === id);
-            const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id);
-            if (count > 0) {
-                const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas';
-                if (confirm(`Existem ${count} lançamentos usando esta categoria.\nDeseja mover todos para "${fallbackName}" e excluí-la?`)) {
-                    let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo);
-                    if (!fallbackCat) { const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single(); fallbackCat = resCat.data; }
-                    await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id);
-                    await client.from('MM_categorias').delete().eq('id', id);
-                    await loadBaseData(); renderCategoryList(); loadTransactions(); alert("Movido e excluído.");
-                }
-            } else { if (confirm("Deseja realmente excluir esta categoria?")) { await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); } }
-        }
+        async function saveCategory(e) { e.preventDefault(); const btn = document.getElementById('btn-cat-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const catId = document.getElementById('cat-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cat-nome').value, cor: document.getElementById('cat-cor').value, tipo: document.getElementById('cat-tipo').value }; let error; if (catId) { const res = await client.from('MM_categorias').update(payload).eq('id', catId); error = res.error; } else { const res = await client.from('MM_categorias').insert([payload]); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { resetCatForm(); await loadBaseData(); renderCategoryList(); loadTransactions(); } }
+        async function deleteCategory(id) { const catToDelete = categorias.find(c => c.id === id); const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id); if (count > 0) { const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas'; if (confirm(`Existem ${count} lançamentos usando esta categoria.\nDeseja mover todos para "${fallbackName}" e excluí-la?`)) { let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo); if (!fallbackCat) { const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single(); fallbackCat = resCat.data; } await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id); await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); loadTransactions(); alert("Movido e excluído."); } } else { if (confirm("Deseja realmente excluir esta categoria?")) { await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); } } }
 
         // ==========================================
         // GESTÃO DE FAMÍLIA (CONVITES)
@@ -460,29 +490,18 @@
         }
 
         // ==========================================
-        // FLUXO DE TRANSAÇÕES (PARCELAMENTO)
+        // FLUXO DE TRANSAÇÕES
         // ==========================================
         function openModal() { document.getElementById('modal-title').innerText = "Novo Lançamento"; document.getElementById('trans-id').value = ""; document.getElementById('modal').classList.add('active'); document.getElementById('trans-date').valueAsDate = new Date(); setTransType('despesa'); }
         function closeModal() { document.getElementById('modal').classList.remove('active'); document.getElementById('form-transaction').reset(); document.getElementById('trans-id').value = ""; }
-
-        function editTransaction(id) {
-            const t = currentMonthTransactions.find(x => x.id === id); if (!t) return;
-            document.getElementById('modal-title').innerText = "Editar Lançamento"; document.getElementById('trans-id').value = t.id; 
-            document.getElementById('trans-value').value = t.valor; document.getElementById('trans-desc').value = t.descricao; document.getElementById('trans-date').value = t.data_transacao; document.getElementById('trans-origem').value = t.carteira_origem_id;
-            setTransType(t.tipo); 
-            if (t.tipo === 'despesa' || t.tipo === 'receita') { document.getElementById('trans-cat').value = t.categoria_id; } else if (t.tipo === 'transferencia') { document.getElementById('trans-destino').value = t.carteira_destino_id; }
-            document.getElementById('modal').classList.add('active');
-        }
-
+        function editTransaction(id) { const t = currentMonthTransactions.find(x => x.id === id); if (!t) return; document.getElementById('modal-title').innerText = "Editar Lançamento"; document.getElementById('trans-id').value = t.id; document.getElementById('trans-value').value = t.valor; document.getElementById('trans-desc').value = t.descricao; document.getElementById('trans-date').value = t.data_transacao; document.getElementById('trans-origem').value = t.carteira_origem_id; setTransType(t.tipo); if (t.tipo === 'despesa' || t.tipo === 'receita') { document.getElementById('trans-cat').value = t.categoria_id; } else if (t.tipo === 'transferencia') { document.getElementById('trans-destino').value = t.carteira_destino_id; } document.getElementById('modal').classList.add('active'); }
         async function deleteTransaction(id) { if (confirm("Deseja excluir este lançamento?")) { await client.from('MM_transacoes').delete().eq('id', id); loadTransactions(); } }
 
         function setTransType(type) {
             document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active'); document.getElementById('trans-type').value = type;
             const grpDestino = document.getElementById('grp-destino'); const grpCat = document.getElementById('grp-categoria'); const lblOrigem = document.getElementById('lbl-origem'); const grpParcelas = document.getElementById('grp-parcelas');
             document.getElementById('trans-destino').required = false; document.getElementById('trans-cat').required = false;
-            
             if(type === 'despesa' || type === 'receita') { grpParcelas.classList.remove('hidden-field'); } else { grpParcelas.classList.add('hidden-field'); document.getElementById('trans-parcelas').value = "1"; }
-            
             if (type === 'despesa' || type === 'receita') { grpDestino.classList.add('hidden-field'); grpCat.classList.remove('hidden-field'); lblOrigem.innerText = type === 'despesa' ? 'Meio de Pagamento (De onde sai)' : 'Conta de Recebimento (Onde entra)'; document.getElementById('trans-cat').required = true; } 
             else if (type === 'transferencia') { grpDestino.classList.remove('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Conta de Origem (Sai de)'; document.getElementById('trans-destino').required = true; }
             else if (type === 'rendimento') { grpDestino.classList.add('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Qual investimento rendeu/desvalorizou?'; }
@@ -491,58 +510,27 @@
         async function saveTransaction(e) {
             e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true;
             const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; 
-            
-            // O valor capturado agora é tratado como o valor de cada parcela
             const valorDaParcela = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.'));
-            
-            const descBase = document.getElementById('trans-desc').value;
-            const origemId = document.getElementById('trans-origem').value;
-            const catId = document.getElementById('trans-cat').value;
-            const destId = document.getElementById('trans-destino').value;
-            const dataBaseHtml = document.getElementById('trans-date').value;
-            
+            const descBase = document.getElementById('trans-desc').value; const origemId = document.getElementById('trans-origem').value; const catId = document.getElementById('trans-cat').value; const destId = document.getElementById('trans-destino').value; const dataBaseHtml = document.getElementById('trans-date').value;
             let parcelas = parseInt(document.getElementById('trans-parcelas').value) || 1;
             if(transId) parcelas = 1;
-
-            const payloads = [];
-            const [ano, mes, dia] = dataBaseHtml.split('-');
-            let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); 
+            const payloads = []; const [ano, mes, dia] = dataBaseHtml.split('-'); let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); 
 
             for(let i = 0; i < parcelas; i++) {
                 let currentDesc = parcelas > 1 ? `${descBase} (${i+1}/${parcelas})` : descBase;
+                let currentDateObj = new Date(dataBaseObj); currentDateObj.setMonth(currentDateObj.getMonth() + i);
+                let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0'); let yyyy = currentDateObj.getFullYear(); let dd = String(currentDateObj.getDate()).padStart(2, '0');
+                let dtTransacao = `${yyyy}-${mm}-${dd}`; let competencia = `${yyyy}-${mm}`;
                 
-                let currentDateObj = new Date(dataBaseObj);
-                currentDateObj.setMonth(currentDateObj.getMonth() + i);
-                
-                let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0');
-                let yyyy = currentDateObj.getFullYear();
-                let dd = String(currentDateObj.getDate()).padStart(2, '0');
-                
-                let dtTransacao = `${yyyy}-${mm}-${dd}`;
-                let competencia = `${yyyy}-${mm}`;
-                
-                // Grava o valor da parcela sem necessidade de divisão matemática!
                 let payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorDaParcela, descricao: currentDesc, data_transacao: dtTransacao, competencia: competencia, carteira_origem_id: origemId };
-                
                 if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = catId; payload.carteira_destino_id = null; } 
                 else if (tipo === 'transferencia') { payload.carteira_destino_id = destId; payload.categoria_id = null; } 
                 else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; }
-                
                 payloads.push(payload);
             }
             
-            let error;
-            if (transId) {
-                const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId);
-                error = res.error;
-            } else {
-                const res = await client.from('MM_transacoes').insert(payloads);
-                error = res.error;
-            }
-
-            btn.innerText = 'Salvar'; btn.disabled = false;
-            if (error) { alert("Erro ao salvar: " + error.message); } 
-            else { closeModal(); loadTransactions(); }
+            let error; if (transId) { const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId); error = res.error; } else { const res = await client.from('MM_transacoes').insert(payloads); error = res.error; }
+            btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { closeModal(); loadTransactions(); }
         }
 
         init();
