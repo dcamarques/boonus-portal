@@ -2,429 +2,175 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Painel - My Money</title>
-    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boonus | MyMoney</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-    <style>
-        :root {
-            --bg-color: #0f172a; --surface-color: #1e293b; --surface-hover: #334155; --border-color: #334155;
-            --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9;
-            --radius: 12px;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; touch-action: manipulation; }
-        body { background-color: var(--bg-color); color: var(--text-primary); min-height: 100dvh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 800px; padding: 1.5rem; padding-bottom: 7rem; }
-
-        header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
-        .user-info h1 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 8px;}
-        .user-info p { font-size: 0.85rem; color: var(--text-secondary); }
-        .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px;}
-        .btn-outline:hover { background: var(--surface-hover); }
-
-        .controls-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-color); padding: 0.5rem; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border-color); }
-        .month-nav { display: flex; align-items: center; gap: 1rem; }
-        .month-nav button { background: none; border: none; color: var(--text-primary); font-size: 1.2rem; cursor: pointer; padding: 0.5rem; }
-        .month-label { font-weight: 600; font-size: 1rem; min-width: 120px; text-align: center; text-transform: capitalize;}
-
-        .view-toggle { display: flex; background: var(--bg-color); border-radius: 8px; overflow: hidden; }
-        .view-btn { background: transparent; border: none; color: var(--text-secondary); padding: 0.5rem 1rem; font-size: 0.85rem; cursor: pointer; transition: 0.3s; }
-        .view-btn.active { background: var(--primary); color: white; font-weight: 600; }
-
-        .balance-filter-row { display: flex; justify-content: flex-end; margin-bottom: 1.5rem; }
-        .balance-toggle { display: flex; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
-        .balance-btn { background: transparent; border: none; color: var(--text-secondary); padding: 0.4rem 0.8rem; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .balance-btn.active { background: var(--text-secondary); color: var(--bg-color); }
-
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .summary-card { background: var(--surface-color); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border-color); }
-        .summary-title { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
-        .summary-value { font-size: 1.5rem; font-weight: 700; transition: color 0.3s ease; }
-        
-        .section-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
-        .transaction-list { display: flex; flex-direction: column; gap: 0.75rem; }
-        .transaction-item { background: var(--surface-color); padding: 1rem; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); gap: 10px; }
-        .t-info { display: flex; flex-direction: column; gap: 0.25rem; flex: 1; }
-        .t-desc { font-weight: 600; font-size: 0.95rem; line-height: 1.2; }
-        .t-cat { font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 6px; align-items: center;}
-        
-        .t-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-        .t-amount { font-weight: 600; font-size: 1.05rem; }
-        .t-actions { display: flex; gap: 12px; }
-        .action-btn { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.4rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-        
-        .text-primary { color: var(--primary); }
-        .text-success { color: var(--success); }
-        .text-danger { color: var(--danger); }
-        .text-info { color: var(--info); }
-
-        .fab { position: fixed; bottom: max(2rem, env(safe-area-inset-bottom)); right: 50%; transform: translateX(50%); background-color: var(--primary); color: white; border: none; border-radius: 50px; padding: 1rem 2rem; font-size: 1rem; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); cursor: pointer; z-index: 100; }
-        @media (min-width: 800px) { .fab { right: calc(50% - 360px); transform: none; } }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); display: none; justify-content: center; align-items: flex-end; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
-        .modal-overlay.active { display: flex; opacity: 1; }
-        .modal-content { background: var(--surface-color); width: 100%; max-width: 500px; padding: 2rem; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height: 90vh; overflow-y: auto; }
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-        @media (min-width: 600px) { .modal-overlay { align-items: center; } .modal-content { border-radius: var(--radius); } }
-
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .btn-close { background: none; border: none; color: var(--text-secondary); font-size: 1.75rem; cursor: pointer; }
-
-        .type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 1.5rem; }
-        .type-btn { padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-color); color: var(--text-secondary); font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.85rem; }
-        .type-btn.active { border-color: var(--primary); color: white; background: var(--primary); }
-
-        .form-group { margin-bottom: 1.2rem; }
-        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); }
-        .form-group input, .form-group select { width: 100%; padding: 0.85rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 16px; outline: none; -webkit-appearance: none; }
-        .form-group input[type="color"] { padding: 0; height: 45px; cursor: pointer; }
-        .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
-        
-        .btn-save { width: 100%; padding: 1rem; border: none; border-radius: 8px; background: var(--primary); color: white; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
-
-        .invite-list { margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
-        .invite-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; font-size: 0.9rem; border-bottom: 1px solid var(--border-color); }
-        .btn-text-danger { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-        .btn-text-info { background: none; border: none; color: var(--info); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-
-        .hidden-field { display: none !important; }
-    </style>
 </head>
-<body>
-
-    <div class="container">
-        <!-- HEADER -->
-        <header>
-            <div class="user-info">
-                <h1>💰 My Money</h1>
-                <p id="user-email">Carregando...</p>
-            </div>
-            <div class="header-actions">
-                <button class="btn-outline" onclick="openCatModal()">🏷️ Categorias</button>
-                <button class="btn-outline" onclick="openFamilyModal()">👨‍👩‍👧 Família</button>
-                <button class="btn-outline" onclick="handleLogout()">Sair</button>
-            </div>
-        </header>
-
-        <!-- CONTROLES MÊS / PERFIL -->
-        <div class="controls-row">
-            <div class="month-nav">
-                <button onclick="changeMonth(-1)">&#10094;</button>
-                <div class="month-label" id="month-display">Setembro 2026</div>
-                <button onclick="changeMonth(1)">&#10095;</button>
-            </div>
-            <div class="view-toggle">
-                <button class="view-btn active" id="btn-view-individual" onclick="setView('individual')">Meu Perfil</button>
-                <button class="view-btn" id="btn-view-familia" onclick="setView('familia')">Família</button>
-            </div>
+<body class="bg-slate-50 text-gray-800 font-sans min-h-screen flex flex-col overflow-x-hidden">
+    
+    <!-- Barra de Navegação Superior -->
+    <nav class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center relative z-10">
+        <div class="text-xl font-bold tracking-wide">Boonus <span class="font-light text-emerald-400">MyMoney</span></div>
+        <div class="flex items-center gap-4">
+            <!-- Botão para voltar ao sistema principal (assume que a pasta mymoney está dentro da raiz) -->
+            <a href="../dashboard.html" class="text-slate-300 hover:text-white text-sm font-medium transition">&larr; Voltar ao Painel Principal</a>
         </div>
+    </nav>
 
-        <!-- FILTRO DE CÁLCULO DE SALDO -->
-        <div class="balance-filter-row">
-            <div class="balance-toggle">
-                <button class="balance-btn active" id="btn-bal-acumulado" onclick="setBalanceMode('acumulado')">Saldo Acumulado</button>
-                <button class="balance-btn" id="btn-bal-mes" onclick="setBalanceMode('mes')">Fluxo do Mês</button>
-            </div>
-        </div>
-
-        <!-- RESUMO -->
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-title" id="lbl-saldo-corrente">Saldo em Contas</div>
-                <div class="summary-value" id="saldo-corrente">R$ 0,00</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Fatura Cartões (Mês)</div>
-                <div class="summary-value text-danger" id="fatura-cartao">R$ 0,00</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title" id="lbl-saldo-invest">Total Investido</div>
-                <div class="summary-value" id="saldo-investimento">R$ 0,00</div>
-            </div>
-        </div>
-
-        <!-- LISTA -->
-        <h2 class="section-header">Movimentações do Mês</h2>
-        <div class="transaction-list" id="transaction-list">
-            <div class="transaction-item" style="justify-content: center;"><span class="t-cat">Carregando dados...</span></div>
-        </div>
-    </div>
-
-    <!-- BOTÃO FLUTUANTE -->
-    <button class="fab" onclick="openModal()"><span>+</span> Lançamento</button>
-
-
-    <!-- MODAL DE TRANSAÇÕES -->
-    <div class="modal-overlay" id="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Novo Lançamento</h2>
-                <button class="btn-close" onclick="closeModal()">&times;</button>
-            </div>
-            <input type="hidden" id="trans-id" value="">
-            <div class="type-selector">
-                <button class="type-btn active" data-type="despesa" onclick="setTransType('despesa')">Despesa</button>
-                <button class="type-btn" data-type="receita" onclick="setTransType('receita')">Receita</button>
-                <button class="type-btn" data-type="transferencia" onclick="setTransType('transferencia')">Transferência</button>
-                <button class="type-btn" data-type="rendimento" onclick="setTransType('rendimento')">Rendimento</button>
-            </div>
-            <form id="form-transaction" onsubmit="saveTransaction(event)">
-                <input type="hidden" id="trans-type" value="despesa">
-                <div class="form-group"><label>Valor (R$)</label><input type="number" id="trans-value" step="0.01" required placeholder="0,00"></div>
-                <div class="form-group"><label>Descrição</label><input type="text" id="trans-desc" required placeholder="Ex: Conta de Luz"></div>
-                <div class="form-group" id="grp-origem"><label id="lbl-origem">Meio de Pagamento / Conta</label><select id="trans-origem" required><option value="">Selecione...</option></select></div>
-                <div class="form-group hidden-field" id="grp-destino"><label>Conta/Investimento de Destino</label><select id="trans-destino"><option value="">Selecione...</option></select></div>
-                <div class="form-group" id="grp-categoria"><label>Categoria</label><select id="trans-cat"><option value="">Selecione...</option></select></div>
-                <div class="form-group"><label>Data</label><input type="date" id="trans-date" required></div>
-                <button type="submit" class="btn-save" id="btn-submit">Salvar</button>
-            </form>
-        </div>
-    </div>
-
-
-    <!-- MODAL DE FAMÍLIA -->
-    <div class="modal-overlay" id="modal-familia">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Gerenciar Família</h2>
-                <button class="btn-close" onclick="closeFamilyModal()">&times;</button>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem;">Convide alguém para acessar o seu orçamento.</p>
-            <form id="form-invite" onsubmit="sendInvite(event)">
-                <div class="form-group"><label>E-mail do Convidado</label><input type="email" id="invite-email" required placeholder="exemplo@gmail.com"></div>
-                <button type="submit" class="btn-save" id="btn-invite-submit" style="margin-top: 0;">Enviar Convite</button>
-            </form>
-            <div class="invite-list" id="invite-list-container">
-                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Convites Pendentes</label>
-                <div id="invite-list"></div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- MODAL DE CATEGORIAS -->
-    <div class="modal-overlay" id="modal-categorias">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Gerenciar Categorias</h2>
-                <button class="btn-close" onclick="closeCatModal()">&times;</button>
-            </div>
-            
-            <form id="form-category" onsubmit="saveCategory(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
-                <input type="hidden" id="cat-id" value="">
-                <h3 id="cat-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Categoria</h3>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group">
-                        <label>Nome</label>
-                        <input type="text" id="cat-nome" required placeholder="Ex: Educação">
-                    </div>
-                    <div class="form-group">
-                        <label>Cor Identificadora</label>
-                        <input type="color" id="cat-cor" required value="#2563eb">
-                    </div>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label>Tipo</label>
-                    <select id="cat-tipo" required>
-                        <option value="despesa">Despesa</option>
-                        <option value="receita">Receita</option>
-                    </select>
-                </div>
-                
-                <div style="display: flex; gap: 10px;">
-                    <button type="submit" class="btn-save" id="btn-cat-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button>
-                    <button type="button" class="btn-outline" onclick="resetCatForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button>
-                </div>
-            </form>
-
-            <div class="invite-list">
-                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Categorias Existentes da Família</label>
-                <div id="category-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const SUPABASE_URL = 'https://kafmnasrqcmbzvzaggap.supabase.co';
-        const SUPABASE_KEY = 'sb_publishable_k4w2E4ur7xJR6qd575inBA_sJoXqHoN';
-        const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let currentUser = null; let currentFamilyId = null; let currentDate = new Date(); let currentView = 'individual'; let balanceMode = 'acumulado'; 
-        let carteiras = []; let categorias = []; let currentMonthTransactions = [];
-
-        async function init() {
-            const { data: { session } } = await client.auth.getSession();
-            if (!session) { window.location.replace('index.html'); return; }
-            currentUser = session.user; document.getElementById('user-email').innerText = currentUser.email;
-            let { data: membros } = await client.from('MM_membros').select('familia_id').eq('user_id', currentUser.id).single();
-            if (!membros) {
-                const { data: convitePendente } = await client.from('MM_convites').select('*').eq('email_convidado', currentUser.email).single();
-                if (convitePendente) {
-                    await client.from('MM_membros').insert([{ familia_id: convitePendente.familia_id, user_id: currentUser.id, perfil: 'convidado' }]);
-                    await client.from('MM_convites').delete().eq('id', convitePendente.id); 
-                    membros = { familia_id: convitePendente.familia_id };
-                } else {
-                    alert("Aguarde a configuração da sua conta ou peça um convite ao titular."); return;
-                }
-            }
-            if(membros) {
-                currentFamilyId = membros.familia_id; await loadBaseData(); updateMonthDisplay(); loadTransactions();
-            }
-        }
-
-        async function handleLogout() { await client.auth.signOut(); window.location.replace('index.html'); }
-
-
-        // ==========================================
-        // GESTÃO DE CATEGORIAS (MÓDULO INTELIGENTE)
-        // ==========================================
-        function openCatModal() { document.getElementById('modal-categorias').classList.add('active'); renderCategoryList(); }
-        function closeCatModal() { document.getElementById('modal-categorias').classList.remove('active'); resetCatForm(); }
-
-        function resetCatForm() {
-            document.getElementById('form-category').reset(); document.getElementById('cat-id').value = "";
-            document.getElementById('cat-form-title').innerText = "Nova Categoria"; document.getElementById('cat-cor').value = "#2563eb";
-        }
-
-        function renderCategoryList() {
-            const listEl = document.getElementById('category-list'); listEl.innerHTML = '';
-            categorias.forEach(c => {
-                const tipoIcon = c.tipo === 'receita' ? '📈' : '🛒';
-                listEl.innerHTML += `
-                    <div class="invite-item">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c.cor}"></span>
-                            <span>${tipoIcon} ${c.nome}</span>
-                        </div>
-                        <div style="display: flex; gap: 8px;">
-                            <button class="btn-text-info" onclick="editCategoryUI('${c.id}')">Editar</button>
-                            <button class="btn-text-danger" onclick="deleteCategory('${c.id}')">Excluir</button>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function editCategoryUI(id) {
-            const cat = categorias.find(c => c.id === id);
-            if(cat) {
-                document.getElementById('cat-id').value = cat.id; document.getElementById('cat-nome').value = cat.nome;
-                document.getElementById('cat-cor').value = cat.cor; document.getElementById('cat-tipo').value = cat.tipo;
-                document.getElementById('cat-form-title').innerText = "Editando: " + cat.nome;
-            }
-        }
-
-        async function saveCategory(e) {
-            e.preventDefault(); const btn = document.getElementById('btn-cat-submit'); btn.innerText = 'Salvando...'; btn.disabled = true;
-            const catId = document.getElementById('cat-id').value;
-            const payload = { familia_id: currentFamilyId, nome: document.getElementById('cat-nome').value, cor: document.getElementById('cat-cor').value, tipo: document.getElementById('cat-tipo').value };
-            let error;
-            if (catId) { const res = await client.from('MM_categorias').update(payload).eq('id', catId); error = res.error; } 
-            else { const res = await client.from('MM_categorias').insert([payload]); error = res.error; }
-            btn.innerText = 'Salvar'; btn.disabled = false;
-            if (error) { alert("Erro ao salvar: " + error.message); } 
-            else { resetCatForm(); await loadBaseData(); renderCategoryList(); loadTransactions(); }
-        }
-
-        async function deleteCategory(id) {
-            const catToDelete = categorias.find(c => c.id === id);
-            
-            // Verifica se a categoria está em uso antes de tentar excluir
-            const { count, error: countError } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id);
-            
-            if (count > 0) {
-                const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas';
-                const confirmacao = confirm(`Existem ${count} lançamentos usando esta categoria.\n\nDeseja mover todos para "${fallbackName}" e excluí-la?`);
-                
-                if (confirmacao) {
-                    // 1. Procura a categoria de escape (Outras...)
-                    let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo);
-                    
-                    // 2. Se a categoria de escape não existir (o usuário apagou), o sistema cria na hora
-                    if (!fallbackCat) {
-                        const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single();
-                        fallbackCat = resCat.data;
-                    }
-                    
-                    // 3. Move todas as transações para a categoria de escape
-                    await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id);
-                    
-                    // 4. Exclui a categoria original com segurança
-                    await client.from('MM_categorias').delete().eq('id', id);
-                    
-                    await loadBaseData(); renderCategoryList(); loadTransactions();
-                    alert("Categoria excluída e dados realocados com sucesso.");
-                }
-            } else {
-                // Se não tem uso, apaga direto
-                if (confirm("Deseja realmente excluir esta categoria?")) {
-                    await client.from('MM_categorias').delete().eq('id', id);
-                    await loadBaseData(); renderCategoryList();
-                }
-            }
-        }
-
-
-        // ==========================================
-        // GESTÃO DE FAMÍLIA (CONVITES)
-        // ==========================================
-        function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadPendingInvites(); }
-        function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
-        async function sendInvite(e) { e.preventDefault(); const btn = document.getElementById('btn-invite-submit'); const email = document.getElementById('invite-email').value.trim(); btn.innerText = 'Enviando...'; btn.disabled = true; const { error } = await client.from('MM_convites').insert([{ familia_id: currentFamilyId, email_convidado: email, criado_por: currentUser.id }]); btn.innerText = 'Enviar Convite'; btn.disabled = false; if (error) { alert("Erro ao criar convite: " + error.message); } else { document.getElementById('invite-email').value = ''; loadPendingInvites(); } }
-        async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } listEl.innerHTML = ''; convites.forEach(c => { listEl.innerHTML += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); }
-        async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
-
-
-        // ==========================================
-        // DADOS E REGRAS DE NEGÓCIO
-        // ==========================================
-        async function loadBaseData() { const { data: carts } = await client.from('MM_carteiras').select('*').eq('ativo', true); carteiras = carts || []; const { data: cats } = await client.from('MM_categorias').select('*').order('nome', { ascending: true }); categorias = cats || []; populateSelects(); }
-        function populateSelects() { const selOrigem = document.getElementById('trans-origem'); const selDestino = document.getElementById('trans-destino'); const selCat = document.getElementById('trans-cat'); selOrigem.innerHTML = '<option value="">Selecione...</option>'; selDestino.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { selOrigem.innerHTML += `<option value="${c.id}">${c.nome}</option>`; selDestino.innerHTML += `<option value="${c.id}">${c.nome}</option>`; }); selCat.innerHTML = '<option value="">Selecione...</option>'; categorias.forEach(c => { selCat.innerHTML += `<option value="${c.id}">${c.nome}</option>`; }); }
+    <main class="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
         
-        const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-        function updateMonthDisplay() { document.getElementById('month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; }
-        function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); updateMonthDisplay(); loadTransactions(); }
-        function setView(viewType) { currentView = viewType; document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-view-${viewType}`).classList.add('active'); loadTransactions(); }
-        function setBalanceMode(mode) { balanceMode = mode; document.querySelectorAll('.balance-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-bal-${mode}`).classList.add('active'); document.getElementById('lbl-saldo-corrente').innerText = mode === 'acumulado' ? 'Saldo Real em Contas' : 'Fluxo Corrente (Mês)'; document.getElementById('lbl-saldo-invest').innerText = mode === 'acumulado' ? 'Total Investido (Acumulado)' : 'Aportes/Rendimentos (Mês)'; loadTransactions(); }
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-slate-800">Controle Financeiro</h1>
+            <p class="text-sm text-slate-500">Gerencie seus cartões e automatize o lançamento de parcelas.</p>
+        </div>
 
-        async function loadTransactions() {
-            const listEl = document.getElementById('transaction-list'); listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Atualizando dados...</span></div>';
-            const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`;
-            let queryMes = client.from('MM_transacoes').select('*, MM_categorias(nome, cor), MM_carteiras!carteira_origem_id(nome)').eq('competencia', compStr).order('data_transacao', { ascending: false });
-            if (currentView === 'individual') { queryMes = queryMes.eq('lancado_por', currentUser.id); }
-            const resMes = await queryMes;
-            if (resMes.error) { listEl.innerHTML = `<div class="transaction-item"><span class="text-danger">Erro ao carregar dados.</span></div>`; return; }
-            currentMonthTransactions = resMes.data; let transacoesParaCalculo = [];
-            if (balanceMode === 'acumulado') { const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0]; let queryGlobal = client.from('MM_transacoes').select('valor, tipo, carteira_origem_id, carteira_destino_id').lte('data_transacao', ultimoDiaDoMes); if (currentView === 'individual') queryGlobal = queryGlobal.eq('lancado_por', currentUser.id); const resGlobal = await queryGlobal; if (!resGlobal.error) transacoesParaCalculo = resGlobal.data; } else { transacoesParaCalculo = resMes.data; }
-            let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
-            transacoesParaCalculo.forEach(t => { const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; if (t.tipo === 'receita') { if (tipoOrigem === 'corrente') saldoCorrente += v; if (tipoOrigem === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'despesa') { if (tipoOrigem === 'corrente') saldoCorrente -= v; } else if (t.tipo === 'transferencia') { if (tipoOrigem === 'corrente') saldoCorrente -= v; if (tipoOrigem === 'investimento') saldoInvestimento -= v; if (tipoDestino === 'corrente') saldoCorrente += v; if (tipoDestino === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'rendimento') { if (tipoOrigem === 'investimento') saldoInvestimento += v; } });
-            resMes.data.forEach(t => { const v = parseFloat(t.valor); if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') faturaCartaoMes += v; });
-            const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-primary' : 'text-danger'); elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-            if (resMes.data.length === 0) { listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>'; return; }
-            listEl.innerHTML = '';
-            resMes.data.forEach(t => { let icon = '💵'; let amountClass = 'text-primary'; let sign = ''; if (t.tipo === 'despesa') { icon = '🛒'; amountClass = 'text-danger'; sign = '-'; } if (t.tipo === 'receita') { icon = '📈'; amountClass = 'text-success'; sign = '+'; } if (t.tipo === 'transferencia') { icon = '🔄'; amountClass = 'text-info'; } if (t.tipo === 'rendimento') { icon = '✨'; amountClass = 'text-success'; sign = '+'; } const dataFormatada = new Date(t.data_transacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}); const catInfo = t.MM_categorias ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${t.MM_categorias.cor}"></span> ${t.MM_categorias.nome}` : t.MM_carteiras.nome; listEl.innerHTML += `<div class="transaction-item"><div class="t-info"><span class="t-desc">${icon} ${t.descricao}</span><span class="t-cat">${catInfo} | ${dataFormatada}</span></div><div class="t-right"><div class="t-amount ${amountClass}">${sign} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div><div class="t-actions"><button class="action-btn" onclick="editTransaction('${t.id}')">✏️</button><button class="action-btn" onclick="deleteTransaction('${t.id}')">❌</button></div></div></div>`; });
-        }
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- COLUNA ESQUERDA: Formulário Lançamento Inteligente -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6">
+                    <h3 class="text-lg font-bold text-slate-800 mb-6 border-b border-gray-100 pb-3 flex items-center gap-2">
+                        <span>💸</span> Lançar Nova Despesa
+                    </h3>
+                    
+                    <form id="form-compra" class="space-y-5">
+                        
+                        <!-- Mês da Primeira Parcela -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Mês da 1ª Parcela</label>
+                            <input type="month" id="compra-mes" required class="w-full px-4 py-2.5 bg-slate-50 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition shadow-sm">
+                        </div>
 
-        // ==========================================
-        // TRANSAÇÕES
-        // ==========================================
-        function openModal() { document.getElementById('modal-title').innerText = "Novo Lançamento"; document.getElementById('trans-id').value = ""; document.getElementById('modal').classList.add('active'); document.getElementById('trans-date').valueAsDate = new Date(); setTransType('despesa'); }
-        function closeModal() { document.getElementById('modal').classList.remove('active'); document.getElementById('form-transaction').reset(); document.getElementById('trans-id').value = ""; }
-        function editTransaction(id) { const t = currentMonthTransactions.find(x => x.id === id); if (!t) return; document.getElementById('modal-title').innerText = "Editar Lançamento"; document.getElementById('trans-id').value = t.id; document.getElementById('trans-value').value = t.valor; document.getElementById('trans-desc').value = t.descricao; document.getElementById('trans-date').value = t.data_transacao; document.getElementById('trans-origem').value = t.carteira_origem_id; setTransType(t.tipo); if (t.tipo === 'despesa' || t.tipo === 'receita') { document.getElementById('trans-cat').value = t.categoria_id; } else if (t.tipo === 'transferencia') { document.getElementById('trans-destino').value = t.carteira_destino_id; } document.getElementById('modal').classList.add('active'); }
-        async function deleteTransaction(id) { if (confirm("Deseja excluir este lançamento?")) { await client.from('MM_transacoes').delete().eq('id', id); loadTransactions(); } }
-        function setTransType(type) { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active'); document.getElementById('trans-type').value = type; const grpDestino = document.getElementById('grp-destino'); const grpCat = document.getElementById('grp-categoria'); const lblOrigem = document.getElementById('lbl-origem'); document.getElementById('trans-destino').required = false; document.getElementById('trans-cat').required = false; if (type === 'despesa' || type === 'receita') { grpDestino.classList.add('hidden-field'); grpCat.classList.remove('hidden-field'); lblOrigem.innerText = type === 'despesa' ? 'Meio de Pagamento (De onde sai)' : 'Conta de Recebimento (Onde entra)'; document.getElementById('trans-cat').required = true; } else if (type === 'transferencia') { grpDestino.classList.remove('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Conta de Origem (Sai de)'; document.getElementById('trans-destino').required = true; } else if (type === 'rendimento') { grpDestino.classList.add('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Qual investimento rendeu/desvalorizou?'; } }
-        async function saveTransaction(e) { e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; const dt = document.getElementById('trans-date').value; const competencia = dt.substring(0, 7); const valorTratado = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.')); const payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorTratado, descricao: document.getElementById('trans-desc').value, data_transacao: dt, competencia: competencia, carteira_origem_id: document.getElementById('trans-origem').value }; if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = document.getElementById('trans-cat').value; payload.carteira_destino_id = null; } else if (tipo === 'transferencia') { payload.carteira_destino_id = document.getElementById('trans-destino').value; payload.categoria_id = null; } else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; } if (transId) { await client.from('MM_transacoes').update(payload).eq('id', transId); } else { await client.from('MM_transacoes').insert([payload]); } btn.innerText = 'Salvar'; btn.disabled = false; closeModal(); loadTransactions(); }
+                        <!-- Seleção do Cartão -->
+                        <div>
+                            <div class="flex justify-between items-end mb-1">
+                                <label class="block text-sm font-medium text-gray-700">Cartão / Conta</label>
+                                <!-- Futuro botão para adicionar cartão pela tela -->
+                                <button type="button" onclick="adicionarNovoCartao()" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold bg-emerald-50 px-2 py-1 rounded">+ Novo Cartão</button>
+                            </div>
+                            <select id="compra-cartao" required class="w-full px-4 py-2.5 bg-slate-50 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition shadow-sm cursor-pointer">
+                                <option value="">Carregando cartões...</option>
+                                <!-- As opções serão injetadas pelo JavaScript -->
+                            </select>
+                        </div>
 
-        init();
+                        <!-- Descrição da Compra -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Descrição da Compra</label>
+                            <input type="text" id="compra-desc" placeholder="Ex: Seguro do Renault Captur" required class="w-full px-4 py-2.5 bg-slate-50 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition shadow-sm">
+                        </div>
+
+                        <!-- Valores e Parcelas lado a lado -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Valor Total (R$)</label>
+                                <input type="number" id="compra-valor" step="0.01" placeholder="0.00" required class="w-full px-4 py-2.5 bg-slate-50 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition shadow-sm font-semibold text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Parcelamento</label>
+                                <select id="compra-parcelas" class="w-full px-4 py-2.5 bg-slate-50 border border-gray-300 rounded-lg outline-none focus:border-emerald-500 focus:bg-white transition shadow-sm cursor-pointer font-medium text-slate-700">
+                                    <option value="1">À vista (1x)</option>
+                                    <option value="2">2 vezes</option>
+                                    <option value="3">3 vezes</option>
+                                    <option value="4">4 vezes</option>
+                                    <option value="5">5 vezes</option>
+                                    <option value="6">6 vezes</option>
+                                    <option value="10">10 vezes</option>
+                                    <option value="12">12 vezes</option>
+                                    <option value="24">24 vezes</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <p class="text-xs text-slate-400 italic">O valor total será dividido automaticamente pelos próximos meses selecionados.</p>
+
+                        <!-- Botão Salvar -->
+                        <button type="button" id="btn-salvar-compra" onclick="salvarCompra()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 rounded-lg shadow-md transition mt-2 flex justify-center items-center gap-2">
+                            Registrar Despesa
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- COLUNA DIREITA: Visão Geral -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Bloco de Cartões Cadastrados -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">💳 Meus Cartões</h3>
+                    </div>
+                    
+                    <!-- Container onde o JS vai renderizar os cartões -->
+                    <div id="lista-cartoes" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        <div class="text-sm text-slate-500 p-4 border-2 border-dashed border-gray-200 rounded-xl text-center w-full col-span-full">
+                            Carregando base de cartões...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bloco de Despesas do Mês -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">📄 Fatura / Despesas</h3>
+                        <div class="flex items-center gap-2 bg-slate-50 border border-gray-200 p-1.5 rounded-lg">
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider pl-2">Mês Alvo:</label>
+                            <input type="month" id="filtro-mes" onchange="carregarDespesas()" class="px-2 py-1 bg-white border border-gray-300 rounded text-sm outline-none font-bold text-slate-700 cursor-pointer shadow-sm">
+                        </div>
+                    </div>
+                    
+                    <div class="overflow-x-auto border border-gray-100 rounded-lg">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-slate-50 text-slate-600 font-semibold border-b border-gray-200">
+                                <tr>
+                                    <th class="p-3.5">Descrição</th>
+                                    <th class="p-3.5">Cartão</th>
+                                    <th class="p-3.5 text-right">Valor (R$)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lista-despesas" class="divide-y divide-gray-100">
+                                <tr>
+                                    <td colspan="3" class="p-8 text-center text-slate-500 italic">Lista de despesas será carregada aqui...</td>
+                                </tr>
+                            </tbody>
+                            <tfoot class="bg-slate-50 border-t border-gray-200 font-bold text-slate-800">
+                                <tr>
+                                    <td colspan="2" class="p-4 text-right uppercase tracking-wider text-xs">Total do Mês:</td>
+                                    <td class="p-4 text-right text-lg text-emerald-600" id="total-mes">R$ 0,00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- SCRIPT DO BANCO E INTELIGÊNCIA -->
+    <!-- Se o seu arquivo supabase-client.js estiver na pasta js da raiz, usamos ../ para voltar uma pasta -->
+    <script src="../js/supabase-client.js"></script> 
+    
+    <!-- Script principal deste módulo -->
+    <script src="js/financeiro.js?v=1.0"></script>
+    
+    <script>
+        // Gatilho visual: Assim que a tela abre, ele preenche o calendário com o mês atual automaticamente
+        document.addEventListener("DOMContentLoaded", () => {
+            const hoje = new Date();
+            // Formata a data para YYYY-MM
+            const mesAtual = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0');
+            
+            // Seta o campo de lançamento
+            const compraMes = document.getElementById('compra-mes');
+            if(compraMes) compraMes.value = mesAtual;
+            
+            // Seta o campo de filtro
+            const filtroMes = document.getElementById('filtro-mes');
+            if(filtroMes) filtroMes.value = mesAtual;
+        });
     </script>
 </body>
 </html>
