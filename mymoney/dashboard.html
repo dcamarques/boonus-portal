@@ -20,7 +20,7 @@
         :root {
             --bg-color: #0f172a; --surface-color: #1e293b; --surface-hover: #334155; --border-color: #334155;
             --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --primary: #2563eb; --light-blue: #60a5fa; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9;
+            --primary: #2563eb; --light-blue: #60a5fa; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9; --purple: #8b5cf6;
             --radius: 12px;
         }
 
@@ -188,7 +188,7 @@
 
     <button class="fab" onclick="openModal()"><span>+</span> Lançamento</button>
 
-    <!-- MODAL DE RELATÓRIOS (ATUALIZADO) -->
+    <!-- MODAL DE RELATÓRIOS -->
     <div class="modal-overlay" id="modal-relatorios">
         <div class="modal-content modal-expanded">
             <div class="modal-header">
@@ -203,8 +203,9 @@
                     <select id="relatorio-tipo-select" onchange="setRelatorioAba(this.value)" style="text-align: center; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); padding: 0.6rem;">
                         <option value="despesa">📋 Categorias: Despesas</option>
                         <option value="receita">📋 Categorias: Receitas</option>
-                        <option value="fluxo">📈 Evolução: Receitas x Despesas</option>
+                        <option value="fluxo">📊 Evolução: Receitas x Despesas</option>
                         <option value="resultado">⚖️ Evolução: Resultado do Mês</option>
+                        <option value="resultado_acumulado">📈 Evolução: Resultado Acumulado</option>
                         <option value="investimentos">💎 Evolução: Investimentos</option>
                     </select>
                 </div>
@@ -488,10 +489,10 @@
             const ctx = document.getElementById('chartEvolucao').getContext('2d');
             if(chartInstance) { chartInstance.destroy(); }
 
-            let datasetInfo = []; let chartType = 'line';
+            let datasetInfo = []; let chartType = 'bar';
             
             if (aba === 'fluxo' || aba === 'resultado') {
-                document.getElementById('grafico-titulo').innerHTML = aba === 'fluxo' ? `📈 Evolução do Fluxo de Caixa` : `⚖️ Resultado Líquido do Mês`;
+                document.getElementById('grafico-titulo').innerHTML = aba === 'fluxo' ? `📊 Receitas vs Despesas (Mensal)` : `⚖️ Resultado Líquido do Mês`;
                 
                 let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).in('competencia', monthsToFetch);
                 if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
@@ -501,19 +502,52 @@
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); }
 
                 if (aba === 'fluxo') {
+                    // Barras Agrupadas: Melhor opção visual para cruzar dados concorrentes
                     datasetInfo = [
-                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), borderColor: '#10b981', backgroundColor: '#10b981', tension: 0.3 },
-                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), borderColor: '#ef4444', backgroundColor: '#ef4444', tension: 0.3 }
+                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 }
                     ];
                 } else {
-                    chartType = 'bar';
                     let resData = monthsToFetch.map(m => recObj[m] - despObj[m]);
                     let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444');
                     datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }];
                 }
-            } 
+            }
+            else if (aba === 'resultado_acumulado') {
+                document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`;
+                chartType = 'line';
+                let lastMonthStr = monthsToFetch[monthsToFetch.length - 1];
+                
+                // Puxa todo o histórico até ao último mês visível
+                let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).lte('competencia', lastMonthStr);
+                if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
+                const { data } = await query;
+                
+                let netByMonth = {};
+                if (data) {
+                    data.forEach(t => {
+                        let v = parseFloat(t.valor);
+                        let delta = t.tipo === 'receita' ? v : -v;
+                        if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; 
+                        netByMonth[t.competencia] += delta;
+                    });
+                }
+                
+                let allMonths = Object.keys(netByMonth).sort();
+                let accumulatedData = monthsToFetch.map(m => 0);
+                
+                for (let i = 0; i < monthsToFetch.length; i++) {
+                    let targetM = monthsToFetch[i]; let sum = 0;
+                    allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; });
+                    accumulatedData[i] = sum;
+                }
+                
+                // Gráfico de Linha Preenchida (Área) com tom roxo
+                datasetInfo = [{ label: 'Resultado Acumulado', data: accumulatedData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }];
+            }
             else if (aba === 'investimentos') {
                 document.getElementById('grafico-titulo').innerHTML = `💎 Evolução Patrimonial (Investimentos)`;
+                chartType = 'line';
                 let lastMonthStr = monthsToFetch[monthsToFetch.length - 1];
                 const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
                 
@@ -549,7 +583,10 @@
                 datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }];
             }
 
-            chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: aba === 'fluxo' }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } });
+            // A legenda só aparece no gráfico de fluxo para diferenciar Receita (Verde) e Despesa (Vermelho)
+            let mostrarLegenda = (aba === 'fluxo');
+
+            chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } });
         }
 
 
