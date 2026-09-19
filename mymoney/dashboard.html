@@ -42,7 +42,6 @@
             .header-bottom { width: auto; justify-content: flex-end; }
         }
 
-        /* Botões ajustados para caberem melhor em telas pequenas */
         .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.4rem 0.6rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px;}
         .btn-outline:hover { background: var(--surface-hover); }
 
@@ -666,14 +665,23 @@
             
             if (resMes.data.length === 0) { listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>'; return; }
             listEl.innerHTML = '';
+            
+            // PSICOLOGIA DAS CORES E LISTAGEM
             resMes.data.forEach(t => { 
                 let icon = '💵'; let amountClass = 'text-primary'; let sign = ''; 
+                let vNum = parseFloat(t.valor);
+
                 if (t.tipo === 'despesa') { icon = '🛒'; amountClass = 'text-danger'; sign = '-'; } 
-                if (t.tipo === 'receita') { icon = '📈'; amountClass = 'text-success'; sign = '+'; } 
+                if (t.tipo === 'receita') { icon = '📈'; amountClass = 'text-light-blue'; sign = '+'; } 
                 if (t.tipo === 'transferencia') { icon = '🔄'; amountClass = 'text-info'; } 
-                if (t.tipo === 'rendimento') { icon = '✨'; amountClass = 'text-success'; sign = '+'; } 
+                if (t.tipo === 'rendimento') { 
+                    if (vNum >= 0) { icon = '✨'; amountClass = 'text-success'; sign = '+'; }
+                    else { icon = '📉'; amountClass = 'text-danger'; sign = ''; } 
+                } 
                 
+                let vFormatado = Math.abs(vNum).toLocaleString('pt-BR', {minimumFractionDigits: 2});
                 const dataFormatada = new Date(t.data_transacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}); 
+                
                 let catBadge = t.MM_categorias ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${t.MM_categorias.cor}"></span> ${t.MM_categorias.nome}` : (t.tipo === 'transferencia' ? '🔄 Transferência' : '✨ Rendimento');
                 let meioPgto = t.MM_carteiras ? `🏦 ${t.MM_carteiras.nome}` : '';
                 
@@ -684,7 +692,7 @@
                             <span class="t-cat" style="font-size: 0.75rem;">${catBadge} • ${meioPgto} • ${dataFormatada}</span>
                         </div>
                         <div class="t-right">
-                            <div class="t-amount ${amountClass}">${sign} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                            <div class="t-amount ${amountClass}">${sign} R$ ${vFormatado}</div>
                             <div class="t-actions">
                                 <button class="action-btn" onclick="editTransaction('${t.id}')">✏️</button>
                                 <button class="action-btn" onclick="deleteTransaction('${t.id}')">❌</button>
