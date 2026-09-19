@@ -34,16 +34,31 @@
         .user-info h1 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 2px;}
         .user-info p { font-size: 0.8rem; color: var(--text-secondary); }
         .top-actions { display: flex; gap: 8px; align-items: center; }
-        .header-bottom { display: flex; flex-wrap: wrap; gap: 8px; }
+        
+        /* LINHA INFERIOR (Botões) FORÇANDO ENCAIXE NO MOBILE */
+        .header-bottom { display: flex; flex-wrap: nowrap; gap: 6px; justify-content: space-between; width: 100%; overflow-x: auto; padding-bottom: 2px;}
+        .header-bottom::-webkit-scrollbar { display: none; }
+        
+        /* Botões espremidos inteligentemente para telas < 400px */
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.35rem 0.5rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+        .btn-outline:hover { background: var(--surface-hover); }
 
+        /* INTELIGÊNCIA DE TEXTO (CATEGORIAS vs CATEG) */
+        .text-full { display: none; }
+        .text-short { display: inline; }
+
+        /* COMPORTAMENTO PARA TABLETS E COMPUTADORES (Telas maiores) */
+        @media (min-width: 450px) {
+            .text-full { display: inline; }
+            .text-short { display: none; }
+        }
+        
         @media (min-width: 768px) {
             header { flex-direction: row; justify-content: space-between; align-items: center; }
             .header-top { width: auto; }
-            .header-bottom { width: auto; justify-content: flex-end; }
+            .header-bottom { width: auto; justify-content: flex-end; gap: 8px; overflow-x: visible; }
+            .btn-outline { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
         }
-
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.4rem 0.6rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px;}
-        .btn-outline:hover { background: var(--surface-hover); }
 
         .controls-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-color); padding: 0.5rem; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border-color); }
         .month-nav { display: flex; align-items: center; gap: 1rem; }
@@ -142,16 +157,19 @@
                     <p id="user-email">Carregando...</p>
                 </div>
                 <div class="top-actions">
-                    <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.1rem; padding: 0.4rem 0.6rem; margin-top:0;">
+                    <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.2rem; padding: 0.35rem 0.5rem;">
                         🔔 <span id="badge-notif" class="badge">0</span>
                     </button>
-                    <button class="btn-outline" onclick="handleLogout()" style="padding: 0.4rem 0.8rem;">Sair</button>
+                    <button class="btn-outline" onclick="handleLogout()">Sair</button>
                 </div>
             </div>
+            
             <div class="header-bottom">
                 <button class="btn-outline" onclick="openRelatoriosModal()">📊 Relatórios</button>
                 <button class="btn-outline" onclick="openCartoesModal()">💳 Contas</button>
-                <button class="btn-outline" onclick="openCatModal()">🏷️ Categorias</button>
+                <button class="btn-outline" onclick="openCatModal()">
+                    🏷️ <span class="text-full">Categorias</span><span class="text-short">Categ</span>
+                </button>
                 <button class="btn-outline" onclick="openFamilyModal()">👨‍👩‍👧 Família</button>
             </div>
         </header>
