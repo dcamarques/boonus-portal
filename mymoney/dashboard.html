@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Painel - My Money</title>
+    
     <!-- Ícones para Navegador e Aplicativo de Celular (iOS / Android) -->
     <link rel="icon" type="image/png" href="https://boonus.app.br/mymoney/icone.png">
     <link rel="apple-touch-icon" href="https://boonus.app.br/mymoney/icone.png">
@@ -17,19 +18,14 @@
     <meta property="og:image" content="https://boonus.app.br/mymoney/banner.png">
     <meta property="og:url" content="https://boonus.app.br/mymoney/">
     <meta property="og:type" content="website">
-    
-    <!-- Meta Tags para Twitter / X -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="My Money | Boonus">
-    <meta name="twitter:description" content="Gestão de orçamento inteligente e compartilhado.">
-    <meta name="twitter:image" content="https://boonus.app.br/mymoney/banner.png">
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
             --bg-color: #0f172a; --surface-color: #1e293b; --surface-hover: #334155; --border-color: #334155;
             --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --primary: #2563eb; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9;
+            --primary: #2563eb; --light-blue: #60a5fa; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9;
             --radius: 12px;
         }
 
@@ -77,6 +73,7 @@
         .action-btn { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.4rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         
         .text-primary { color: var(--primary); }
+        .text-light-blue { color: var(--light-blue); }
         .text-success { color: var(--success); }
         .text-danger { color: var(--danger); }
         .text-info { color: var(--info); }
@@ -165,7 +162,8 @@
         <div class="summary-grid">
             <div class="summary-card">
                 <div class="summary-title" id="lbl-saldo-corrente">Saldo em Contas</div>
-                <div class="summary-value" id="saldo-corrente">R$ 0,00</div>
+                <!-- Inicializado com a cor azul claro -->
+                <div class="summary-value text-light-blue" id="saldo-corrente">R$ 0,00</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Fatura Cartões (Mês)</div>
@@ -283,7 +281,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE FAMÍLIA (ATUALIZADO COM LISTA DE MEMBROS) -->
+    <!-- MODAL DE FAMÍLIA -->
     <div class="modal-overlay" id="modal-familia">
         <div class="modal-content">
             <div class="modal-header">
@@ -315,7 +313,7 @@
 
         let currentUser = null; 
         let currentFamilyId = null; 
-        let currentUserProfile = ''; // Saber se é Titular ou Convidado
+        let currentUserProfile = ''; 
         let currentDate = new Date(); 
         let currentView = 'individual'; 
         let balanceMode = 'acumulado'; 
@@ -335,7 +333,6 @@
                 membros = { familia_id: novaF.id, perfil: 'titular', email_membro: currentUser.email };
             }
             
-            // Auto-atualiza o email no banco se estiver vazio (SaaS Tracking)
             if (!membros.email_membro) {
                 await client.from('MM_membros').update({email_membro: currentUser.email}).eq('id', membros.id);
             }
@@ -349,9 +346,6 @@
 
         async function handleLogout() { await client.auth.signOut(); window.location.replace('index.html'); }
 
-        // ==========================================
-        // SISTEMA DE NOTIFICAÇÕES (O SININHO B2C)
-        // ==========================================
         async function checkNotifications() {
             const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email);
             const badge = document.getElementById('badge-notif');
@@ -382,9 +376,6 @@
         }
         async function rejectInvite(conviteId) { if(confirm("Deseja realmente recusar e excluir este convite?")) { await client.from('MM_convites').delete().eq('id', conviteId); checkNotifications(); openNotificacoesModal(); } }
 
-        // ==========================================
-        // GESTÃO DE FAMÍLIA (MEMBROS E CONVITES)
-        // ==========================================
         function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadFamilyMembers(); loadPendingInvites(); }
         function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
         
@@ -399,31 +390,17 @@
                 const isMe = m.user_id === currentUser.id;
                 let badge = m.perfil === 'titular' ? '👑' : '👤';
                 let btn = '';
-                
-                if (!isMe && currentUserProfile === 'titular') {
-                    btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`;
-                } else if (isMe && currentUserProfile === 'convidado') {
-                    btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`;
-                }
-
+                if (!isMe && currentUserProfile === 'titular') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`; } else if (isMe && currentUserProfile === 'convidado') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`; }
                 listEl.innerHTML += `<div class="invite-item"><span>${badge} ${m.email_membro || 'Usuário'} ${isMe ? '(Você)' : ''}</span>${btn}</div>`;
             });
         }
 
-        async function removeMember(id) {
-            if(confirm("Tem certeza que deseja remover este acesso? Ele perderá a visualização imediatamente.")) {
-                const { error } = await client.from('MM_membros').delete().eq('id', id);
-                if (error) { alert("Erro ao remover: " + error.message); } else { loadFamilyMembers(); }
-            }
-        }
+        async function removeMember(id) { if(confirm("Tem certeza que deseja remover este acesso? Ele perderá a visualização imediatamente.")) { const { error } = await client.from('MM_membros').delete().eq('id', id); if (error) { alert("Erro ao remover: " + error.message); } else { loadFamilyMembers(); } } }
 
         async function sendInvite(e) { e.preventDefault(); const btn = document.getElementById('btn-invite-submit'); const email = document.getElementById('invite-email').value.trim(); btn.innerText = 'Enviando...'; btn.disabled = true; const { error } = await client.from('MM_convites').insert([{ familia_id: currentFamilyId, email_convidado: email, criado_por: currentUser.id }]); btn.innerText = 'Enviar Convite'; btn.disabled = false; if (error) { alert("Erro ao criar convite: " + error.message); } else { document.getElementById('invite-email').value = ''; loadPendingInvites(); } }
         async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } listEl.innerHTML = ''; convites.forEach(c => { listEl.innerHTML += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); }
         async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
 
-        // ==========================================
-        // GESTÃO DE CONTAS, CATEGORIAS E TRANSAÇÕES
-        // ==========================================
         function openCartoesModal() { document.getElementById('modal-cartoes').classList.add('active'); renderCartoesList(); }
         function closeCartoesModal() { document.getElementById('modal-cartoes').classList.remove('active'); resetCartaoForm(); }
         function resetCartaoForm() { document.getElementById('form-cartao').reset(); document.getElementById('cartao-id').value = ""; document.getElementById('cartao-form-title').innerText = "Nova Conta/Cartão"; }
@@ -460,7 +437,14 @@
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
             transacoesParaCalculo.forEach(t => { const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; if (t.tipo === 'receita') { if (tipoOrigem === 'corrente') saldoCorrente += v; if (tipoOrigem === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'despesa') { if (tipoOrigem === 'corrente') saldoCorrente -= v; } else if (t.tipo === 'transferencia') { if (tipoOrigem === 'corrente') saldoCorrente -= v; if (tipoOrigem === 'investimento') saldoInvestimento -= v; if (tipoDestino === 'corrente') saldoCorrente += v; if (tipoDestino === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'rendimento') { if (tipoOrigem === 'investimento') saldoInvestimento += v; } });
             resMes.data.forEach(t => { const v = parseFloat(t.valor); if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') faturaCartaoMes += v; });
-            const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-primary' : 'text-danger'); elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            
+            const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); 
+            
+            // O azul mais claro entra em ação aqui
+            elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-light-blue' : 'text-danger'); 
+            
+            elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); 
+            elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             if (resMes.data.length === 0) { listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>'; return; }
             listEl.innerHTML = '';
             resMes.data.forEach(t => { let icon = '💵'; let amountClass = 'text-primary'; let sign = ''; if (t.tipo === 'despesa') { icon = '🛒'; amountClass = 'text-danger'; sign = '-'; } if (t.tipo === 'receita') { icon = '📈'; amountClass = 'text-success'; sign = '+'; } if (t.tipo === 'transferencia') { icon = '🔄'; amountClass = 'text-info'; } if (t.tipo === 'rendimento') { icon = '✨'; amountClass = 'text-success'; sign = '+'; } const dataFormatada = new Date(t.data_transacao).toLocaleDateString('pt-BR', {timeZone: 'UTC'}); const catInfo = t.MM_categorias ? `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${t.MM_categorias.cor}"></span> ${t.MM_categorias.nome}` : t.MM_carteiras.nome; listEl.innerHTML += `<div class="transaction-item"><div class="t-info"><span class="t-desc">${icon} ${t.descricao}</span><span class="t-cat">${catInfo} | ${dataFormatada}</span></div><div class="t-right"><div class="t-amount ${amountClass}">${sign} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div><div class="t-actions"><button class="action-btn" onclick="editTransaction('${t.id}')">✏️</button><button class="action-btn" onclick="deleteTransaction('${t.id}')">❌</button></div></div></div>`; });
