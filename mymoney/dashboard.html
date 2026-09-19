@@ -79,7 +79,7 @@
         .summary-title { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .summary-value { font-size: 1.5rem; font-weight: 700; transition: color 0.3s ease; }
         
-        .section-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; }
+        .section-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 0; }
         .transaction-list { display: flex; flex-direction: column; gap: 0.75rem; }
         .transaction-item { background: var(--surface-color); padding: 1rem; border-radius: var(--radius); display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); gap: 10px; }
         .t-info { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
@@ -210,8 +210,16 @@
             </div>
         </div>
 
-        <!-- LISTA -->
-        <h2 class="section-header">Movimentações do Mês</h2>
+        <!-- LISTA DE TRANSAÇÕES COM BUSCA -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 class="section-header">Movimentações do Mês</h2>
+            <button class="action-btn" onclick="toggleSearch()" style="background: transparent; color: var(--text-secondary); border-color: var(--border-color); padding: 0.4rem 0.6rem; border-radius: 50%;">🔍</button>
+        </div>
+        
+        <div id="search-box" style="display: none; margin-bottom: 1.5rem; width: 100%;">
+            <input type="text" id="input-search" onkeyup="doSearch(this.value)" placeholder="Buscar descrição ou categoria..." style="width: 100%; padding: 0.85rem; background: var(--surface-color); border: 1px solid var(--primary); border-radius: 8px; color: var(--text-primary); outline: none; font-size: 16px;">
+        </div>
+
         <div class="transaction-list" id="transaction-list">
             <div class="transaction-item" style="justify-content: center;"><span class="t-cat">Carregando dados...</span></div>
         </div>
@@ -250,10 +258,7 @@
             </div>
 
             <div class="relatorios-grid">
-                <!-- Coluna 1: Lista de Categorias -->
                 <div id="relatorio-categorias"></div>
-
-                <!-- Coluna 2: Gráficos de Evolução -->
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
                     <h3 id="grafico-titulo" style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary); text-align: center;">Evolução</h3>
                     <div class="chart-container">
@@ -392,6 +397,7 @@
         let currentUser = null; let currentFamilyId = null; let currentUserProfile = ''; 
         let currentDate = new Date(); let currentView = 'individual'; let balanceMode = 'acumulado'; 
         let carteiras = []; let categorias = []; let currentMonthTransactions = [];
+        let currentSearchTerm = ''; // Variável global de controle da Lupa
 
         async function init() {
             const { data: { session } } = await client.auth.getSession();
@@ -412,9 +418,7 @@
         // MÓDULO DE RELATÓRIOS (DRE FINANCEIRO)
         // ==========================================
         let chartInstance = null;
-        let selectedRelatorioCatId = null;
-        let selectedRelatorioCatName = '';
-        let selectedRelatorioCatCor = '';
+        let selectedRelatorioCatId = null; let selectedRelatorioCatName = ''; let selectedRelatorioCatCor = '';
 
         function openRelatoriosModal() {
             document.getElementById('modal-relatorios').classList.add('active');
@@ -426,10 +430,7 @@
         function closeRelatoriosModal() { document.getElementById('modal-relatorios').classList.remove('active'); }
 
         function setRelatorioAba(aba) {
-            if(aba === 'despesa' || aba === 'receita') {
-                selectedRelatorioCatId = null;
-                document.getElementById('relatorio-grafico-wrapper').style.display = 'none';
-            }
+            if(aba === 'despesa' || aba === 'receita') { selectedRelatorioCatId = null; document.getElementById('relatorio-grafico-wrapper').style.display = 'none'; }
             refreshRelatorioAtual();
         }
 
@@ -510,21 +511,17 @@
 
         async function renderMacroEvolution(aba) {
             document.getElementById('relatorio-grafico-wrapper').style.display = 'block';
-            
             let monthsToFetch = []; let labels = [];
             for(let i = -3; i <= 3; i++) {
                 let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0');
                 monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`);
             }
-
             const ctx = document.getElementById('chartEvolucao').getContext('2d');
             if(chartInstance) { chartInstance.destroy(); }
 
             let datasetInfo = []; let chartType = 'bar';
-            
             if (aba === 'fluxo' || aba === 'resultado') {
                 document.getElementById('grafico-titulo').innerHTML = aba === 'fluxo' ? `📊 Receitas vs Despesas (Mensal)` : `⚖️ Resultado Líquido do Mês`;
-                
                 let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).in('competencia', monthsToFetch);
                 if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
                 const { data } = await query;
@@ -532,103 +529,49 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; });
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); }
 
-                if (aba === 'fluxo') {
-                    datasetInfo = [
-                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 },
-                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 }
-                    ];
-                } else {
-                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]);
-                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444');
-                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }];
-                }
+                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
+                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; }
             }
             else if (aba === 'resultado_acumulado') {
-                document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`;
-                chartType = 'line';
+                document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line';
                 let lastMonthStr = monthsToFetch[monthsToFetch.length - 1];
-                
                 let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).lte('competencia', lastMonthStr);
                 if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
                 const { data } = await query;
                 
                 let netByMonth = {};
-                if (data) {
-                    data.forEach(t => {
-                        let v = parseFloat(t.valor);
-                        let delta = t.tipo === 'receita' ? v : -v;
-                        if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; 
-                        netByMonth[t.competencia] += delta;
-                    });
-                }
-                
-                let allMonths = Object.keys(netByMonth).sort();
-                let accumulatedData = monthsToFetch.map(m => 0);
-                
-                for (let i = 0; i < monthsToFetch.length; i++) {
-                    let targetM = monthsToFetch[i]; let sum = 0;
-                    allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; });
-                    accumulatedData[i] = sum;
-                }
-                
+                if (data) { data.forEach(t => { let v = parseFloat(t.valor); let delta = t.tipo === 'receita' ? v : -v; if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; }); }
+                let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0);
+                for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; }
                 datasetInfo = [{ label: 'Resultado Acumulado', data: accumulatedData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }];
             }
             else if (aba === 'investimentos') {
-                document.getElementById('grafico-titulo').innerHTML = `💎 Evolução Patrimonial (Investimentos)`;
-                chartType = 'line';
-                let lastMonthStr = monthsToFetch[monthsToFetch.length - 1];
-                const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
-                
+                document.getElementById('grafico-titulo').innerHTML = `💎 Evolução Patrimonial (Investimentos)`; chartType = 'line';
+                let lastMonthStr = monthsToFetch[monthsToFetch.length - 1]; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
                 let query = client.from('MM_transacoes').select('valor, tipo, competencia, carteira_origem_id, carteira_destino_id').lte('competencia', lastMonthStr);
                 if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
                 const { data } = await query;
                 
                 let netByMonth = {};
-                if (data) {
-                    data.forEach(t => {
-                        let v = parseFloat(t.valor);
-                        let origInv = carteiraTipos[t.carteira_origem_id] === 'investimento';
-                        let destInv = t.carteira_destino_id && carteiraTipos[t.carteira_destino_id] === 'investimento';
-                        let delta = 0;
-                        if (t.tipo === 'receita' && origInv) delta += v;
-                        if (t.tipo === 'despesa' && origInv) delta -= v;
-                        if (t.tipo === 'transferencia') { if (origInv) delta -= v; if (destInv) delta += v; }
-                        if (t.tipo === 'rendimento' && origInv) delta += v;
-                        
-                        if (delta !== 0) { if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; }
-                    });
-                }
-                
-                let allMonths = Object.keys(netByMonth).sort();
-                let accumulatedData = monthsToFetch.map(m => 0);
-                
-                for (let i = 0; i < monthsToFetch.length; i++) {
-                    let targetM = monthsToFetch[i]; let sum = 0;
-                    allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; });
-                    accumulatedData[i] = sum;
-                }
-                
+                if (data) { data.forEach(t => { let v = parseFloat(t.valor); let origInv = carteiraTipos[t.carteira_origem_id] === 'investimento'; let destInv = t.carteira_destino_id && carteiraTipos[t.carteira_destino_id] === 'investimento'; let delta = 0; if (t.tipo === 'receita' && origInv) delta += v; if (t.tipo === 'despesa' && origInv) delta -= v; if (t.tipo === 'transferencia') { if (origInv) delta -= v; if (destInv) delta += v; } if (t.tipo === 'rendimento' && origInv) delta += v; if (delta !== 0) { if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; } }); }
+                let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0);
+                for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; }
                 datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }];
             }
 
             let mostrarLegenda = (aba === 'fluxo');
-
             chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } });
         }
 
 
         // ==========================================
-        // SISTEMA DE NOTIFICAÇÕES
+        // SISTEMA DE NOTIFICAÇÕES E FAMÍLIA (Omitido para focar na renderização principal)
         // ==========================================
         async function checkNotifications() { const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); const badge = document.getElementById('badge-notif'); if (convites && convites.length > 0) { badge.style.display = 'flex'; badge.innerText = convites.length; } else { badge.style.display = 'none'; } }
         async function openNotificacoesModal() { document.getElementById('modal-notificacoes').classList.add('active'); const listEl = document.getElementById('notif-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando convites...</span>'; const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); if (!convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.9rem; color:gray;">Você não tem nenhum convite pendente.</span>'; return; } listEl.innerHTML = ''; convites.forEach(c => { listEl.innerHTML += `<div class="invite-item" style="flex-direction: column; align-items: flex-start; gap: 10px;"><span>📢 Você recebeu um convite para ingressar em um orçamento compartilhado.</span><div style="display: flex; gap: 10px; width: 100%;"><button class="btn-save" style="margin-top:0; flex:1; font-size: 0.9rem;" onclick="acceptInvite('${c.id}', '${c.familia_id}')">✅ Aceitar</button><button class="btn-outline" style="flex:1; justify-content:center; border-color: var(--danger); color: var(--danger);" onclick="rejectInvite('${c.id}')">❌ Recusar</button></div></div>`; }); }
         function closeNotificacoesModal() { document.getElementById('modal-notificacoes').classList.remove('active'); }
         async function acceptInvite(conviteId, novaFamiliaId) { if(confirm("Ao aceitar, seu perfil será movido para esta nova família. Deseja continuar?")) { await client.from('MM_membros').update({ familia_id: novaFamiliaId, perfil: 'convidado', email_membro: currentUser.email }).eq('user_id', currentUser.id); await client.from('MM_convites').delete().eq('id', conviteId); currentFamilyId = novaFamiliaId; currentUserProfile = 'convidado'; closeNotificacoesModal(); checkNotifications(); await loadBaseData(); loadTransactions(); alert("Pronto! Você agora faz parte do orçamento compartilhado."); } }
         async function rejectInvite(conviteId) { if(confirm("Deseja realmente recusar e excluir este convite?")) { await client.from('MM_convites').delete().eq('id', conviteId); checkNotifications(); openNotificacoesModal(); } }
-
-        // ==========================================
-        // GESTÃO DE FAMÍLIA E CONTAS
-        // ==========================================
         function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadFamilyMembers(); loadPendingInvites(); }
         function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
         async function loadFamilyMembers() { const listEl = document.getElementById('active-members-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: membros, error } = await client.from('MM_membros').select('*').eq('familia_id', currentFamilyId).order('criado_em', {ascending: true}); if (error || !membros) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Erro ao carregar membros.</span>'; return; } listEl.innerHTML = ''; membros.forEach(m => { const isMe = m.user_id === currentUser.id; let badge = m.perfil === 'titular' ? '👑' : '👤'; let btn = ''; if (!isMe && currentUserProfile === 'titular') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`; } else if (isMe && currentUserProfile === 'convidado') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`; } listEl.innerHTML += `<div class="invite-item"><span>${badge} ${m.email_membro || 'Usuário'} ${isMe ? '(Você)' : ''}</span>${btn}</div>`; }); }
@@ -637,6 +580,9 @@
         async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } listEl.innerHTML = ''; convites.forEach(c => { listEl.innerHTML += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); }
         async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
 
+        // ==========================================
+        // GESTÃO DE CONTAS E CATEGORIAS
+        // ==========================================
         function openCartoesModal() { document.getElementById('modal-cartoes').classList.add('active'); renderCartoesList(); }
         function closeCartoesModal() { document.getElementById('modal-cartoes').classList.remove('active'); resetCartaoForm(); }
         function resetCartaoForm() { document.getElementById('form-cartao').reset(); document.getElementById('cartao-id').value = ""; document.getElementById('cartao-form-title').innerText = "Nova Conta/Cartão"; }
@@ -644,7 +590,6 @@
         function editCartaoUI(id) { const c = carteiras.find(x => x.id === id); if(c) { document.getElementById('cartao-id').value = c.id; document.getElementById('cartao-nome').value = c.nome; document.getElementById('cartao-tipo').value = c.tipo; document.getElementById('cartao-form-title').innerText = "Editando: " + c.nome; } }
         async function saveCartao(e) { e.preventDefault(); const btn = document.getElementById('btn-cartao-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const cId = document.getElementById('cartao-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cartao-nome').value, tipo: document.getElementById('cartao-tipo').value, ativo: true }; let error; if (cId) { const res = await client.from('MM_carteiras').update(payload).eq('id', cId); error = res.error; } else { const res = await client.from('MM_carteiras').insert([payload]); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { resetCartaoForm(); await loadBaseData(); renderCartoesList(); } }
         async function deleteCartao(id) { const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).or(`carteira_origem_id.eq.${id},carteira_destino_id.eq.${id}`); if (count > 0) { alert(`❌ Esta conta possui lançamentos.\nApenas edite o nome dela.`); } else { if (confirm("Deseja realmente excluir esta conta?")) { await client.from('MM_carteiras').delete().eq('id', id); await loadBaseData(); renderCartoesList(); } } }
-
         function openCatModal() { document.getElementById('modal-categorias').classList.add('active'); renderCategoryList(); }
         function closeCatModal() { document.getElementById('modal-categorias').classList.remove('active'); resetCatForm(); }
         function resetCatForm() { document.getElementById('form-category').reset(); document.getElementById('cat-id').value = ""; document.getElementById('cat-form-title').innerText = "Nova Categoria"; document.getElementById('cat-cor').value = "#2563eb"; }
@@ -654,16 +599,44 @@
         async function deleteCategory(id) { const catToDelete = categorias.find(c => c.id === id); const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id); if (count > 0) { const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas'; if (confirm(`Existem ${count} lançamentos nesta categoria.\nMover para "${fallbackName}" e excluir?`)) { let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo); if (!fallbackCat) { const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single(); fallbackCat = resCat.data; } await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id); await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); loadTransactions(); } } else { if (confirm("Deseja realmente excluir esta categoria?")) { await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); } } }
 
         // ==========================================
-        // DADOS E TRANSAÇÕES GERAIS
+        // DADOS E BUSCA DE TRANSAÇÕES
         // ==========================================
         async function loadBaseData() { const { data: carts } = await client.from('MM_carteiras').select('*').eq('ativo', true).order('nome', {ascending: true}); carteiras = carts || []; const { data: cats } = await client.from('MM_categorias').select('*').order('nome', { ascending: true }); categorias = cats || []; populateSelects(); }
         function populateSelects() { const selOrigem = document.getElementById('trans-origem'); const selDestino = document.getElementById('trans-destino'); const selCat = document.getElementById('trans-cat'); selOrigem.innerHTML = '<option value="">Selecione...</option>'; selDestino.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { selOrigem.innerHTML += `<option value="${c.id}">${c.nome}</option>`; selDestino.innerHTML += `<option value="${c.id}">${c.nome}</option>`; }); selCat.innerHTML = '<option value="">Selecione...</option>'; categorias.forEach(c => { selCat.innerHTML += `<option value="${c.id}">${c.nome}</option>`; }); }
         
         const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         function updateMonthDisplay() { document.getElementById('month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; }
-        function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); updateMonthDisplay(); loadTransactions(); }
+        
+        function changeMonth(delta) { 
+            currentDate.setMonth(currentDate.getMonth() + delta); 
+            updateMonthDisplay(); 
+            // Ao mudar de mês, limpa a busca automaticamente para não confundir o usuário
+            currentSearchTerm = '';
+            document.getElementById('input-search').value = '';
+            document.getElementById('search-box').style.display = 'none';
+            loadTransactions(); 
+        }
         function setView(viewType) { currentView = viewType; document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-view-${viewType}`).classList.add('active'); loadTransactions(); }
         function setBalanceMode(mode) { balanceMode = mode; document.querySelectorAll('.balance-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-bal-${mode}`).classList.add('active'); document.getElementById('lbl-saldo-corrente').innerText = mode === 'acumulado' ? 'Saldo Real em Contas' : 'Fluxo Corrente (Mês)'; document.getElementById('lbl-saldo-invest').innerText = mode === 'acumulado' ? 'Total Investido (Acumulado)' : 'Aportes/Rendimentos (Mês)'; loadTransactions(); }
+
+        // SISTEMA DE BUSCA INSTANTÂNEA
+        function toggleSearch() {
+            const searchBox = document.getElementById('search-box');
+            if (searchBox.style.display === 'none' || searchBox.style.display === '') {
+                searchBox.style.display = 'block';
+                document.getElementById('input-search').focus();
+            } else {
+                searchBox.style.display = 'none';
+                document.getElementById('input-search').value = '';
+                currentSearchTerm = '';
+                renderTransactionsList();
+            }
+        }
+
+        function doSearch(val) {
+            currentSearchTerm = val.toLowerCase();
+            renderTransactionsList();
+        }
 
         async function loadTransactions() {
             const listEl = document.getElementById('transaction-list'); listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Atualizando dados...</span></div>';
@@ -673,6 +646,7 @@
             const resMes = await queryMes; if (resMes.error) { listEl.innerHTML = `<div class="transaction-item"><span class="text-danger">Erro ao carregar dados.</span></div>`; return; }
             currentMonthTransactions = resMes.data; let transacoesParaCalculo = [];
             if (balanceMode === 'acumulado') { const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0]; let queryGlobal = client.from('MM_transacoes').select('valor, tipo, carteira_origem_id, carteira_destino_id').lte('data_transacao', ultimoDiaDoMes); if (currentView === 'individual') queryGlobal = queryGlobal.eq('lancado_por', currentUser.id); const resGlobal = await queryGlobal; if (!resGlobal.error) transacoesParaCalculo = resGlobal.data; } else { transacoesParaCalculo = resMes.data; }
+            
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo);
             transacoesParaCalculo.forEach(t => { const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; if (t.tipo === 'receita') { if (tipoOrigem === 'corrente') saldoCorrente += v; if (tipoOrigem === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'despesa') { if (tipoOrigem === 'corrente') saldoCorrente -= v; } else if (t.tipo === 'transferencia') { if (tipoOrigem === 'corrente') saldoCorrente -= v; if (tipoOrigem === 'investimento') saldoInvestimento -= v; if (tipoDestino === 'corrente') saldoCorrente += v; if (tipoDestino === 'investimento') saldoInvestimento += v; } else if (t.tipo === 'rendimento') { if (tipoOrigem === 'investimento') saldoInvestimento += v; } });
             resMes.data.forEach(t => { const v = parseFloat(t.valor); if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') faturaCartaoMes += v; });
@@ -681,11 +655,35 @@
             elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-light-blue' : 'text-danger'); elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); 
             elSaldoCorrente.innerText = `R$ ${saldoCorrente.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; elSaldoInvest.innerText = `R$ ${saldoInvestimento.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`; document.getElementById('fatura-cartao').innerText = `R$ ${faturaCartaoMes.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             
-            if (resMes.data.length === 0) { listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>'; return; }
-            listEl.innerHTML = '';
+            // Separação lógica: Busca os dados acima e chama o renderizador abaixo
+            renderTransactionsList();
+        }
+
+        // MOTOR DE RENDERIZAÇÃO E FILTRAGEM
+        function renderTransactionsList() {
+            const listEl = document.getElementById('transaction-list');
             
-            // PSICOLOGIA DAS CORES E LISTAGEM
-            resMes.data.forEach(t => { 
+            if (currentMonthTransactions.length === 0) { 
+                listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum lançamento neste mês.</span></div>'; 
+                return; 
+            }
+            
+            let transacoesFiltradas = currentMonthTransactions;
+            if (currentSearchTerm) {
+                transacoesFiltradas = transacoesFiltradas.filter(t => {
+                    const desc = (t.descricao || '').toLowerCase();
+                    const catNome = t.MM_categorias ? t.MM_categorias.nome.toLowerCase() : (t.tipo === 'transferencia' ? 'transferência' : 'rendimento');
+                    return desc.includes(currentSearchTerm) || catNome.includes(currentSearchTerm);
+                });
+            }
+
+            if (transacoesFiltradas.length === 0) {
+                listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Nenhum resultado encontrado para a busca.</span></div>'; 
+                return;
+            }
+
+            listEl.innerHTML = '';
+            transacoesFiltradas.forEach(t => { 
                 let icon = '💵'; let amountClass = 'text-primary'; let sign = ''; 
                 let vNum = parseFloat(t.valor);
 
