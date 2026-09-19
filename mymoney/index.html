@@ -2,473 +2,174 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <!-- Ajuste crítico para iOS: viewport-fit=cover para respeitar notch e safe-areas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Tags Críticas para PWA no iOS (Web App Nativo) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>My Money - Boonus</title>
-    <!-- Ícones para Navegador e Aplicativo de Celular (iOS / Android) -->
+    <title>My Money | Iniciar Sessão</title>
+    
+    <!-- Ícones e Partilha (Meta Tags) -->
     <link rel="icon" type="image/png" href="https://boonus.app.br/mymoney/icone.png">
     <link rel="apple-touch-icon" href="https://boonus.app.br/mymoney/icone.png">
     <meta name="theme-color" content="#0f172a">
-
-    <!-- Meta Tags Sociais (Para o card do WhatsApp, iMessage, etc.) -->
     <meta property="og:title" content="My Money | Boonus">
     <meta property="og:description" content="Gestão de orçamento inteligente e compartilhado para a sua família.">
     <meta property="og:image" content="https://boonus.app.br/mymoney/banner.png">
     <meta property="og:url" content="https://boonus.app.br/mymoney/">
-    <meta property="og:type" content="website">
     
-    <!-- Meta Tags para Twitter / X -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="My Money | Boonus">
-    <meta name="twitter:description" content="Gestão de orçamento inteligente e compartilhado.">
-    <meta name="twitter:image" content="https://boonus.app.br/mymoney/banner.png">
-    <!-- Supabase JS Client Oficial v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
         :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --background-color: #0f172a;
-            --surface-color: #1e293b;
-            --border-color: #334155;
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --error-color: #ef4444;
-            --success-color: #10b981;
-            --border-radius: 12px;
+            --bg-color: #0f172a; --surface-color: #1e293b; --border-color: #334155;
+            --text-primary: #f8fafc; --text-secondary: #94a3b8;
+            --primary: #2563eb; --primary-hover: #1d4ed8;
+            --radius: 12px;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            touch-action: manipulation; /* Remove atraso de clique no iOS */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; touch-action: manipulation; }
+        
+        /* O cálculo max() garante que a tela respeite o Safe Area do iPhone, mas mantenha 1rem de borda em navegadores normais */
+        body { 
+            background-color: var(--bg-color); color: var(--text-primary); 
+            display: flex; justify-content: center; align-items: center; 
+            min-height: 100dvh; 
+            padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); 
         }
+        
+        .auth-container { background: var(--surface-color); padding: 2.5rem 2rem; border-radius: var(--radius); border: 1px solid var(--border-color); width: 100%; max-width: 400px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .auth-container h1 { text-align: center; margin-bottom: 0.5rem; font-size: 1.8rem; }
+        .auth-container p { text-align: center; color: var(--text-secondary); margin-bottom: 2rem; font-size: 0.9rem; }
+        
+        .form-group { margin-bottom: 1.2rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+        
+        /* font-size: 16px bloqueia o zoom nativo do iOS / -webkit-appearance remove estilos padrão da Apple */
+        .form-group input { width: 100%; padding: 0.85rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 16px; outline: none; -webkit-appearance: none; }
+        .form-group input:focus { border-color: var(--primary); }
+        
+        .btn-primary { width: 100%; padding: 1rem; border: none; border-radius: 8px; background: var(--primary); color: white; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 0.5rem; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        
+        .auth-links { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 10px; text-align: center; }
+        .auth-links a { color: var(--primary); text-decoration: none; font-size: 0.9rem; font-weight: 500; cursor: pointer; }
+        .auth-links a:hover { text-decoration: underline; }
 
-        body {
-            background-color: var(--background-color);
-            color: var(--text-primary);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100dvh; /* Evita quebras com barras de navegação do iOS Safari */
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-        }
-
-        .auth-container {
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            width: 100%;
-            max-width: 420px;
-            padding: 2.5rem 2rem;
-            border-radius: var(--border-radius);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
-            margin: 20px;
-            text-align: center;
-        }
-
-        .logo {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-bottom: 2rem;
-        }
-
-        h2 {
-            margin-bottom: 1.5rem;
-            font-size: 1.25rem;
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .form-group {
-            margin-bottom: 1.2rem;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        input {
-            width: 100%;
-            padding: 0.85rem 1rem;
-            background-color: #0f172a;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: var(--text-primary);
-            /* CRÍTICO PARA IOS: font-size >= 16px impede o zoom automático de tela no Safari */
-            font-size: 16px; 
-            -webkit-appearance: none;
-            appearance: none;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-
-        input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-        }
-
-        button.primary-btn {
-            width: 100%;
-            padding: 0.85rem;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            margin-top: 1rem;
-            -webkit-appearance: none;
-        }
-
-        button.primary-btn:hover {
-            background-color: var(--primary-hover);
-        }
-
-        button.primary-btn:disabled {
-            background-color: #475569;
-            cursor: not-allowed;
-        }
-
-        .links {
-            margin-top: 1.5rem;
-            font-size: 0.85rem;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .links a {
-            color: #60a5fa;
-            text-decoration: none;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-
-        .links a:hover {
-            text-decoration: underline;
-            color: #93c5fd;
-        }
-
-        .auth-section {
-            display: none;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-
-        .auth-section.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message {
-            margin-top: 15px;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.85rem;
-            display: none;
-            line-height: 1.4;
-        }
-
-        .message.error {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #f87171;
-        }
-
-        .message.success {
-            background-color: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #34d399;
-        }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div class="auth-container">
-        <div class="logo">💰 My Money</div>
-        <p class="subtitle">Gestão & Orçamento Doméstico</p>
+        <h1>💰 My Money</h1>
+        <p id="subtitle">Acesse seu orçamento compartilhado</p>
 
-        <!-- SESSÃO 1: LOGIN -->
-        <div id="section-login" class="auth-section active">
-            <h2>Acessar Painel</h2>
-            <form id="form-login" onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label for="login-email">E-mail</label>
-                    <input type="email" id="login-email" required placeholder="seu@email.com" autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="login-password">Senha</label>
-                    <input type="password" id="login-password" required placeholder="Digite sua senha" autocomplete="current-password">
-                </div>
-                <button type="submit" id="btn-login" class="primary-btn">Entrar</button>
-                <div id="login-msg" class="message"></div>
-            </form>
-            <div class="links">
-                <a onclick="toggleSection('section-forgot')">Esqueci minha senha</a>
-                <a onclick="toggleSection('section-register')">Primeiro acesso? Criar conta</a>
+        <!-- Formulário de INÍCIO DE SESSÃO -->
+        <form id="form-login" onsubmit="handleLogin(event)">
+            <div class="form-group"><label>E-mail</label><input type="email" id="login-email" required></div>
+            <div class="form-group"><label>Senha</label><input type="password" id="login-password" required></div>
+            <button type="submit" class="btn-primary" id="btn-login">Entrar</button>
+            <div class="auth-links">
+                <a onclick="showForm('register')">Não tem conta? Criar agora</a>
+                <a onclick="showForm('forgot')" style="color: var(--text-secondary);">Esqueci minha senha</a>
             </div>
-        </div>
+        </form>
 
-        <!-- SESSÃO 2: CADASTRO / PRIMEIRO ACESSO -->
-        <div id="section-register" class="auth-section">
-            <h2>Primeiro Acesso</h2>
-            <form id="form-register" onsubmit="handleRegister(event)">
-                <div class="form-group">
-                    <label for="reg-email">E-mail</label>
-                    <input type="email" id="reg-email" required placeholder="seu@email.com" autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="reg-password">Criar Senha</label>
-                    <input type="password" id="reg-password" required placeholder="Mínimo de 6 dígitos" autocomplete="new-password">
-                </div>
-                <button type="submit" id="btn-reg" class="primary-btn">Cadastrar</button>
-                <div id="reg-msg" class="message"></div>
-            </form>
-            <div class="links">
-                <a onclick="toggleSection('section-login')">Já possui conta? Fazer Login</a>
-            </div>
-        </div>
+        <!-- Formulário de CRIAÇÃO DE CONTA -->
+        <form id="form-register" class="hidden" onsubmit="handleRegister(event)">
+            <div class="form-group"><label>Seu E-mail</label><input type="email" id="reg-email" required></div>
+            <div class="form-group"><label>Crie uma Senha</label><input type="password" id="reg-password" required minlength="6"></div>
+            <button type="submit" class="btn-primary" id="btn-reg">Criar Conta</button>
+            <div class="auth-links"><a onclick="showForm('login')">Já tenho conta. Voltar</a></div>
+        </form>
 
-        <!-- SESSÃO 3: ESQUECI MINHA SENHA -->
-        <div id="section-forgot" class="auth-section">
-            <h2>Recuperar Senha</h2>
-            <p style="font-size: 0.85rem; margin-bottom: 15px; color: var(--text-secondary);">
-                Informe seu e-mail para receber um link de acesso e redefinição de credenciais.
-            </p>
-            <form id="form-forgot" onsubmit="handleForgot(event)">
-                <div class="form-group">
-                    <label for="forgot-email">E-mail</label>
-                    <input type="email" id="forgot-email" required placeholder="seu@email.com" autocomplete="email">
-                </div>
-                <button type="submit" id="btn-forgot" class="primary-btn">Enviar Link de Recuperação</button>
-                <div id="forgot-msg" class="message"></div>
-            </form>
-            <div class="links">
-                <a onclick="toggleSection('section-login')">Voltar ao Login</a>
-            </div>
-        </div>
+        <!-- Formulário de ESQUECI MINHA SENHA -->
+        <form id="form-forgot" class="hidden" onsubmit="handleForgot(event)">
+            <p style="text-align: left; margin-bottom: 1rem;">Digite seu e-mail para receber um link de recuperação seguro.</p>
+            <div class="form-group"><label>E-mail cadastrado</label><input type="email" id="forgot-email" required></div>
+            <button type="submit" class="btn-primary" id="btn-forgot">Enviar link de recuperação</button>
+            <div class="auth-links"><a onclick="showForm('login')">Voltar ao Início</a></div>
+        </form>
 
-        <!-- SESSÃO 4: NOVA SENHA (DISPARADA APÓS RETORNO DO E-MAIL) -->
-        <div id="section-reset" class="auth-section">
-            <h2>Cadastrar Nova Senha</h2>
-            <form id="form-reset" onsubmit="handleUpdatePassword(event)">
-                <div class="form-group">
-                    <label for="new-password">Nova Senha</label>
-                    <input type="password" id="new-password" required placeholder="Digite a nova senha" autocomplete="new-password">
-                </div>
-                <button type="submit" id="btn-reset" class="primary-btn">Salvar Senha</button>
-                <div id="reset-msg" class="message"></div>
-            </form>
-        </div>
+        <!-- Formulário de ATUALIZAR SENHA (Abre via Link do Email) -->
+        <form id="form-update" class="hidden" onsubmit="handleUpdatePassword(event)">
+            <p style="text-align: left; margin-bottom: 1rem; color: var(--success);">Autenticação verificada. Defina a nova credencial.</p>
+            <div class="form-group"><label>Nova Senha</label><input type="password" id="update-password" required minlength="6"></div>
+            <button type="submit" class="btn-primary" id="btn-update">Salvar e Entrar</button>
+        </form>
     </div>
 
     <script>
-        // Inicialização do Supabase Client
         const SUPABASE_URL = 'https://kafmnasrqcmbzvzaggap.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_k4w2E4ur7xJR6qd575inBA_sJoXqHoN';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Constantes do sistema de segurança
-        const MAX_ATTEMPTS = 3;
-        const ATTEMPTS_KEY = 'mm_failed_attempts';
-        const LOCKED_USER_KEY = 'mm_locked_email';
+        // Verifica se o usuário já tem sessão ativa
+        async function checkSession() {
+            const { data: { session } } = await client.auth.getSession();
+            if (session) { window.location.replace('dashboard.html'); }
+        }
 
-        // Ouvinte de eventos de autenticação (Captura o link de recuperação de e-mail)
-        client.auth.onAuthStateChange(async (event, session) => {
+        // Intercepta o evento de clicar no link do e-mail de recuperação
+        client.auth.onAuthStateChange((event, session) => {
             if (event === 'PASSWORD_RECOVERY') {
-                toggleSection('section-reset');
-                showMessage('reset-msg', 'Autenticado com sucesso. Defina sua nova senha abaixo.', false);
+                showForm('update');
             }
         });
 
-        function toggleSection(sectionId) {
-            document.querySelectorAll('.auth-section').forEach(sec => sec.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-            clearMessages();
-        }
-
-        function showMessage(elementId, text, isError = true) {
-            const el = document.getElementById(elementId);
-            el.className = isError ? 'message error' : 'message success';
-            el.style.display = 'block';
-            el.innerText = text;
-        }
-
-        function clearMessages() {
-            document.querySelectorAll('.message').forEach(m => {
-                m.style.display = 'none';
-                m.innerText = '';
-            });
-        }
-
-        function getFailedAttempts() {
-            return parseInt(localStorage.getItem(ATTEMPTS_KEY) || '0', 10);
-        }
-
-        function setFailedAttempts(count) {
-            localStorage.setItem(ATTEMPTS_KEY, count.toString());
-        }
-
-        function clearLockout() {
-            localStorage.removeItem(ATTEMPTS_KEY);
-            localStorage.removeItem(LOCKED_USER_KEY);
-        }
-
-        // Execução de Login com trava de segurança de segunda ordem
-        async function handleLogin(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-login');
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-
-            let attempts = getFailedAttempts();
-
-            if (attempts >= MAX_ATTEMPTS) {
-                showMessage('login-msg', 'Acesso bloqueado por excesso de tentativas. Um link de redefinição de senha foi enviado para seu e-mail.');
-                return;
-            }
-
-            btn.disabled = true;
-            btn.innerText = 'Autenticando...';
-
-            const { data, error } = await client.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-            if (error) {
-                attempts++;
-                setFailedAttempts(attempts);
-
-                if (attempts >= MAX_ATTEMPTS) {
-                    localStorage.setItem(LOCKED_USER_KEY, email);
-                    // Dispara automaticamente a redefinição de segurança via Supabase
-                    await client.auth.resetPasswordForEmail(email, {
-                        redirectTo: window.location.origin + window.location.pathname
-                    });
-                    showMessage('login-msg', 'Acesso bloqueado: 3 tentativas inválidas. Enviamos um link de desbloqueio para o seu e-mail.');
-                } else {
-                    const restantes = MAX_ATTEMPTS - attempts;
-                    showMessage('login-msg', `Credenciais incorretas. ${restantes} tentativa(s) restante(s) antes do bloqueio.`);
-                }
-                btn.disabled = false;
-                btn.innerText = 'Entrar';
-                return;
-            }
-
-            // Sucesso: Reseta tentativas e redireciona
-            clearLockout();
-            showMessage('login-msg', 'Acesso autorizado! Carregando painel...', false);
+        function showForm(formType) {
+            document.getElementById('form-login').classList.add('hidden');
+            document.getElementById('form-register').classList.add('hidden');
+            document.getElementById('form-forgot').classList.add('hidden');
+            document.getElementById('form-update').classList.add('hidden');
             
-            setTimeout(() => {
-                // Redireciona para o módulo financeiro após autenticado
-                window.location.href = 'dashboard.html';
-            }, 1000);
+            if(formType === 'login') { document.getElementById('form-login').classList.remove('hidden'); document.getElementById('subtitle').innerText = "Acesse seu orçamento compartilhado"; }
+            if(formType === 'register') { document.getElementById('form-register').classList.remove('hidden'); document.getElementById('subtitle').innerText = "Bem-vindo ao My Money"; }
+            if(formType === 'forgot') { document.getElementById('form-forgot').classList.remove('hidden'); document.getElementById('subtitle').innerText = "Recuperação de Acesso"; }
+            if(formType === 'update') { document.getElementById('form-update').classList.remove('hidden'); document.getElementById('subtitle').innerText = "Redefinir Senha"; }
         }
 
-        // Cadastro de Usuário (Primeiro Acesso)
-        async function handleRegister(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-reg');
-            const email = document.getElementById('reg-email').value.trim();
-            const password = document.getElementById('reg-password').value;
-
-            btn.disabled = true;
-            btn.innerText = 'Cadastrando...';
-
-            const { data, error } = await client.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    emailRedirectTo: window.location.origin + window.location.pathname
-                }
+        async function handleLogin(e) {
+            e.preventDefault(); const btn = document.getElementById('btn-login'); btn.innerText = "Entrando..."; btn.disabled = true;
+            const { error } = await client.auth.signInWithPassword({
+                email: document.getElementById('login-email').value.trim(),
+                password: document.getElementById('login-password').value
             });
-
-            btn.disabled = false;
-            btn.innerText = 'Cadastrar';
-
-            if (error) {
-                showMessage('reg-msg', 'Erro no cadastro: ' + error.message);
-            } else {
-                showMessage('reg-msg', 'Cadastro concluído! Verifique seu e-mail para validar a conta antes de entrar.', false);
-            }
+            if (error) { alert("Erro ao entrar: Verifique suas credenciais."); btn.innerText = "Entrar"; btn.disabled = false; } 
+            else { window.location.replace('dashboard.html'); }
         }
 
-        // Esqueci minha senha
+        async function handleRegister(e) {
+            e.preventDefault(); const btn = document.getElementById('btn-reg'); btn.innerText = "Criando conta..."; btn.disabled = true;
+            const { error } = await client.auth.signUp({
+                email: document.getElementById('reg-email').value.trim(),
+                password: document.getElementById('reg-password').value
+            });
+            if (error) { alert("Erro ao criar conta: " + error.message); btn.innerText = "Criar Conta"; btn.disabled = false; } 
+            else { window.location.replace('dashboard.html'); } // Entra direto graças ao Trigger SQL
+        }
+
         async function handleForgot(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-forgot');
+            e.preventDefault(); const btn = document.getElementById('btn-forgot'); btn.innerText = "Enviando..."; btn.disabled = true;
             const email = document.getElementById('forgot-email').value.trim();
-
-            btn.disabled = true;
-            btn.innerText = 'Enviando...';
-
             const { error } = await client.auth.resetPasswordForEmail(email, {
                 redirectTo: window.location.origin + window.location.pathname
             });
-
-            btn.disabled = false;
-            btn.innerText = 'Enviar Link de Recuperação';
-
-            if (error) {
-                showMessage('forgot-msg', 'Erro: ' + error.message);
-            } else {
-                showMessage('forgot-msg', 'Link enviado com sucesso! Verifique sua caixa de entrada para definir uma nova senha.', false);
-            }
+            if (error) { alert("Erro: " + error.message); } 
+            else { alert("✅ Se o e-mail existir em nossa base, você receberá um link de recuperação em instantes."); showForm('login'); }
+            btn.innerText = "Enviar link de recuperação"; btn.disabled = false;
         }
 
-        // Definição de Nova Senha (Após validação do link recebido no e-mail)
         async function handleUpdatePassword(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btn-reset');
-            const newPassword = document.getElementById('new-password').value;
-
-            btn.disabled = true;
-            btn.innerText = 'Atualizando...';
-
-            const { error } = await client.auth.updateUser({
-                password: newPassword
-            });
-
-            btn.disabled = false;
-            btn.innerText = 'Salvar Senha';
-
-            if (error) {
-                showMessage('reset-msg', 'Erro ao redefinir senha: ' + error.message);
-            } else {
-                clearLockout();
-                showMessage('reset-msg', 'Senha atualizada com sucesso! Redirecionando para o login...', false);
-                setTimeout(() => {
-                    toggleSection('section-login');
-                }, 2000);
-            }
+            e.preventDefault(); const btn = document.getElementById('btn-update'); btn.innerText = "Salvando..."; btn.disabled = true;
+            const newPassword = document.getElementById('update-password').value;
+            const { error } = await client.auth.updateUser({ password: newPassword });
+            if (error) { alert("Erro ao atualizar: " + error.message); btn.innerText = "Salvar e Entrar"; btn.disabled = false; } 
+            else { alert("Senha atualizada com sucesso!"); window.location.replace('dashboard.html'); }
         }
+
+        checkSession();
     </script>
 </body>
 </html>
