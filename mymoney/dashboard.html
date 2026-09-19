@@ -28,12 +28,22 @@
         body { background-color: var(--bg-color); color: var(--text-primary); min-height: 100dvh; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(7rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 800px; }
 
-        header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 1.5rem; }
-        .user-info h1 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 8px;}
-        .user-info p { font-size: 0.85rem; color: var(--text-secondary); }
-        .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* HEADER OTIMIZADO PARA MOBILE E DESKTOP */
+        header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 1.5rem; width: 100%; }
+        .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+        .user-info h1 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 2px;}
+        .user-info p { font-size: 0.8rem; color: var(--text-secondary); }
+        .top-actions { display: flex; gap: 8px; align-items: center; }
+        .header-bottom { display: flex; flex-wrap: wrap; gap: 8px; }
 
-        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 0.75rem; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px;}
+        @media (min-width: 768px) {
+            header { flex-direction: row; justify-content: space-between; align-items: center; }
+            .header-top { width: auto; }
+            .header-bottom { width: auto; justify-content: flex-end; }
+        }
+
+        /* Botões ajustados para caberem melhor em telas pequenas */
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.4rem 0.6rem; border-radius: 8px; cursor: pointer; font-size: 0.8rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px;}
         .btn-outline:hover { background: var(--surface-hover); }
 
         .controls-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-color); padding: 0.5rem; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border-color); }
@@ -125,21 +135,25 @@
 <body>
 
     <div class="container">
-        <!-- HEADER -->
+        <!-- HEADER OTIMIZADO -->
         <header>
-            <div class="user-info">
-                <h1>💰 My Money</h1>
-                <p id="user-email">Carregando...</p>
+            <div class="header-top">
+                <div class="user-info">
+                    <h1>💰 My Money</h1>
+                    <p id="user-email">Carregando...</p>
+                </div>
+                <div class="top-actions">
+                    <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.1rem; padding: 0.4rem 0.6rem; margin-top:0;">
+                        🔔 <span id="badge-notif" class="badge">0</span>
+                    </button>
+                    <button class="btn-outline" onclick="handleLogout()" style="padding: 0.4rem 0.8rem;">Sair</button>
+                </div>
             </div>
-            <div class="header-actions">
-                <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.1rem; padding: 0.4rem 0.6rem;">
-                    🔔 <span id="badge-notif" class="badge">0</span>
-                </button>
+            <div class="header-bottom">
                 <button class="btn-outline" onclick="openRelatoriosModal()">📊 Relatórios</button>
                 <button class="btn-outline" onclick="openCartoesModal()">💳 Contas</button>
                 <button class="btn-outline" onclick="openCatModal()">🏷️ Categorias</button>
                 <button class="btn-outline" onclick="openFamilyModal()">👨‍👩‍👧 Família</button>
-                <button class="btn-outline" onclick="handleLogout()">Sair</button>
             </div>
         </header>
 
@@ -502,7 +516,6 @@
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); }
 
                 if (aba === 'fluxo') {
-                    // Barras Agrupadas: Melhor opção visual para cruzar dados concorrentes
                     datasetInfo = [
                         { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 },
                         { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 }
@@ -518,7 +531,6 @@
                 chartType = 'line';
                 let lastMonthStr = monthsToFetch[monthsToFetch.length - 1];
                 
-                // Puxa todo o histórico até ao último mês visível
                 let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).lte('competencia', lastMonthStr);
                 if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id);
                 const { data } = await query;
@@ -542,7 +554,6 @@
                     accumulatedData[i] = sum;
                 }
                 
-                // Gráfico de Linha Preenchida (Área) com tom roxo
                 datasetInfo = [{ label: 'Resultado Acumulado', data: accumulatedData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }];
             }
             else if (aba === 'investimentos') {
@@ -583,7 +594,6 @@
                 datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }];
             }
 
-            // A legenda só aparece no gráfico de fluxo para diferenciar Receita (Verde) e Despesa (Vermelho)
             let mostrarLegenda = (aba === 'fluxo');
 
             chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } });
