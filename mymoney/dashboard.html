@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="https://boonus.app.br/mymoney/icone.png">
     <meta name="theme-color" content="#0f172a">
 
-    <!-- Supabase e Chart.js (Para os Gráficos) -->
+    <!-- Supabase e Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -20,7 +20,7 @@
         :root {
             --bg-color: #0f172a; --surface-color: #1e293b; --surface-hover: #334155; --border-color: #334155;
             --text-primary: #f8fafc; --text-secondary: #94a3b8;
-            --primary: #2563eb; --light-blue: #60a5fa; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --info: #0ea5e9; --purple: #8b5cf6;
+            --primary: #2563eb; --light-blue: #60a5fa; --success: #10b981; --danger: #ef4444; --warning: #f59e0b; --purple: #8b5cf6;
             --radius: 12px;
         }
 
@@ -28,37 +28,21 @@
         body { background-color: var(--bg-color); color: var(--text-primary); min-height: 100dvh; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(7rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left)); display: flex; flex-direction: column; align-items: center; }
         .container { width: 100%; max-width: 800px; }
 
-        /* HEADER OTIMIZADO PARA MOBILE E DESKTOP */
         header { display: flex; flex-direction: column; gap: 12px; margin-bottom: 1.5rem; width: 100%; }
         .header-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .user-info h1 { font-size: 1.25rem; font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 2px;}
         .user-info p { font-size: 0.8rem; color: var(--text-secondary); }
         .top-actions { display: flex; gap: 8px; align-items: center; }
-        
-        /* LINHA INFERIOR (Botões) FORÇANDO ENCAIXE NO MOBILE */
         .header-bottom { display: flex; flex-wrap: nowrap; gap: 6px; justify-content: space-between; width: 100%; overflow-x: auto; padding-bottom: 2px;}
         .header-bottom::-webkit-scrollbar { display: none; }
         
-        /* Botões espremidos inteligentemente para telas < 400px */
         .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.35rem 0.5rem; border-radius: 8px; cursor: pointer; font-size: 0.75rem; transition: background 0.2s; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
         .btn-outline:hover { background: var(--surface-hover); }
 
-        /* INTELIGÊNCIA DE TEXTO (CATEGORIAS vs CATEG) */
         .text-full { display: none; }
         .text-short { display: inline; }
-
-        /* COMPORTAMENTO PARA TABLETS E COMPUTADORES (Telas maiores) */
-        @media (min-width: 450px) {
-            .text-full { display: inline; }
-            .text-short { display: none; }
-        }
-        
-        @media (min-width: 768px) {
-            header { flex-direction: row; justify-content: space-between; align-items: center; }
-            .header-top { width: auto; }
-            .header-bottom { width: auto; justify-content: flex-end; gap: 8px; overflow-x: visible; }
-            .btn-outline { padding: 0.5rem 0.75rem; font-size: 0.85rem; }
-        }
+        @media (min-width: 450px) { .text-full { display: inline; } .text-short { display: none; } }
+        @media (min-width: 768px) { header { flex-direction: row; justify-content: space-between; align-items: center; } .header-top { width: auto; } .header-bottom { width: auto; justify-content: flex-end; gap: 8px; overflow-x: visible; } .btn-outline { padding: 0.5rem 0.75rem; font-size: 0.85rem; } }
 
         .controls-row { display: flex; justify-content: space-between; align-items: center; background: var(--surface-color); padding: 0.5rem; border-radius: var(--radius); margin-bottom: 1rem; border: 1px solid var(--border-color); }
         .month-nav { display: flex; align-items: center; gap: 1rem; }
@@ -75,13 +59,10 @@
         .balance-btn.active { background: var(--text-secondary); color: var(--bg-color); }
 
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        
-        /* Modificações para os cartões clicáveis */
         .summary-card { background: var(--surface-color); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border-color); position: relative; cursor: pointer; transition: all 0.2s; }
         .summary-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .summary-card::after { content: "🔍"; position: absolute; top: 15px; right: 15px; font-size: 0.8rem; opacity: 0; transition: opacity 0.2s; }
         .summary-card:hover::after { opacity: 0.6; }
-        
         .summary-title { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
         .summary-value { font-size: 1.5rem; font-weight: 700; transition: color 0.3s ease; }
         
@@ -91,17 +72,12 @@
         .t-info { display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
         .t-desc { font-weight: 600; font-size: 0.95rem; line-height: 1.2; }
         .t-cat { font-size: 0.75rem; color: var(--text-secondary); display: flex; gap: 6px; align-items: center; flex-wrap: wrap;}
-        
         .t-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
         .t-amount { font-weight: 600; font-size: 1.05rem; }
         .t-actions { display: flex; gap: 12px; }
         .action-btn { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 6px; padding: 0.4rem; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         
-        .text-primary { color: var(--primary); }
-        .text-light-blue { color: var(--light-blue); }
-        .text-success { color: var(--success); }
-        .text-danger { color: var(--danger); }
-        .text-info { color: var(--info); }
+        .text-primary { color: var(--primary); } .text-light-blue { color: var(--light-blue); } .text-success { color: var(--success); } .text-danger { color: var(--danger); } .text-info { color: var(--info); }
 
         .fab { position: fixed; bottom: max(2rem, env(safe-area-inset-bottom)); right: 50%; transform: translateX(50%); background-color: var(--primary); color: white; border: none; border-radius: 50px; padding: 1rem 2rem; font-size: 1rem; font-weight: 600; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); cursor: pointer; z-index: 100; }
         @media (min-width: 800px) { .fab { right: calc(50% - 360px); transform: none; } }
@@ -110,10 +86,7 @@
         .modal-overlay.active { display: flex; opacity: 1; }
         .modal-content { background: var(--surface-color); width: 100%; max-width: 500px; padding: 2rem; border-radius: 20px 20px 0 0; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); max-height: 90vh; overflow-y: auto; }
         .modal-overlay.active .modal-content { transform: translateY(0); }
-        
-        /* Modal Expandido para Gráficos */
         .modal-expanded { max-width: 900px !important; }
-
         @media (min-width: 600px) { .modal-overlay { align-items: center; } .modal-content { border-radius: var(--radius); } }
 
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
@@ -128,7 +101,6 @@
         .form-group input, .form-group select { width: 100%; padding: 0.85rem; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; color: var(--text-primary); font-size: 16px; outline: none; -webkit-appearance: none; }
         .form-group input[type="color"] { padding: 0; height: 45px; cursor: pointer; }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); }
-        
         .btn-save { width: 100%; padding: 1rem; border: none; border-radius: 8px; background: var(--primary); color: white; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
 
         .invite-list { margin-top: 1rem; border-top: 1px solid var(--border-color); padding-top: 1rem; }
@@ -137,21 +109,14 @@
         .btn-text-info { background: none; border: none; color: var(--info); cursor: pointer; font-size: 0.85rem; font-weight: 600; }
 
         .hidden-field { display: none !important; }
-
         .badge { display: none; position: absolute; top: -5px; right: -5px; background-color: var(--danger); color: white; width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: bold; align-items: center; justify-content: center; }
 
-        /* Estilos do Grid de Relatórios */
         .relatorios-grid { display: flex; flex-direction: column; gap: 20px; }
         .cat-progress-item { cursor:pointer; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; margin-bottom: 8px; transition: 0.2s; }
         .cat-progress-item:hover { border-color: var(--primary); background: var(--surface-color); }
         .chart-container { background: var(--bg-color); padding: 1rem; border-radius: 12px; border: 1px solid var(--border-color); width: 100%; height: 300px; position: relative; }
-        
-        @media (min-width: 600px) {
-            .relatorios-grid { flex-direction: row; align-items: flex-start; }
-            #relatorio-categorias, #relatorio-grafico-wrapper { flex: 1; }
-        }
+        @media (min-width: 600px) { .relatorios-grid { flex-direction: row; align-items: flex-start; } #relatorio-categorias, #relatorio-grafico-wrapper { flex: 1; } }
 
-        /* Estilos Contas Fixas */
         .fixa-summary-box { background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
         .fixa-sum-row { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 8px; }
         .fixa-sum-val { font-weight: 700; }
@@ -241,72 +206,7 @@
 
     <button class="fab" onclick="openModal()"><span>+</span> Lançamento</button>
 
-    <!-- MODAL DE CONTAS FIXAS (ATUALIZADO COM ABAS) -->
-    <div class="modal-overlay" id="modal-contas-fixas">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>📌 Contas Fixas</h2>
-                <button class="btn-close" onclick="closeContasFixasModal()">&times;</button>
-            </div>
-            
-            <!-- SELETOR DE ABA (Despesas / Receitas) -->
-            <div class="view-toggle" style="margin: 0 auto 1.5rem auto; background: var(--surface-color); border: 1px solid var(--border-color); width: 100%; max-width: 300px;">
-                <button class="view-btn active" id="btn-fixa-despesa" onclick="setFixaAba('despesa')" style="flex:1;">Despesas</button>
-                <button class="view-btn" id="btn-fixa-receita" onclick="setFixaAba('receita')" style="flex:1;">Receitas</button>
-            </div>
-
-            <!-- Resumo Financeiro Inteligente Dinâmico -->
-            <div class="fixa-summary-box">
-                <h4 id="fixa-summary-title" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-secondary);">Resumo Mensal (Despesas Fixas)</h4>
-                <div class="fixa-sum-row"><span>Total Fixo:</span><span class="fixa-sum-val" id="fixa-tot">R$ 0,00</span></div>
-                <div class="fixa-sum-row" style="color: var(--success);"><span id="lbl-fixa-lan">Pagas / Lançadas:</span><span class="fixa-sum-val" id="fixa-lan">R$ 0,00</span></div>
-                <div class="fixa-sum-row" id="row-fixa-pen" style="color: var(--danger); border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;"><span id="lbl-fixa-pen">A Pagar (Pendente):</span><span class="fixa-sum-val" id="fixa-pen">R$ 0,00</span></div>
-            </div>
-
-            <button class="btn-outline" style="width: 100%; justify-content: center; margin-bottom: 1rem; border-color: var(--primary); color: var(--primary);" onclick="openFormContaFixa()">+ Novo Molde de Conta Fixa</button>
-            
-            <div class="invite-list" id="contas-fixas-list" style="margin-top: 0; border-top: none;">
-                <!-- Preenchido via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL FORMULÁRIO DE CONTA FIXA -->
-    <div class="modal-overlay" id="modal-form-fixa">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="title-form-fixa">Nova Conta Fixa</h2>
-                <button class="btn-close" onclick="closeFormContaFixa()">&times;</button>
-            </div>
-            <form id="form-conta-fixa" onsubmit="saveContaFixa(event)">
-                <input type="hidden" id="fixa-id" value="">
-                <div class="form-group"><label>Tipo</label><select id="fixa-tipo" required><option value="despesa">Despesa (Sai)</option><option value="receita">Receita (Entra)</option></select></div>
-                <div class="form-group"><label>Descrição (Exata como será no lançamento)</label><input type="text" id="fixa-desc" required placeholder="Ex: Netflix"></div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="form-group"><label>Dia do Vencimento</label><input type="number" id="fixa-dia" min="1" max="31" required placeholder="Ex: 10"></div>
-                    <div class="form-group"><label>Valor Previsto (R$)</label><input type="number" id="fixa-valor" step="0.01" required placeholder="0,00"></div>
-                </div>
-                <div class="form-group"><label>Conta/Cartão Padrão</label><select id="fixa-origem" required><option value="">Selecione...</option></select></div>
-                <div class="form-group"><label>Categoria Padrão</label><select id="fixa-cat" required><option value="">Selecione...</option></select></div>
-                <button type="submit" class="btn-save" id="btn-fixa-submit">Salvar Molde</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL DE DETALHAMENTO DE CONTAS -->
-    <div class="modal-overlay" id="modal-breakdown">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="breakdown-title">Detalhamento</h2>
-                <button class="btn-close" onclick="closeBreakdownModal()">&times;</button>
-            </div>
-            <div class="invite-list" id="breakdown-list" style="margin-top: 0; border-top: none;">
-                <!-- Preenchido via JS -->
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE RELATÓRIOS -->
+    <!-- 1. MODAL DE RELATÓRIOS -->
     <div class="modal-overlay" id="modal-relatorios">
         <div class="modal-content modal-expanded">
             <div class="modal-header">
@@ -315,7 +215,6 @@
             </div>
             
             <div class="controls-row" style="margin-bottom: 1.5rem; flex-direction: column; gap: 15px; background: transparent; border: none; padding: 0;">
-                
                 <div class="form-group" style="margin-bottom: 0; width: 100%; max-width: 350px; margin: 0 auto;">
                     <select id="relatorio-tipo-select" onchange="setRelatorioAba(this.value)" style="text-align: center; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); padding: 0.6rem;">
                         <option value="despesa">📋 Categorias: Despesas</option>
@@ -326,7 +225,6 @@
                         <option value="investimentos">💎 Evolução: Investimentos</option>
                     </select>
                 </div>
-
                 <div class="month-nav" style="margin: 0 auto; background: var(--surface-color); border-radius: var(--radius); padding: 0.5rem 1rem; border: 1px solid var(--border-color); width: 100%; justify-content: center; max-width: 300px;">
                     <button onclick="changeMonthRelatorio(-1)">&#10094;</button>
                     <div class="month-label" id="relatorio-month-display" style="min-width: 140px;">Setembro 2026</div>
@@ -336,7 +234,6 @@
 
             <div class="relatorios-grid">
                 <div id="relatorio-categorias"></div>
-                <!-- ÁREA DO GRÁFICO PREPARADA PARA IOS -->
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
                     <h3 id="grafico-titulo" style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary); text-align: center;">Evolução</h3>
                     <div class="chart-container" id="grafico-container-dinamico">
@@ -347,7 +244,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE NOTIFICAÇÕES (SININHO) -->
+    <!-- 2. MODAL DE NOTIFICAÇÕES -->
     <div class="modal-overlay" id="modal-notificacoes">
         <div class="modal-content">
             <div class="modal-header">
@@ -358,7 +255,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE TRANSAÇÕES -->
+    <!-- 3. MODAL DE NOVO LANÇAMENTO (TRANSAÇÃO) -->
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -386,10 +283,141 @@
         </div>
     </div>
 
-    <!-- MODAIS CADASTROS BÁSICOS -->
-    <div class="modal-overlay" id="modal-cartoes"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Contas e Cartões</h2><button class="btn-close" onclick="closeCartoesModal()">&times;</button></div><form id="form-cartao" onsubmit="saveCartao(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cartao-id" value=""><h3 id="cartao-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Conta/Cartão</h3><div class="form-group"><label>Nome</label><input type="text" id="cartao-nome" required placeholder="Ex: Cartão Nubank"></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cartao-tipo" required><option value="corrente">Conta Corrente / Dinheiro</option><option value="cartao_credito">Cartão de Crédito</option><option value="investimento">Investimentos (Corretora/Banco)</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cartao-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCartaoForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Suas Contas e Cartões Existentes</label><div id="cartoes-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
-    <div class="modal-overlay" id="modal-categorias"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Categorias</h2><button class="btn-close" onclick="closeCatModal()">&times;</button></div><form id="form-category" onsubmit="saveCategory(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cat-id" value=""><h3 id="cat-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Categoria</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Nome</label><input type="text" id="cat-nome" required placeholder="Ex: Educação"></div><div class="form-group"><label>Cor Identificadora</label><input type="color" id="cat-cor" required value="#2563eb"></div></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cat-tipo" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cat-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCatForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Categorias Existentes</label><div id="category-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
-    <div class="modal-overlay" id="modal-familia"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Família</h2><button class="btn-close" onclick="closeFamilyModal()">&times;</button></div><div class="invite-list" id="active-members-container" style="border-top: none; margin-top: 0; padding-top: 0;"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Membros Ativos no Orçamento</label><div id="active-members-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div><p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 1.5rem;">Convide alguém para acessar o seu orçamento.</p><form id="form-invite" onsubmit="sendInvite(event)"><div class="form-group"><label>E-mail do Convidado</label><input type="email" id="invite-email" required placeholder="exemplo@gmail.com"></div><button type="submit" class="btn-save" id="btn-invite-submit" style="margin-top: 0;">Enviar Convite</button></form><div class="invite-list" id="invite-list-container"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Convites Pendentes</label><div id="invite-list"></div></div></div></div>
+    <!-- 4. MODAL DE CARTÕES E CONTAS -->
+    <div class="modal-overlay" id="modal-cartoes">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gerenciar Contas e Cartões</h2>
+                <button class="btn-close" onclick="closeCartoesModal()">&times;</button>
+            </div>
+            <form id="form-cartao" onsubmit="saveCartao(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+                <input type="hidden" id="cartao-id" value="">
+                <h3 id="cartao-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Conta/Cartão</h3>
+                <div class="form-group"><label>Nome</label><input type="text" id="cartao-nome" required placeholder="Ex: Cartão Nubank"></div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Tipo</label>
+                    <select id="cartao-tipo" required>
+                        <option value="corrente">Conta Corrente / Dinheiro</option>
+                        <option value="cartao_credito">Cartão de Crédito</option>
+                        <option value="investimento">Investimentos (Corretora/Banco)</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-save" id="btn-cartao-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button>
+                    <button type="button" class="btn-outline" onclick="resetCartaoForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button>
+                </div>
+            </form>
+            <div class="invite-list">
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Suas Contas e Cartões Existentes</label>
+                <div id="cartoes-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL DE CATEGORIAS -->
+    <div class="modal-overlay" id="modal-categorias">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gerenciar Categorias</h2>
+                <button class="btn-close" onclick="closeCatModal()">&times;</button>
+            </div>
+            <form id="form-category" onsubmit="saveCategory(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);">
+                <input type="hidden" id="cat-id" value="">
+                <h3 id="cat-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Categoria</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group"><label>Nome</label><input type="text" id="cat-nome" required placeholder="Ex: Educação"></div>
+                    <div class="form-group"><label>Cor Identificadora</label><input type="color" id="cat-cor" required value="#2563eb"></div>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cat-tipo" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn-save" id="btn-cat-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button>
+                    <button type="button" class="btn-outline" onclick="resetCatForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button>
+                </div>
+            </form>
+            <div class="invite-list">
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Categorias Existentes</label>
+                <div id="category-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL DE FAMÍLIA -->
+    <div class="modal-overlay" id="modal-familia">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Gerenciar Família</h2>
+                <button class="btn-close" onclick="closeFamilyModal()">&times;</button>
+            </div>
+            <div class="invite-list" id="active-members-container" style="border-top: none; margin-top: 0; padding-top: 0;">
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Membros Ativos no Orçamento</label>
+                <div id="active-members-list" style="display: flex; flex-direction: column; gap: 5px;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 1.5rem;">Convide alguém para acessar o seu orçamento.</p>
+            <form id="form-invite" onsubmit="sendInvite(event)">
+                <div class="form-group"><label>E-mail do Convidado</label><input type="email" id="invite-email" required placeholder="exemplo@gmail.com"></div>
+                <button type="submit" class="btn-save" id="btn-invite-submit" style="margin-top: 0;">Enviar Convite</button>
+            </form>
+            <div class="invite-list" id="invite-list-container">
+                <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Convites Pendentes</label>
+                <div id="invite-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. MODAL DE CONTAS FIXAS -->
+    <div class="modal-overlay" id="modal-contas-fixas">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📌 Contas Fixas</h2>
+                <button class="btn-close" onclick="closeContasFixasModal()">&times;</button>
+            </div>
+            <div class="view-toggle" style="margin: 0 auto 1.5rem auto; background: var(--surface-color); border: 1px solid var(--border-color); width: 100%; max-width: 300px;">
+                <button class="view-btn active" id="btn-fixa-despesa" onclick="setFixaAba('despesa')" style="flex:1;">Despesas</button>
+                <button class="view-btn" id="btn-fixa-receita" onclick="setFixaAba('receita')" style="flex:1;">Receitas</button>
+            </div>
+            <div class="fixa-summary-box">
+                <h4 id="fixa-summary-title" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-secondary);">Resumo Mensal</h4>
+                <div class="fixa-sum-row"><span>Total Fixo:</span><span class="fixa-sum-val" id="fixa-tot">R$ 0,00</span></div>
+                <div class="fixa-sum-row" style="color: var(--success);"><span id="lbl-fixa-lan">Pagas / Lançadas:</span><span class="fixa-sum-val" id="fixa-lan">R$ 0,00</span></div>
+                <div class="fixa-sum-row" id="row-fixa-pen" style="color: var(--danger); border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;"><span id="lbl-fixa-pen">A Pagar (Pendente):</span><span class="fixa-sum-val" id="fixa-pen">R$ 0,00</span></div>
+            </div>
+            <button class="btn-outline" style="width: 100%; justify-content: center; margin-bottom: 1rem; border-color: var(--primary); color: var(--primary);" onclick="openFormContaFixa()">+ Novo Molde de Conta Fixa</button>
+            <div class="invite-list" id="contas-fixas-list" style="margin-top: 0; border-top: none;"></div>
+        </div>
+    </div>
+
+    <!-- 8. MODAL FORMULÁRIO DE CONTA FIXA -->
+    <div class="modal-overlay" id="modal-form-fixa">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="title-form-fixa">Nova Conta Fixa</h2>
+                <button class="btn-close" onclick="closeFormContaFixa()">&times;</button>
+            </div>
+            <form id="form-conta-fixa" onsubmit="saveContaFixa(event)">
+                <input type="hidden" id="fixa-id" value="">
+                <div class="form-group"><label>Tipo</label><select id="fixa-tipo" required><option value="despesa">Despesa (Sai)</option><option value="receita">Receita (Entra)</option></select></div>
+                <div class="form-group"><label>Descrição (Exata como será no lançamento)</label><input type="text" id="fixa-desc" required placeholder="Ex: Netflix"></div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="form-group"><label>Dia do Vencimento</label><input type="number" id="fixa-dia" min="1" max="31" required placeholder="Ex: 10"></div>
+                    <div class="form-group"><label>Valor Previsto (R$)</label><input type="number" id="fixa-valor" step="0.01" required placeholder="0,00"></div>
+                </div>
+                <div class="form-group"><label>Conta/Cartão Padrão</label><select id="fixa-origem" required><option value="">Selecione...</option></select></div>
+                <div class="form-group"><label>Categoria Padrão</label><select id="fixa-cat" required><option value="">Selecione...</option></select></div>
+                <button type="submit" class="btn-save" id="btn-fixa-submit">Salvar Molde</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 9. MODAL DE DETALHAMENTO DE CONTAS -->
+    <div class="modal-overlay" id="modal-breakdown">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="breakdown-title">Detalhamento</h2>
+                <button class="btn-close" onclick="closeBreakdownModal()">&times;</button>
+            </div>
+            <div class="invite-list" id="breakdown-list" style="margin-top: 0; border-top: none;"></div>
+        </div>
+    </div>
 
     <script>
         const SUPABASE_URL = 'https://kafmnasrqcmbzvzaggap.supabase.co';
@@ -427,10 +455,11 @@
         }
         
         function populateSelects() { 
-            const origems = ['trans-origem', 'fixa-origem']; const cats = ['trans-cat', 'fixa-cat'];
-            origems.forEach(id => { const el = document.getElementById(id); if(el) { el.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; el.appendChild(opt); }); } });
-            cats.forEach(id => { const el = document.getElementById(id); if(el) { el.innerHTML = '<option value="">Selecione...</option>'; categorias.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; el.appendChild(opt); }); } });
-            const dest = document.getElementById('trans-destino'); if(dest) { dest.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; dest.appendChild(opt); }); }
+            let optCarts = '<option value="">Selecione...</option>' + carteiras.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+            let optCats = '<option value="">Selecione...</option>' + categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
+            
+            ['trans-origem', 'trans-destino', 'fixa-origem'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = optCarts; });
+            ['trans-cat', 'fixa-cat'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = optCats; });
         }
         
         const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -443,16 +472,18 @@
         function doSearch(val) { currentSearchTerm = val.toLowerCase(); renderTransactionsList(); }
 
         async function loadTransactions() {
-            const listEl = document.getElementById('transaction-list'); listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">Atualizando dados...</span></div>';
+            const listEl = document.getElementById('transaction-list'); listEl.innerHTML = '<div class="transaction-item" style="justify-content: center;"><span class="t-cat">A atualizar dados...</span></div>';
             const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`;
             let queryMes = client.from('MM_transacoes').select('*, MM_categorias(nome, cor), MM_carteiras!carteira_origem_id(nome)').eq('competencia', compStr).order('data_transacao', { ascending: false });
             if (currentView === 'individual') { queryMes = queryMes.eq('lancado_por', currentUser.id); }
             const resMes = await queryMes; if (resMes.error) { listEl.innerHTML = `<div class="transaction-item"><span class="text-danger">Erro ao carregar dados.</span></div>`; return; }
             currentMonthTransactions = resMes.data; let transacoesParaCalculo = [];
+            
             if (balanceMode === 'acumulado') { const ultimoDiaDoMes = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).toISOString().split('T')[0]; let queryGlobal = client.from('MM_transacoes').select('valor, tipo, carteira_origem_id, carteira_destino_id').lte('data_transacao', ultimoDiaDoMes); if (currentView === 'individual') queryGlobal = queryGlobal.eq('lancado_por', currentUser.id); const resGlobal = await queryGlobal; if (!resGlobal.error) transacoesParaCalculo = resGlobal.data; } else { transacoesParaCalculo = resMes.data; }
             
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; 
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
+            
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
             transacoesParaCalculo.forEach(t => { 
@@ -568,7 +599,7 @@
         async function saveTransaction(e) { e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; const valorDaParcela = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.')); const descBase = document.getElementById('trans-desc').value; const origemId = document.getElementById('trans-origem').value; const catId = document.getElementById('trans-cat').value; const destId = document.getElementById('trans-destino').value; const dataBaseHtml = document.getElementById('trans-date').value; let parcelas = parseInt(document.getElementById('trans-parcelas').value) || 1; if(transId) parcelas = 1; const payloads = []; const [ano, mes, dia] = dataBaseHtml.split('-'); let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); for(let i = 0; i < parcelas; i++) { let currentDesc = parcelas > 1 ? `${descBase} (${i+1}/${parcelas})` : descBase; let currentDateObj = new Date(dataBaseObj); currentDateObj.setMonth(currentDateObj.getMonth() + i); let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0'); let yyyy = currentDateObj.getFullYear(); let dd = String(currentDateObj.getDate()).padStart(2, '0'); let dtTransacao = `${yyyy}-${mm}-${dd}`; let competencia = `${yyyy}-${mm}`; let payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorDaParcela, descricao: currentDesc, data_transacao: dtTransacao, competencia: competencia, carteira_origem_id: origemId }; if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = catId; payload.carteira_destino_id = null; } else if (tipo === 'transferencia') { payload.carteira_destino_id = destId; payload.categoria_id = null; } else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; } payloads.push(payload); } let error; if (transId) { const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId); error = res.error; } else { const res = await client.from('MM_transacoes').insert(payloads); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { closeModal(); loadTransactions(); } }
 
         // ==========================================
-        // DEMAIS FUNÇÕES DO DRE (AGORA 100% COMPATÍVEIS COM IOS/SAFARI)
+        // DEMAIS FUNÇÕES DO DRE E GRÁFICOS (100% BLINDADO PARA IOS)
         // ==========================================
         function openRelatoriosModal() { document.getElementById('modal-relatorios').classList.add('active'); document.getElementById('relatorio-tipo-select').value = 'despesa'; document.getElementById('relatorio-month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; setRelatorioAba('despesa'); }
         function closeRelatoriosModal() { document.getElementById('modal-relatorios').classList.remove('active'); }
@@ -596,7 +627,6 @@
             listEl.innerHTML = html; 
         }
 
-        // TÉCNICA IOS/SAFARI: Destruir fisicamente o <canvas> e recriar no DOM para evitar renderização 0x0
         async function renderCategoryEvolution(catId, catName, catCor) { 
             selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; 
             const wrapper = document.getElementById('relatorio-grafico-wrapper');
@@ -616,15 +646,15 @@
             
             if(chartInstance) { chartInstance.destroy(); } 
             
-            // Re-injetando Canvas para forçar cálculo de tamanho no iOS Safari
+            // Injeção limpa de DOM para iOS Safari calcular dimensões corretamente
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
-            const ctx = document.getElementById('chartEvolucao').getContext('2d');
             
-            chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
-            
-            // Atraso de 100ms para evitar solavanco em telas mobile ao descer para o grafico recém gerado
-            setTimeout(() => { if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); } }, 100);
+            setTimeout(() => {
+                const ctx = document.getElementById('chartEvolucao').getContext('2d');
+                chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+                if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+            }, 50);
         }
 
         async function renderMacroEvolution(aba) { 
@@ -673,34 +703,18 @@
             } 
             
             if(chartInstance) { chartInstance.destroy(); } 
-            
-            // Re-injetando Canvas para forçar cálculo de tamanho no iOS Safari
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
-            const ctx = document.getElementById('chartEvolucao').getContext('2d');
-
-            let mostrarLegenda = (aba === 'fluxo'); 
-            chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+            
+            setTimeout(() => {
+                const ctx = document.getElementById('chartEvolucao').getContext('2d');
+                let mostrarLegenda = (aba === 'fluxo'); 
+                chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+            }, 50);
         }
 
         // ==========================================
-        // SISTEMA DE NOTIFICAÇÕES E FAMÍLIA
-        // ==========================================
-        async function checkNotifications() { const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); const badge = document.getElementById('badge-notif'); if (convites && convites.length > 0) { badge.style.display = 'flex'; badge.innerText = convites.length; } else { badge.style.display = 'none'; } }
-        async function openNotificacoesModal() { document.getElementById('modal-notificacoes').classList.add('active'); const listEl = document.getElementById('notif-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando convites...</span>'; const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); if (!convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.9rem; color:gray;">Você não tem nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item" style="flex-direction: column; align-items: flex-start; gap: 10px;"><span>📢 Você recebeu um convite para ingressar em um orçamento compartilhado.</span><div style="display: flex; gap: 10px; width: 100%;"><button class="btn-save" style="margin-top:0; flex:1; font-size: 0.9rem;" onclick="acceptInvite('${c.id}', '${c.familia_id}')">✅ Aceitar</button><button class="btn-outline" style="flex:1; justify-content:center; border-color: var(--danger); color: var(--danger);" onclick="rejectInvite('${c.id}')">❌ Recusar</button></div></div>`; }); listEl.innerHTML = html; }
-        function closeNotificacoesModal() { document.getElementById('modal-notificacoes').classList.remove('active'); }
-        async function acceptInvite(conviteId, novaFamiliaId) { if(confirm("Ao aceitar, seu perfil será movido para esta nova família. Deseja continuar?")) { await client.from('MM_membros').update({ familia_id: novaFamiliaId, perfil: 'convidado', email_membro: currentUser.email }).eq('user_id', currentUser.id); await client.from('MM_convites').delete().eq('id', conviteId); currentFamilyId = novaFamiliaId; currentUserProfile = 'convidado'; closeNotificacoesModal(); checkNotifications(); await loadBaseData(); loadTransactions(); alert("Pronto! Você agora faz parte do orçamento compartilhado."); } }
-        async function rejectInvite(conviteId) { if(confirm("Deseja realmente recusar e excluir este convite?")) { await client.from('MM_convites').delete().eq('id', conviteId); checkNotifications(); openNotificacoesModal(); } }
-        function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadFamilyMembers(); loadPendingInvites(); }
-        function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
-        async function loadFamilyMembers() { const listEl = document.getElementById('active-members-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: membros, error } = await client.from('MM_membros').select('*').eq('familia_id', currentFamilyId).order('criado_em', {ascending: true}); if (error || !membros) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Erro ao carregar membros.</span>'; return; } let html = ''; membros.forEach(m => { const isMe = m.user_id === currentUser.id; let badge = m.perfil === 'titular' ? '👑' : '👤'; let btn = ''; if (!isMe && currentUserProfile === 'titular') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`; } else if (isMe && currentUserProfile === 'convidado') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`; } html += `<div class="invite-item"><span>${badge} ${m.email_membro || 'Usuário'} ${isMe ? '(Você)' : ''}</span>${btn}</div>`; }); listEl.innerHTML = html; }
-        async function removeMember(id) { if(confirm("Tem certeza que deseja remover este acesso? Ele perderá a visualização imediatamente.")) { const { error } = await client.from('MM_membros').delete().eq('id', id); if (error) { alert("Erro ao remover: " + error.message); } else { loadFamilyMembers(); } } }
-        async function sendInvite(e) { e.preventDefault(); const btn = document.getElementById('btn-invite-submit'); const email = document.getElementById('invite-email').value.trim(); btn.innerText = 'Enviando...'; btn.disabled = true; const { error } = await client.from('MM_convites').insert([{ familia_id: currentFamilyId, email_convidado: email, criado_por: currentUser.id }]); btn.innerText = 'Enviar Convite'; btn.disabled = false; if (error) { alert("Erro ao criar convite: " + error.message); } else { document.getElementById('invite-email').value = ''; loadPendingInvites(); } }
-        async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); listEl.innerHTML = html; }
-        async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
-
-        // ==========================================
-        // GESTÃO DE CONTAS E CATEGORIAS
+        // CADASTROS DE SISTEMA
         // ==========================================
         function openCartoesModal() { document.getElementById('modal-cartoes').classList.add('active'); renderCartoesList(); }
         function closeCartoesModal() { document.getElementById('modal-cartoes').classList.remove('active'); resetCartaoForm(); }
@@ -716,6 +730,22 @@
         function editCategoryUI(id) { const cat = categorias.find(c => c.id === id); if(cat) { document.getElementById('cat-id').value = cat.id; document.getElementById('cat-nome').value = cat.nome; document.getElementById('cat-cor').value = cat.cor; document.getElementById('cat-tipo').value = cat.tipo; document.getElementById('cat-form-title').innerText = "Editando: " + cat.nome; } }
         async function saveCategory(e) { e.preventDefault(); const btn = document.getElementById('btn-cat-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const catId = document.getElementById('cat-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cat-nome').value, cor: document.getElementById('cat-cor').value, tipo: document.getElementById('cat-tipo').value }; let error; if (catId) { const res = await client.from('MM_categorias').update(payload).eq('id', catId); error = res.error; } else { const res = await client.from('MM_categorias').insert([payload]); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar."); } else { resetCatForm(); await loadBaseData(); renderCategoryList(); loadTransactions(); } }
         async function deleteCategory(id) { const catToDelete = categorias.find(c => c.id === id); const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id); if (count > 0) { const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas'; if (confirm(`Existem ${count} lançamentos nesta categoria.\nMover para "${fallbackName}" e excluir?`)) { let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo); if (!fallbackCat) { const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single(); fallbackCat = resCat.data; } await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id); await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); loadTransactions(); } } else { if (confirm("Deseja realmente excluir esta categoria?")) { await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); } } }
+
+        // ==========================================
+        // NOTIFICAÇÕES E FAMÍLIA
+        // ==========================================
+        async function checkNotifications() { const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); const badge = document.getElementById('badge-notif'); if (convites && convites.length > 0) { badge.style.display = 'flex'; badge.innerText = convites.length; } else { badge.style.display = 'none'; } }
+        async function openNotificacoesModal() { document.getElementById('modal-notificacoes').classList.add('active'); const listEl = document.getElementById('notif-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando convites...</span>'; const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); if (!convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.9rem; color:gray;">Você não tem nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item" style="flex-direction: column; align-items: flex-start; gap: 10px;"><span>📢 Você recebeu um convite para ingressar em um orçamento compartilhado.</span><div style="display: flex; gap: 10px; width: 100%;"><button class="btn-save" style="margin-top:0; flex:1; font-size: 0.9rem;" onclick="acceptInvite('${c.id}', '${c.familia_id}')">✅ Aceitar</button><button class="btn-outline" style="flex:1; justify-content:center; border-color: var(--danger); color: var(--danger);" onclick="rejectInvite('${c.id}')">❌ Recusar</button></div></div>`; }); listEl.innerHTML = html; }
+        function closeNotificacoesModal() { document.getElementById('modal-notificacoes').classList.remove('active'); }
+        async function acceptInvite(conviteId, novaFamiliaId) { if(confirm("Ao aceitar, seu perfil será movido para esta nova família. Deseja continuar?")) { await client.from('MM_membros').update({ familia_id: novaFamiliaId, perfil: 'convidado', email_membro: currentUser.email }).eq('user_id', currentUser.id); await client.from('MM_convites').delete().eq('id', conviteId); currentFamilyId = novaFamiliaId; currentUserProfile = 'convidado'; closeNotificacoesModal(); checkNotifications(); await loadBaseData(); loadTransactions(); alert("Pronto! Você agora faz parte do orçamento compartilhado."); } }
+        async function rejectInvite(conviteId) { if(confirm("Deseja realmente recusar e excluir este convite?")) { await client.from('MM_convites').delete().eq('id', conviteId); checkNotifications(); openNotificacoesModal(); } }
+        function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadFamilyMembers(); loadPendingInvites(); }
+        function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
+        async function loadFamilyMembers() { const listEl = document.getElementById('active-members-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: membros, error } = await client.from('MM_membros').select('*').eq('familia_id', currentFamilyId).order('criado_em', {ascending: true}); if (error || !membros) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Erro ao carregar membros.</span>'; return; } let html = ''; membros.forEach(m => { const isMe = m.user_id === currentUser.id; let badge = m.perfil === 'titular' ? '👑' : '👤'; let btn = ''; if (!isMe && currentUserProfile === 'titular') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`; } else if (isMe && currentUserProfile === 'convidado') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`; } html += `<div class="invite-item"><span>${badge} ${m.email_membro || 'Usuário'} ${isMe ? '(Você)' : ''}</span>${btn}</div>`; }); listEl.innerHTML = html; }
+        async function removeMember(id) { if(confirm("Tem certeza que deseja remover este acesso? Ele perderá a visualização imediatamente.")) { const { error } = await client.from('MM_membros').delete().eq('id', id); if (error) { alert("Erro ao remover: " + error.message); } else { loadFamilyMembers(); } } }
+        async function sendInvite(e) { e.preventDefault(); const btn = document.getElementById('btn-invite-submit'); const email = document.getElementById('invite-email').value.trim(); btn.innerText = 'Enviando...'; btn.disabled = true; const { error } = await client.from('MM_convites').insert([{ familia_id: currentFamilyId, email_convidado: email, criado_por: currentUser.id }]); btn.innerText = 'Enviar Convite'; btn.disabled = false; if (error) { alert("Erro ao criar convite: " + error.message); } else { document.getElementById('invite-email').value = ''; loadPendingInvites(); } }
+        async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); listEl.innerHTML = html; }
+        async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
 
         init();
     </script>
