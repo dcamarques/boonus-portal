@@ -130,7 +130,7 @@
             <div class="header-top">
                 <div class="user-info">
                     <h1>💰 My Money</h1>
-                    <p id="user-email">A carregar...</p>
+                    <p id="user-email">Carregando...</p>
                 </div>
                 <div class="top-actions">
                     <button class="btn-outline" onclick="openNotificacoesModal()" style="position:relative; font-size:1.2rem; padding: 0.35rem 0.5rem;">
@@ -164,7 +164,9 @@
         </div>
 
         <div class="balance-filter-row">
+            <!-- BOTÃO CONTAS FIXAS -->
             <button class="btn-outline" style="border-color: var(--primary); color: var(--primary); font-weight: 600;" onclick="openContasFixasModal()">📌 Contas Fixas</button>
+
             <div class="balance-toggle">
                 <button class="balance-btn active" id="btn-bal-acumulado" onclick="setBalanceMode('acumulado')">Saldo Acumulado</button>
                 <button class="balance-btn" id="btn-bal-mes" onclick="setBalanceMode('mes')">Fluxo do Mês</button>
@@ -240,7 +242,7 @@
             <form id="form-conta-fixa" onsubmit="saveContaFixa(event)">
                 <input type="hidden" id="fixa-id" value="">
                 <div class="form-group"><label>Tipo</label><select id="fixa-tipo" required><option value="despesa">Despesa (Sai)</option><option value="receita">Receita (Entra)</option></select></div>
-                <div class="form-group"><label>Descrição</label><input type="text" id="fixa-desc" required placeholder="Ex: Netflix"></div>
+                <div class="form-group"><label>Descrição (Exata como será no lançamento)</label><input type="text" id="fixa-desc" required placeholder="Ex: Netflix"></div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                     <div class="form-group"><label>Dia do Vencimento</label><input type="number" id="fixa-dia" min="1" max="31" required placeholder="Ex: 10"></div>
                     <div class="form-group"><label>Valor Previsto (R$)</label><input type="number" id="fixa-valor" step="0.01" required placeholder="0,00"></div>
@@ -263,7 +265,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE RELATÓRIOS -->
+    <!-- MODAL DE RELATÓRIOS (COM A CORREÇÃO DE ID) -->
     <div class="modal-overlay" id="modal-relatorios">
         <div class="modal-content modal-expanded">
             <div class="modal-header">
@@ -293,9 +295,12 @@
                 <div id="relatorio-categorias"></div>
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
                     <h3 id="grafico-titulo" style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary); text-align: center;">Evolução</h3>
-                    <div class="chart-container">
+                    
+                    <!-- O ID QUE FALTAVA NA VERSÃO ANTERIOR FOI RESTAURADO AQUI -->
+                    <div class="chart-container" id="grafico-container-dinamico">
                         <canvas id="chartEvolucao"></canvas>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -409,6 +414,7 @@
             
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; 
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
+            
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
             transacoesParaCalculo.forEach(t => { 
@@ -450,6 +456,9 @@
             listEl.innerHTML = htmlCompleto;
         }
 
+        // ==========================================
+        // MÓDULO CONTAS FIXAS
+        // ==========================================
         function openContasFixasModal() { document.getElementById('modal-contas-fixas').classList.add('active'); setFixaAba('despesa'); }
         function closeContasFixasModal() { document.getElementById('modal-contas-fixas').classList.remove('active'); }
         function setFixaAba(aba) { currentFixaTab = aba; document.getElementById('btn-fixa-despesa').classList.remove('active'); document.getElementById('btn-fixa-receita').classList.remove('active'); document.getElementById(`btn-fixa-${aba}`).classList.add('active'); renderContasFixasList(); }
@@ -564,7 +573,6 @@
         async function renderCategoryEvolution(catId, catName, catCor) { 
             selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; 
             
-            // Define o bloco para "block" ANTES de criar o gráfico
             const wrapper = document.getElementById('relatorio-grafico-wrapper');
             wrapper.style.display = 'block'; 
             document.getElementById('grafico-titulo').innerHTML = `<span style="color:${catCor}">■</span> Evolução (7 Meses): ${catName}`; 
@@ -580,17 +588,32 @@
             if(trans) { trans.forEach(t => { monthTotals[t.competencia] += parseFloat(t.valor); }); } 
             let dataValues = monthsToFetch.map(m => monthTotals[m]); 
             
-            // Inicialização Nativa sem manipular innerHTML do Canvas
             if(chartInstance) { chartInstance.destroy(); } 
-            const ctx = document.getElementById('chartEvolucao').getContext('2d');
             
-            chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+            const containerBox = document.getElementById('grafico-container-dinamico');
+            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            void containerBox.offsetHeight; 
             
-            if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+            setTimeout(() => {
+                const canvas = document.getElementById('chartEvolucao');
+                if(!canvas) return;
+                const ctx = canvas.getContext('2d');
+                
+                chartInstance = new Chart(ctx, { 
+                    type: 'bar', 
+                    data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, 
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
+                        scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
+                    } 
+                }); 
+                if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
+            }, 100);
         }
 
         async function renderMacroEvolution(aba) { 
-            // Define o bloco para "block" ANTES de criar o gráfico
             const wrapper = document.getElementById('relatorio-grafico-wrapper');
             wrapper.style.display = 'block'; 
             
@@ -607,8 +630,16 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
                 
-                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
-                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
+                if (aba === 'fluxo') { 
+                    datasetInfo = [ 
+                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, 
+                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } 
+                    ]; 
+                } else { 
+                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); 
+                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); 
+                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; 
+                } 
             } 
             else if (aba === 'resultado_acumulado') { 
                 document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
@@ -635,12 +666,29 @@
                 datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }]; 
             } 
             
-            // Inicialização Nativa sem manipular innerHTML do Canvas
             if(chartInstance) { chartInstance.destroy(); } 
-            const ctx = document.getElementById('chartEvolucao').getContext('2d');
             
-            let mostrarLegenda = (aba === 'fluxo'); 
-            chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+            const containerBox = document.getElementById('grafico-container-dinamico');
+            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            void containerBox.offsetHeight; 
+            
+            setTimeout(() => {
+                const canvas = document.getElementById('chartEvolucao');
+                if(!canvas) return;
+                const ctx = canvas.getContext('2d');
+                
+                let mostrarLegenda = (aba === 'fluxo'); 
+                chartInstance = new Chart(ctx, { 
+                    type: chartType, 
+                    data: { labels: labels, datasets: datasetInfo }, 
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
+                        scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
+                    } 
+                }); 
+            }, 100);
         }
 
         // ==========================================
@@ -660,6 +708,22 @@
         function editCategoryUI(id) { const cat = categorias.find(c => c.id === id); if(cat) { document.getElementById('cat-id').value = cat.id; document.getElementById('cat-nome').value = cat.nome; document.getElementById('cat-cor').value = cat.cor; document.getElementById('cat-tipo').value = cat.tipo; document.getElementById('cat-form-title').innerText = "Editando: " + cat.nome; } }
         async function saveCategory(e) { e.preventDefault(); const btn = document.getElementById('btn-cat-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const catId = document.getElementById('cat-id').value; const payload = { familia_id: currentFamilyId, nome: document.getElementById('cat-nome').value, cor: document.getElementById('cat-cor').value, tipo: document.getElementById('cat-tipo').value }; let error; if (catId) { const res = await client.from('MM_categorias').update(payload).eq('id', catId); error = res.error; } else { const res = await client.from('MM_categorias').insert([payload]); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar."); } else { resetCatForm(); await loadBaseData(); renderCategoryList(); loadTransactions(); } }
         async function deleteCategory(id) { const catToDelete = categorias.find(c => c.id === id); const { count } = await client.from('MM_transacoes').select('*', { count: 'exact', head: true }).eq('categoria_id', id); if (count > 0) { const fallbackName = catToDelete.tipo === 'despesa' ? 'Outras Despesas' : 'Outras Receitas'; if (confirm(`Existem ${count} lançamentos nesta categoria.\nMover para "${fallbackName}" e excluir?`)) { let fallbackCat = categorias.find(c => c.nome === fallbackName && c.tipo === catToDelete.tipo); if (!fallbackCat) { const resCat = await client.from('MM_categorias').insert({ familia_id: currentFamilyId, nome: fallbackName, tipo: catToDelete.tipo, cor: '#94a3b8' }).select().single(); fallbackCat = resCat.data; } await client.from('MM_transacoes').update({ categoria_id: fallbackCat.id }).eq('categoria_id', id); await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); loadTransactions(); } } else { if (confirm("Deseja realmente excluir esta categoria?")) { await client.from('MM_categorias').delete().eq('id', id); await loadBaseData(); renderCategoryList(); } } }
+
+        // ==========================================
+        // NOTIFICAÇÕES E FAMÍLIA
+        // ==========================================
+        async function checkNotifications() { const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); const badge = document.getElementById('badge-notif'); if (convites && convites.length > 0) { badge.style.display = 'flex'; badge.innerText = convites.length; } else { badge.style.display = 'none'; } }
+        async function openNotificacoesModal() { document.getElementById('modal-notificacoes').classList.add('active'); const listEl = document.getElementById('notif-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando convites...</span>'; const { data: convites } = await client.from('MM_convites').select('id, familia_id').eq('email_convidado', currentUser.email); if (!convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.9rem; color:gray;">Você não tem nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item" style="flex-direction: column; align-items: flex-start; gap: 10px;"><span>📢 Você recebeu um convite para ingressar em um orçamento compartilhado.</span><div style="display: flex; gap: 10px; width: 100%;"><button class="btn-save" style="margin-top:0; flex:1; font-size: 0.9rem;" onclick="acceptInvite('${c.id}', '${c.familia_id}')">✅ Aceitar</button><button class="btn-outline" style="flex:1; justify-content:center; border-color: var(--danger); color: var(--danger);" onclick="rejectInvite('${c.id}')">❌ Recusar</button></div></div>`; }); listEl.innerHTML = html; }
+        function closeNotificacoesModal() { document.getElementById('modal-notificacoes').classList.remove('active'); }
+        async function acceptInvite(conviteId, novaFamiliaId) { if(confirm("Ao aceitar, seu perfil será movido para esta nova família. Deseja continuar?")) { await client.from('MM_membros').update({ familia_id: novaFamiliaId, perfil: 'convidado', email_membro: currentUser.email }).eq('user_id', currentUser.id); await client.from('MM_convites').delete().eq('id', conviteId); currentFamilyId = novaFamiliaId; currentUserProfile = 'convidado'; closeNotificacoesModal(); checkNotifications(); await loadBaseData(); loadTransactions(); alert("Pronto! Você agora faz parte do orçamento compartilhado."); } }
+        async function rejectInvite(conviteId) { if(confirm("Deseja realmente recusar e excluir este convite?")) { await client.from('MM_convites').delete().eq('id', conviteId); checkNotifications(); openNotificacoesModal(); } }
+        function openFamilyModal() { document.getElementById('modal-familia').classList.add('active'); loadFamilyMembers(); loadPendingInvites(); }
+        function closeFamilyModal() { document.getElementById('modal-familia').classList.remove('active'); document.getElementById('form-invite').reset(); }
+        async function loadFamilyMembers() { const listEl = document.getElementById('active-members-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: membros, error } = await client.from('MM_membros').select('*').eq('familia_id', currentFamilyId).order('criado_em', {ascending: true}); if (error || !membros) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Erro ao carregar membros.</span>'; return; } let html = ''; membros.forEach(m => { const isMe = m.user_id === currentUser.id; let badge = m.perfil === 'titular' ? '👑' : '👤'; let btn = ''; if (!isMe && currentUserProfile === 'titular') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Remover</button>`; } else if (isMe && currentUserProfile === 'convidado') { btn = `<button class="btn-text-danger" onclick="removeMember('${m.id}')">Sair da Família</button>`; } html += `<div class="invite-item"><span>${badge} ${m.email_membro || 'Usuário'} ${isMe ? '(Você)' : ''}</span>${btn}</div>`; }); listEl.innerHTML = html; }
+        async function removeMember(id) { if(confirm("Tem certeza que deseja remover este acesso? Ele perderá a visualização imediatamente.")) { const { error } = await client.from('MM_membros').delete().eq('id', id); if (error) { alert("Erro ao remover: " + error.message); } else { loadFamilyMembers(); } } }
+        async function sendInvite(e) { e.preventDefault(); const btn = document.getElementById('btn-invite-submit'); const email = document.getElementById('invite-email').value.trim(); btn.innerText = 'Enviando...'; btn.disabled = true; const { error } = await client.from('MM_convites').insert([{ familia_id: currentFamilyId, email_convidado: email, criado_por: currentUser.id }]); btn.innerText = 'Enviar Convite'; btn.disabled = false; if (error) { alert("Erro ao criar convite: " + error.message); } else { document.getElementById('invite-email').value = ''; loadPendingInvites(); } }
+        async function loadPendingInvites() { const listEl = document.getElementById('invite-list'); listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Carregando...</span>'; const { data: convites, error } = await client.from('MM_convites').select('*').eq('familia_id', currentFamilyId); if (error || !convites || convites.length === 0) { listEl.innerHTML = '<span style="font-size:0.8rem; color:gray;">Nenhum convite pendente.</span>'; return; } let html = ''; convites.forEach(c => { html += `<div class="invite-item"><span>⏳ ${c.email_convidado}</span><button class="btn-text-danger" onclick="cancelInvite('${c.id}')">Cancelar</button></div>`; }); listEl.innerHTML = html; }
+        async function cancelInvite(id) { await client.from('MM_convites').delete().eq('id', id); loadPendingInvites(); }
 
         init();
     </script>
