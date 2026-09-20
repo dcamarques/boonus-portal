@@ -293,7 +293,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE DETALHAMENTO DE CONTAS (NOVO) -->
+    <!-- MODAL DE DETALHAMENTO DE CONTAS -->
     <div class="modal-overlay" id="modal-breakdown">
         <div class="modal-content">
             <div class="modal-header">
@@ -336,9 +336,10 @@
 
             <div class="relatorios-grid">
                 <div id="relatorio-categorias"></div>
+                <!-- ÁREA DO GRÁFICO PREPARADA PARA IOS -->
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
                     <h3 id="grafico-titulo" style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary); text-align: center;">Evolução</h3>
-                    <div class="chart-container">
+                    <div class="chart-container" id="grafico-container-dinamico">
                         <canvas id="chartEvolucao"></canvas>
                     </div>
                 </div>
@@ -400,7 +401,6 @@
         let carteiras = []; let categorias = []; let currentMonthTransactions = []; let contasFixas = [];
         let currentSearchTerm = ''; let currentFixaTab = 'despesa';
 
-        // Globais de Detalhamento
         let globalBreakdownCorrente = {}; let globalBreakdownInvestimento = {}; let globalBreakdownCartao = {};
 
         async function init() {
@@ -418,35 +418,24 @@
 
         async function handleLogout() { await client.auth.signOut(); window.location.replace('index.html'); }
 
-        // ==========================================
-        // DADOS E BUSCA DE TRANSAÇÕES
-        // ==========================================
         async function loadBaseData() { 
             const { data: carts } = await client.from('MM_carteiras').select('*').eq('ativo', true).order('nome', {ascending: true}); carteiras = carts || []; 
             const { data: cats } = await client.from('MM_categorias').select('*').order('nome', { ascending: true }); categorias = cats || []; 
-            
             const { data: fixas, error: errFixas } = await client.from('MM_contas_fixas').select('*').eq('familia_id', currentFamilyId).order('dia_vencimento', { ascending: true });
             contasFixas = errFixas ? [] : (fixas || []);
-
             populateSelects(); 
         }
         
         function populateSelects() { 
-            let optCarts = '<option value="">Selecione...</option>' + carteiras.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-            let optCats = '<option value="">Selecione...</option>' + categorias.map(c => `<option value="${c.id}">${c.nome}</option>`).join('');
-            
-            ['trans-origem', 'trans-destino', 'fixa-origem'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = optCarts; });
-            ['trans-cat', 'fixa-cat'].forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = optCats; });
+            const origems = ['trans-origem', 'fixa-origem']; const cats = ['trans-cat', 'fixa-cat'];
+            origems.forEach(id => { const el = document.getElementById(id); if(el) { el.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; el.appendChild(opt); }); } });
+            cats.forEach(id => { const el = document.getElementById(id); if(el) { el.innerHTML = '<option value="">Selecione...</option>'; categorias.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; el.appendChild(opt); }); } });
+            const dest = document.getElementById('trans-destino'); if(dest) { dest.innerHTML = '<option value="">Selecione...</option>'; carteiras.forEach(c => { let opt = document.createElement('option'); opt.value = c.id; opt.text = c.nome; dest.appendChild(opt); }); }
         }
         
         const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
         function updateMonthDisplay() { document.getElementById('month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; }
-        
-        function changeMonth(delta) { 
-            currentDate.setMonth(currentDate.getMonth() + delta); updateMonthDisplay(); 
-            currentSearchTerm = ''; document.getElementById('input-search').value = ''; document.getElementById('search-box').style.display = 'none';
-            loadTransactions(); 
-        }
+        function changeMonth(delta) { currentDate.setMonth(currentDate.getMonth() + delta); updateMonthDisplay(); currentSearchTerm = ''; document.getElementById('input-search').value = ''; document.getElementById('search-box').style.display = 'none'; loadTransactions(); }
         function setView(viewType) { currentView = viewType; document.querySelectorAll('.view-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-view-${viewType}`).classList.add('active'); loadTransactions(); }
         function setBalanceMode(mode) { balanceMode = mode; document.querySelectorAll('.balance-btn').forEach(btn => btn.classList.remove('active')); document.getElementById(`btn-bal-${mode}`).classList.add('active'); document.getElementById('lbl-saldo-corrente').innerText = mode === 'acumulado' ? 'Saldo Real em Contas' : 'Fluxo Corrente (Mês)'; document.getElementById('lbl-saldo-invest').innerText = mode === 'acumulado' ? 'Total Investido (Acumulado)' : 'Aportes/Rendimentos (Mês)'; loadTransactions(); }
 
@@ -506,39 +495,19 @@
         }
 
         // ==========================================
-        // MÓDULO CONTAS FIXAS COM ABAS (ATUALIZADO)
+        // MÓDULO CONTAS FIXAS
         // ==========================================
-        function openContasFixasModal() { 
-            document.getElementById('modal-contas-fixas').classList.add('active'); 
-            setFixaAba('despesa'); // Começa sempre na aba de despesas
-        }
+        function openContasFixasModal() { document.getElementById('modal-contas-fixas').classList.add('active'); setFixaAba('despesa'); }
         function closeContasFixasModal() { document.getElementById('modal-contas-fixas').classList.remove('active'); }
-        
-        function setFixaAba(aba) {
-            currentFixaTab = aba;
-            document.getElementById('btn-fixa-despesa').classList.remove('active');
-            document.getElementById('btn-fixa-receita').classList.remove('active');
-            document.getElementById(`btn-fixa-${aba}`).classList.add('active');
-            renderContasFixasList();
-        }
+        function setFixaAba(aba) { currentFixaTab = aba; document.getElementById('btn-fixa-despesa').classList.remove('active'); document.getElementById('btn-fixa-receita').classList.remove('active'); document.getElementById(`btn-fixa-${aba}`).classList.add('active'); renderContasFixasList(); }
 
         function openFormContaFixa(id = null) {
             document.getElementById('modal-form-fixa').classList.add('active');
             if (id) {
                 const cf = contasFixas.find(x => x.id === id);
-                document.getElementById('title-form-fixa').innerText = "Editar Molde";
-                document.getElementById('fixa-id').value = cf.id;
-                document.getElementById('fixa-tipo').value = cf.tipo;
-                document.getElementById('fixa-desc').value = cf.descricao;
-                document.getElementById('fixa-dia').value = cf.dia_vencimento;
-                document.getElementById('fixa-valor').value = cf.valor_previsto;
-                document.getElementById('fixa-origem').value = cf.carteira_id;
-                document.getElementById('fixa-cat').value = cf.categoria_id;
+                document.getElementById('title-form-fixa').innerText = "Editar Molde"; document.getElementById('fixa-id').value = cf.id; document.getElementById('fixa-tipo').value = cf.tipo; document.getElementById('fixa-desc').value = cf.descricao; document.getElementById('fixa-dia').value = cf.dia_vencimento; document.getElementById('fixa-valor').value = cf.valor_previsto; document.getElementById('fixa-origem').value = cf.carteira_id; document.getElementById('fixa-cat').value = cf.categoria_id;
             } else {
-                document.getElementById('form-conta-fixa').reset();
-                document.getElementById('fixa-id').value = "";
-                document.getElementById('title-form-fixa').innerText = "Nova Conta Fixa";
-                document.getElementById('fixa-tipo').value = currentFixaTab; // Puxa o tipo da aba atual
+                document.getElementById('form-conta-fixa').reset(); document.getElementById('fixa-id').value = ""; document.getElementById('title-form-fixa').innerText = "Nova Conta Fixa"; document.getElementById('fixa-tipo').value = currentFixaTab;
             }
         }
         function closeFormContaFixa() { document.getElementById('modal-form-fixa').classList.remove('active'); document.getElementById('form-conta-fixa').reset(); }
@@ -546,87 +515,42 @@
         async function saveContaFixa(e) {
             e.preventDefault(); const btn = document.getElementById('btn-fixa-submit'); btn.innerText = "Salvando..."; btn.disabled = true;
             const cfId = document.getElementById('fixa-id').value;
-            const payload = {
-                familia_id: currentFamilyId, criado_por: currentUser.id,
-                tipo: document.getElementById('fixa-tipo').value,
-                descricao: document.getElementById('fixa-desc').value,
-                valor_previsto: parseFloat(document.getElementById('fixa-valor').value),
-                dia_vencimento: parseInt(document.getElementById('fixa-dia').value),
-                carteira_id: document.getElementById('fixa-origem').value,
-                categoria_id: document.getElementById('fixa-cat').value
-            };
-            let error;
-            if (cfId) { const res = await client.from('MM_contas_fixas').update(payload).eq('id', cfId); error = res.error; }
-            else { const res = await client.from('MM_contas_fixas').insert([payload]); error = res.error; }
+            const payload = { familia_id: currentFamilyId, criado_por: currentUser.id, tipo: document.getElementById('fixa-tipo').value, descricao: document.getElementById('fixa-desc').value, valor_previsto: parseFloat(document.getElementById('fixa-valor').value), dia_vencimento: parseInt(document.getElementById('fixa-dia').value), carteira_id: document.getElementById('fixa-origem').value, categoria_id: document.getElementById('fixa-cat').value };
+            let error; if (cfId) { const res = await client.from('MM_contas_fixas').update(payload).eq('id', cfId); error = res.error; } else { const res = await client.from('MM_contas_fixas').insert([payload]); error = res.error; }
             btn.innerText = "Salvar Molde"; btn.disabled = false;
-            if (error) { alert("Erro ao salvar: " + error.message); }
-            else { closeFormContaFixa(); await loadBaseData(); renderContasFixasList(); }
+            if (error) { alert("Erro ao salvar: " + error.message); } else { closeFormContaFixa(); await loadBaseData(); renderContasFixasList(); }
         }
 
         async function deleteContaFixa(id) { if (confirm("Deseja realmente excluir este molde de conta fixa?")) { await client.from('MM_contas_fixas').delete().eq('id', id); await loadBaseData(); renderContasFixasList(); } }
 
         function prepLaunchFixed(cfId) {
             closeContasFixasModal(); const cf = contasFixas.find(x => x.id === cfId); if (!cf) return;
-            openModal();
-            document.getElementById('modal-title').innerText = "Lançar Conta Fixa";
-            document.getElementById('trans-type').value = cf.tipo; setTransType(cf.tipo);
-            document.getElementById('trans-value').value = cf.valor_previsto;
-            document.getElementById('trans-desc').value = cf.descricao;
-            document.getElementById('trans-origem').value = cf.carteira_id;
-            document.getElementById('trans-cat').value = cf.categoria_id;
-            
-            let y = currentDate.getFullYear(); let m = currentDate.getMonth(); let d = cf.dia_vencimento;
-            let lastDay = new Date(y, m + 1, 0).getDate(); if (d > lastDay) d = lastDay;
+            openModal(); document.getElementById('modal-title').innerText = "Lançar Conta Fixa"; document.getElementById('trans-type').value = cf.tipo; setTransType(cf.tipo); document.getElementById('trans-value').value = cf.valor_previsto; document.getElementById('trans-desc').value = cf.descricao; document.getElementById('trans-origem').value = cf.carteira_id; document.getElementById('trans-cat').value = cf.categoria_id;
+            let y = currentDate.getFullYear(); let m = currentDate.getMonth(); let d = cf.dia_vencimento; let lastDay = new Date(y, m + 1, 0).getDate(); if (d > lastDay) d = lastDay;
             document.getElementById('trans-date').value = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         }
 
         function renderContasFixasList() {
             const listEl = document.getElementById('contas-fixas-list');
             let tTotal = 0; let tLan = 0; let tPen = 0;
-            
-            // Filtra pela aba selecionada no momento
             const contasParaExibir = contasFixas.filter(cf => cf.tipo === currentFixaTab);
-            
             let htmlCompleto = '';
+            
             contasParaExibir.forEach(cf => {
                 const v = parseFloat(cf.valor_previsto); tTotal += v;
                 const isPosted = currentMonthTransactions.some(t => t.descricao.trim().toLowerCase() === cf.descricao.trim().toLowerCase() && t.tipo === cf.tipo);
-                
                 let btnHtml = '';
-                if (isPosted) {
-                    tLan += v;
-                    btnHtml = `<div style="font-size: 1.5rem; text-align: center; width: 40px;">✅</div>`;
-                } else {
-                    tPen += v;
-                    btnHtml = `<button class="action-btn" onclick="prepLaunchFixed('${cf.id}')" style="font-size: 1.2rem; background: var(--primary); border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🚀</button>`;
-                }
-
-                htmlCompleto += `
-                    <div class="transaction-item" style="margin-bottom: 8px;">
-                        <div class="t-info">
-                            <span class="t-desc" style="font-size: 1rem;">${cf.descricao}</span>
-                            <span class="t-cat">Dia ${cf.dia_vencimento} • R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                        </div>
-                        <div class="t-right" style="flex-direction: row; align-items: center;">
-                            <button class="action-btn" onclick="openFormContaFixa('${cf.id}')" style="margin-right: 5px;">✏️</button>
-                            <button class="action-btn" onclick="deleteContaFixa('${cf.id}')" style="margin-right: 10px;">❌</button>
-                            ${btnHtml}
-                        </div>
-                    </div>`;
+                if (isPosted) { tLan += v; btnHtml = `<div style="font-size: 1.5rem; text-align: center; width: 40px;">✅</div>`; } 
+                else { tPen += v; btnHtml = `<button class="action-btn" onclick="prepLaunchFixed('${cf.id}')" style="font-size: 1.2rem; background: var(--primary); border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🚀</button>`; }
+                htmlCompleto += `<div class="transaction-item" style="margin-bottom: 8px;"><div class="t-info"><span class="t-desc" style="font-size: 1rem;">${cf.descricao}</span><span class="t-cat">Dia ${cf.dia_vencimento} • R$ ${v.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span></div><div class="t-right" style="flex-direction: row; align-items: center;"><button class="action-btn" onclick="openFormContaFixa('${cf.id}')" style="margin-right: 5px;">✏️</button><button class="action-btn" onclick="deleteContaFixa('${cf.id}')" style="margin-right: 10px;">❌</button>${btnHtml}</div></div>`;
             });
 
-            // Ajuste Inteligente dos Textos e Cores do Resumo
             document.getElementById('fixa-summary-title').innerText = currentFixaTab === 'despesa' ? 'Resumo Mensal (Despesas Fixas)' : 'Resumo Mensal (Receitas Fixas)';
             document.getElementById('lbl-fixa-lan').innerText = currentFixaTab === 'despesa' ? 'Pagas / Lançadas:' : 'Recebidas / Lançadas:';
             document.getElementById('lbl-fixa-pen').innerText = currentFixaTab === 'despesa' ? 'A Pagar (Pendente):' : 'A Receber (Pendente):';
-            
-            // Azul para receita pendente, Vermelho para despesa pendente
             document.getElementById('row-fixa-pen').style.color = currentFixaTab === 'despesa' ? 'var(--danger)' : 'var(--light-blue)';
 
-            document.getElementById('fixa-tot').innerText = `R$ ${tTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('fixa-lan').innerText = `R$ ${tLan.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            document.getElementById('fixa-pen').innerText = `R$ ${tPen.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
-            
+            document.getElementById('fixa-tot').innerText = `R$ ${tTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; document.getElementById('fixa-lan').innerText = `R$ ${tLan.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`; document.getElementById('fixa-pen').innerText = `R$ ${tPen.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
             listEl.innerHTML = htmlCompleto || '<span style="color:gray; font-size: 0.9rem;">Nenhum molde registado nesta aba.</span>';
         }
 
@@ -644,16 +568,120 @@
         async function saveTransaction(e) { e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; const valorDaParcela = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.')); const descBase = document.getElementById('trans-desc').value; const origemId = document.getElementById('trans-origem').value; const catId = document.getElementById('trans-cat').value; const destId = document.getElementById('trans-destino').value; const dataBaseHtml = document.getElementById('trans-date').value; let parcelas = parseInt(document.getElementById('trans-parcelas').value) || 1; if(transId) parcelas = 1; const payloads = []; const [ano, mes, dia] = dataBaseHtml.split('-'); let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); for(let i = 0; i < parcelas; i++) { let currentDesc = parcelas > 1 ? `${descBase} (${i+1}/${parcelas})` : descBase; let currentDateObj = new Date(dataBaseObj); currentDateObj.setMonth(currentDateObj.getMonth() + i); let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0'); let yyyy = currentDateObj.getFullYear(); let dd = String(currentDateObj.getDate()).padStart(2, '0'); let dtTransacao = `${yyyy}-${mm}-${dd}`; let competencia = `${yyyy}-${mm}`; let payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorDaParcela, descricao: currentDesc, data_transacao: dtTransacao, competencia: competencia, carteira_origem_id: origemId }; if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = catId; payload.carteira_destino_id = null; } else if (tipo === 'transferencia') { payload.carteira_destino_id = destId; payload.categoria_id = null; } else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; } payloads.push(payload); } let error; if (transId) { const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId); error = res.error; } else { const res = await client.from('MM_transacoes').insert(payloads); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { closeModal(); loadTransactions(); } }
 
         // ==========================================
-        // DEMAIS FUNÇÕES DO DRE
+        // DEMAIS FUNÇÕES DO DRE (AGORA 100% COMPATÍVEIS COM IOS/SAFARI)
         // ==========================================
         function openRelatoriosModal() { document.getElementById('modal-relatorios').classList.add('active'); document.getElementById('relatorio-tipo-select').value = 'despesa'; document.getElementById('relatorio-month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; setRelatorioAba('despesa'); }
         function closeRelatoriosModal() { document.getElementById('modal-relatorios').classList.remove('active'); }
         function setRelatorioAba(aba) { if(aba === 'despesa' || aba === 'receita') { selectedRelatorioCatId = null; document.getElementById('relatorio-grafico-wrapper').style.display = 'none'; } refreshRelatorioAtual(); }
         function changeMonthRelatorio(delta) { changeMonth(delta); document.getElementById('relatorio-month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; refreshRelatorioAtual(); }
         function refreshRelatorioAtual() { let aba = document.getElementById('relatorio-tipo-select').value; if(aba === 'despesa' || aba === 'receita') { document.getElementById('relatorio-categorias').style.display = 'block'; if (!selectedRelatorioCatId) { document.getElementById('relatorio-grafico-wrapper').style.display = 'none'; } loadRelatorioCategorias(aba); if(selectedRelatorioCatId) { renderCategoryEvolution(selectedRelatorioCatId, selectedRelatorioCatName, selectedRelatorioCatCor); } } else { document.getElementById('relatorio-categorias').style.display = 'none'; renderMacroEvolution(aba); } }
-        async function loadRelatorioCategorias(aba) { const listEl = document.getElementById('relatorio-categorias'); listEl.innerHTML = '<span style="color:gray;">Calculando dados...</span>'; const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`; let queryMes = client.from('MM_transacoes').select('valor, categoria_id, tipo, MM_categorias(nome, cor)').eq('competencia', compStr).eq('tipo', aba); if (currentView === 'individual') { queryMes = queryMes.eq('lancado_por', currentUser.id); } const { data: trans, error } = await queryMes; if(error || !trans) { listEl.innerHTML = 'Erro ao carregar'; return; } let catTotals = {}; let totalMes = 0; trans.forEach(t => { if(!t.categoria_id) return; if(!catTotals[t.categoria_id]) { catTotals[t.categoria_id] = { nome: t.MM_categorias?.nome || 'Outras', cor: t.MM_categorias?.cor || '#ccc', total: 0 }; } catTotals[t.categoria_id].total += parseFloat(t.valor); totalMes += parseFloat(t.valor); }); let sortedCats = Object.entries(catTotals).map(([id, dados]) => ({id, ...dados})).sort((a,b) => b.total - a.total); let labelTotal = aba === 'despesa' ? 'Total de Despesas' : 'Total de Receitas'; let colorClass = aba === 'despesa' ? 'text-danger' : 'text-success'; if(sortedCats.length === 0) { listEl.innerHTML = `<span style="color:gray;">Nenhum registo nesta aba para o mês.</span>`; return; } let html = `<div style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary);">${labelTotal}: <strong class="${colorClass}">R$ ${totalMes.toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong><br>Clique em uma categoria para ver a evolução.</div>`; sortedCats.forEach(c => { const perc = ((c.total / totalMes) * 100).toFixed(1); html += `<div class="cat-progress-item" onclick="renderCategoryEvolution('${c.id}', '${c.nome}', '${c.cor}')"><div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;"><span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c.cor}"></span> ${c.nome}</span><span>R$ ${c.total.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></div><div style="width: 100%; background: var(--surface-color); height: 8px; border-radius: 4px; overflow: hidden;"><div style="width: ${perc}%; background: ${c.cor}; height: 100%;"></div></div><div style="text-align: right; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">${perc}%</div></div>`; }); listEl.innerHTML = html; }
-        async function renderCategoryEvolution(catId, catName, catCor) { selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; document.getElementById('relatorio-grafico-wrapper').style.display = 'block'; document.getElementById('grafico-titulo').innerHTML = `<span style="color:${catCor}">■</span> Evolução (7 Meses): ${catName}`; let monthsToFetch = []; let labels = []; for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } let query = client.from('MM_transacoes').select('valor, competencia').eq('categoria_id', catId).in('competencia', monthsToFetch); if (currentView === 'individual') { query = query.eq('lancado_por', currentUser.id); } const { data: trans } = await query; let monthTotals = {}; monthsToFetch.forEach(m => monthTotals[m] = 0); if(trans) { trans.forEach(t => { monthTotals[t.competencia] += parseFloat(t.valor); }); } let dataValues = monthsToFetch.map(m => monthTotals[m]); const ctx = document.getElementById('chartEvolucao').getContext('2d'); if(chartInstance) { chartInstance.destroy(); } chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); if(window.innerWidth < 600) { document.getElementById('relatorio-grafico-wrapper').scrollIntoView({ behavior: 'smooth' }); } }
-        async function renderMacroEvolution(aba) { document.getElementById('relatorio-grafico-wrapper').style.display = 'block'; let monthsToFetch = []; let labels = []; for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } const ctx = document.getElementById('chartEvolucao').getContext('2d'); if(chartInstance) { chartInstance.destroy(); } let datasetInfo = []; let chartType = 'bar'; if (aba === 'fluxo' || aba === 'resultado') { document.getElementById('grafico-titulo').innerHTML = aba === 'fluxo' ? `📊 Receitas vs Despesas (Mensal)` : `⚖️ Resultado Líquido do Mês`; let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).in('competencia', monthsToFetch); if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); const { data } = await query; let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } } else if (aba === 'resultado_acumulado') { document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; let lastMonthStr = monthsToFetch[monthsToFetch.length - 1]; let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).lte('competencia', lastMonthStr); if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); const { data } = await query; let netByMonth = {}; if (data) { data.forEach(t => { let v = parseFloat(t.valor); let delta = t.tipo === 'receita' ? v : -v; if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; }); } let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0); for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; } datasetInfo = [{ label: 'Resultado Acumulado', data: accumulatedData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }]; } else if (aba === 'investimentos') { document.getElementById('grafico-titulo').innerHTML = `💎 Evolução Patrimonial (Investimentos)`; chartType = 'line'; let lastMonthStr = monthsToFetch[monthsToFetch.length - 1]; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo); let query = client.from('MM_transacoes').select('valor, tipo, competencia, carteira_origem_id, carteira_destino_id').lte('competencia', lastMonthStr); if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); const { data } = await query; let netByMonth = {}; if (data) { data.forEach(t => { let v = parseFloat(t.valor); let origInv = carteiraTipos[t.carteira_origem_id] === 'investimento'; let destInv = t.carteira_destino_id && carteiraTipos[t.carteira_destino_id] === 'investimento'; let delta = 0; if (t.tipo === 'receita' && origInv) delta += v; if (t.tipo === 'despesa' && origInv) delta -= v; if (t.tipo === 'transferencia') { if (origInv) delta -= v; if (destInv) delta += v; } if (t.tipo === 'rendimento' && origInv) delta += v; if (delta !== 0) { if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; } }); } let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0); for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; } datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }]; } let mostrarLegenda = (aba === 'fluxo'); chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); }
+        
+        async function loadRelatorioCategorias(aba) { 
+            const listEl = document.getElementById('relatorio-categorias'); listEl.innerHTML = '<span style="color:gray;">Calculando dados...</span>'; 
+            const compStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}`; 
+            let queryMes = client.from('MM_transacoes').select('valor, categoria_id, tipo, MM_categorias(nome, cor)').eq('competencia', compStr).eq('tipo', aba); 
+            if (currentView === 'individual') { queryMes = queryMes.eq('lancado_por', currentUser.id); } 
+            const { data: trans, error } = await queryMes; 
+            if(error || !trans) { listEl.innerHTML = 'Erro ao carregar'; return; } 
+            
+            let catTotals = {}; let totalMes = 0; 
+            trans.forEach(t => { if(!t.categoria_id) return; if(!catTotals[t.categoria_id]) { catTotals[t.categoria_id] = { nome: t.MM_categorias?.nome || 'Outras', cor: t.MM_categorias?.cor || '#ccc', total: 0 }; } catTotals[t.categoria_id].total += parseFloat(t.valor); totalMes += parseFloat(t.valor); }); 
+            let sortedCats = Object.entries(catTotals).map(([id, dados]) => ({id, ...dados})).sort((a,b) => b.total - a.total); 
+            let labelTotal = aba === 'despesa' ? 'Total de Despesas' : 'Total de Receitas'; let colorClass = aba === 'despesa' ? 'text-danger' : 'text-success'; 
+            
+            if(sortedCats.length === 0) { listEl.innerHTML = `<span style="color:gray;">Nenhum registo nesta aba para o mês.</span>`; return; } 
+            
+            let html = `<div style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary);">${labelTotal}: <strong class="${colorClass}">R$ ${totalMes.toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong><br>Clique em uma categoria para ver a evolução.</div>`; 
+            sortedCats.forEach(c => { const perc = ((c.total / totalMes) * 100).toFixed(1); html += `<div class="cat-progress-item" onclick="renderCategoryEvolution('${c.id}', '${c.nome}', '${c.cor}')"><div style="display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; font-weight: 600;"><span style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${c.cor}"></span> ${c.nome}</span><span>R$ ${c.total.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span></div><div style="width: 100%; background: var(--surface-color); height: 8px; border-radius: 4px; overflow: hidden;"><div style="width: ${perc}%; background: ${c.cor}; height: 100%;"></div></div><div style="text-align: right; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">${perc}%</div></div>`; }); 
+            listEl.innerHTML = html; 
+        }
+
+        // TÉCNICA IOS/SAFARI: Destruir fisicamente o <canvas> e recriar no DOM para evitar renderização 0x0
+        async function renderCategoryEvolution(catId, catName, catCor) { 
+            selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper');
+            wrapper.style.display = 'block'; 
+            document.getElementById('grafico-titulo').innerHTML = `<span style="color:${catCor}">■</span> Evolução (7 Meses): ${catName}`; 
+            
+            let monthsToFetch = []; let labels = []; 
+            for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } 
+            
+            let query = client.from('MM_transacoes').select('valor, competencia').eq('categoria_id', catId).in('competencia', monthsToFetch); 
+            if (currentView === 'individual') { query = query.eq('lancado_por', currentUser.id); } 
+            const { data: trans } = await query; 
+            
+            let monthTotals = {}; monthsToFetch.forEach(m => monthTotals[m] = 0); 
+            if(trans) { trans.forEach(t => { monthTotals[t.competencia] += parseFloat(t.valor); }); } 
+            let dataValues = monthsToFetch.map(m => monthTotals[m]); 
+            
+            if(chartInstance) { chartInstance.destroy(); } 
+            
+            // Re-injetando Canvas para forçar cálculo de tamanho no iOS Safari
+            const containerBox = document.getElementById('grafico-container-dinamico');
+            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            const ctx = document.getElementById('chartEvolucao').getContext('2d');
+            
+            chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+            
+            // Atraso de 100ms para evitar solavanco em telas mobile ao descer para o grafico recém gerado
+            setTimeout(() => { if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); } }, 100);
+        }
+
+        async function renderMacroEvolution(aba) { 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper');
+            wrapper.style.display = 'block'; 
+            
+            let monthsToFetch = []; let labels = []; 
+            for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } 
+            
+            let datasetInfo = []; let chartType = 'bar'; 
+            
+            if (aba === 'fluxo' || aba === 'resultado') { 
+                document.getElementById('grafico-titulo').innerHTML = aba === 'fluxo' ? `📊 Receitas vs Despesas (Mensal)` : `⚖️ Resultado Líquido do Mês`; 
+                let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).in('competencia', monthsToFetch); 
+                if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); 
+                const { data } = await query; 
+                let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
+                if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
+                
+                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
+                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
+            } 
+            else if (aba === 'resultado_acumulado') { 
+                document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
+                let lastMonthStr = monthsToFetch[monthsToFetch.length - 1]; 
+                let query = client.from('MM_transacoes').select('valor, tipo, competencia').in('tipo', ['despesa', 'receita']).lte('competencia', lastMonthStr); 
+                if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); 
+                const { data } = await query; 
+                let netByMonth = {}; 
+                if (data) { data.forEach(t => { let v = parseFloat(t.valor); let delta = t.tipo === 'receita' ? v : -v; if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; }); } 
+                let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0); 
+                for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; } 
+                datasetInfo = [{ label: 'Resultado Acumulado', data: accumulatedData, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.2)', fill: true, tension: 0.3 }]; 
+            } 
+            else if (aba === 'investimentos') { 
+                document.getElementById('grafico-titulo').innerHTML = `💎 Evolução Patrimonial (Investimentos)`; chartType = 'line'; 
+                let lastMonthStr = monthsToFetch[monthsToFetch.length - 1]; const carteiraTipos = {}; carteiras.forEach(c => carteiraTipos[c.id] = c.tipo); 
+                let query = client.from('MM_transacoes').select('valor, tipo, competencia, carteira_origem_id, carteira_destino_id').lte('competencia', lastMonthStr); 
+                if (currentView === 'individual') query = query.eq('lancado_por', currentUser.id); 
+                const { data } = await query; 
+                let netByMonth = {}; 
+                if (data) { data.forEach(t => { let v = parseFloat(t.valor); let origInv = carteiraTipos[t.carteira_origem_id] === 'investimento'; let destInv = t.carteira_destino_id && carteiraTipos[t.carteira_destino_id] === 'investimento'; let delta = 0; if (t.tipo === 'receita' && origInv) delta += v; if (t.tipo === 'despesa' && origInv) delta -= v; if (t.tipo === 'transferencia') { if (origInv) delta -= v; if (destInv) delta += v; } if (t.tipo === 'rendimento' && origInv) delta += v; if (delta !== 0) { if (!netByMonth[t.competencia]) netByMonth[t.competencia] = 0; netByMonth[t.competencia] += delta; } }); } 
+                let allMonths = Object.keys(netByMonth).sort(); let accumulatedData = monthsToFetch.map(m => 0); 
+                for (let i = 0; i < monthsToFetch.length; i++) { let targetM = monthsToFetch[i]; let sum = 0; allMonths.forEach(mStr => { if (mStr <= targetM) sum += netByMonth[mStr]; }); accumulatedData[i] = sum; } 
+                datasetInfo = [{ label: 'Saldo Acumulado', data: accumulatedData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.2)', fill: true, tension: 0.3 }]; 
+            } 
+            
+            if(chartInstance) { chartInstance.destroy(); } 
+            
+            // Re-injetando Canvas para forçar cálculo de tamanho no iOS Safari
+            const containerBox = document.getElementById('grafico-container-dinamico');
+            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            const ctx = document.getElementById('chartEvolucao').getContext('2d');
+
+            let mostrarLegenda = (aba === 'fluxo'); 
+            chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+        }
 
         // ==========================================
         // SISTEMA DE NOTIFICAÇÕES E FAMÍLIA
