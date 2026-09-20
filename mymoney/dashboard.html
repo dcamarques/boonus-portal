@@ -265,7 +265,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE RELATÓRIOS (COM A CORREÇÃO DE ID) -->
+    <!-- MODAL DE RELATÓRIOS -->
     <div class="modal-overlay" id="modal-relatorios">
         <div class="modal-content modal-expanded">
             <div class="modal-header">
@@ -295,12 +295,9 @@
                 <div id="relatorio-categorias"></div>
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
                     <h3 id="grafico-titulo" style="margin-bottom: 1rem; font-size: 1rem; color: var(--text-primary); text-align: center;">Evolução</h3>
-                    
-                    <!-- O ID QUE FALTAVA NA VERSÃO ANTERIOR FOI RESTAURADO AQUI -->
                     <div class="chart-container" id="grafico-container-dinamico">
                         <canvas id="chartEvolucao"></canvas>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -355,10 +352,16 @@
         const SUPABASE_KEY = 'sb_publishable_k4w2E4ur7xJR6qd575inBA_sJoXqHoN';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // VARIÁVEIS GLOBAIS RESTAURADAS - O SEGREDO DO GRÁFICO FUNCIONAR
         let currentUser = null; let currentFamilyId = null; let currentUserProfile = ''; 
         let currentDate = new Date(); let currentView = 'individual'; let balanceMode = 'acumulado'; 
         let carteiras = []; let categorias = []; let currentMonthTransactions = []; let contasFixas = [];
         let currentSearchTerm = ''; let currentFixaTab = 'despesa';
+
+        let chartInstance = null; 
+        let selectedRelatorioCatId = null; 
+        let selectedRelatorioCatName = ''; 
+        let selectedRelatorioCatCor = '';
 
         let globalBreakdownCorrente = {}; let globalBreakdownInvestimento = {}; let globalBreakdownCartao = {};
 
@@ -414,7 +417,6 @@
             
             let saldoCorrente = 0; let saldoInvestimento = 0; let faturaCartaoMes = 0; const carteiraTipos = {}; 
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
-            
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
             transacoesParaCalculo.forEach(t => { 
@@ -456,9 +458,6 @@
             listEl.innerHTML = htmlCompleto;
         }
 
-        // ==========================================
-        // MÓDULO CONTAS FIXAS
-        // ==========================================
         function openContasFixasModal() { document.getElementById('modal-contas-fixas').classList.add('active'); setFixaAba('despesa'); }
         function closeContasFixasModal() { document.getElementById('modal-contas-fixas').classList.remove('active'); }
         function setFixaAba(aba) { currentFixaTab = aba; document.getElementById('btn-fixa-despesa').classList.remove('active'); document.getElementById('btn-fixa-receita').classList.remove('active'); document.getElementById(`btn-fixa-${aba}`).classList.add('active'); renderContasFixasList(); }
@@ -590,25 +589,16 @@
             
             if(chartInstance) { chartInstance.destroy(); } 
             
+            // Re-injetando Canvas (agora COM o ID global declarado)
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
-            void containerBox.offsetHeight; 
             
             setTimeout(() => {
                 const canvas = document.getElementById('chartEvolucao');
                 if(!canvas) return;
                 const ctx = canvas.getContext('2d');
                 
-                chartInstance = new Chart(ctx, { 
-                    type: 'bar', 
-                    data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
                 if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
             }, 100);
         }
@@ -630,16 +620,8 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
                 
-                if (aba === 'fluxo') { 
-                    datasetInfo = [ 
-                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, 
-                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } 
-                    ]; 
-                } else { 
-                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); 
-                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); 
-                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; 
-                } 
+                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
+                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
             } 
             else if (aba === 'resultado_acumulado') { 
                 document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
@@ -670,7 +652,6 @@
             
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
-            void containerBox.offsetHeight; 
             
             setTimeout(() => {
                 const canvas = document.getElementById('chartEvolucao');
@@ -678,16 +659,7 @@
                 const ctx = canvas.getContext('2d');
                 
                 let mostrarLegenda = (aba === 'fluxo'); 
-                chartInstance = new Chart(ctx, { 
-                    type: chartType, 
-                    data: { labels: labels, datasets: datasetInfo }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
             }, 100);
         }
 
