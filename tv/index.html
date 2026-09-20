@@ -11,15 +11,14 @@
     <meta property="og:url" content="https://tv.boonus.app.br/">
     <meta property="og:type" content="website">
 
+    <!-- Biblioteca Oficial do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <style>
         :root { 
-            /* Paleta Genérica Padrão (Marca) - Será sobrescrita via JS */
             --neon-color: #00ff88; 
-            
-            /* Paleta Financeira Universal (Imutável) */
             --positive-color: #00ff88; 
             --negative-color: #ff4444;
-            
             --dark-bg: #050505; 
             --panel-bg: #111; 
         }
@@ -44,7 +43,6 @@
         .content-area { flex: 4; position: relative; display: flex; justify-content: center; align-items: center; background: var(--dark-bg); cursor: pointer; }
         .display-block { position: absolute; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 0.8s; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
 
-        /* Indicador de Pausa */
         #pause-indicator { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: var(--neon-color); padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; z-index: 100; border: 1px solid var(--neon-color); display: none; transition: color 0.5s, border-color 0.5s; letter-spacing: 1px; }
 
         .macro-grid, .coins-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; width: 95%; text-align: left; }
@@ -68,7 +66,6 @@
 
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-        /* REGRAS MOBILE */
         @media (max-width: 768px) {
             .header { flex-direction: column; gap: 15px; padding: 15px 10px; }
             .clocks-container { flex-wrap: wrap; justify-content: center; gap: 10px; }
@@ -93,7 +90,7 @@
 <body>
 
     <div class="header">
-        <div class="logo"><img id="header-logo" src="logo.png" alt="Logo"></div>
+        <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;"></div>
         <div class="clocks-container">
             <div class="clock-box"><div class="label">Brasília</div><div id="br-time" class="time">--:--:--</div></div>
             <div class="clock-box"><div class="label">New York</div><div id="ny-time" class="time">--:--:--</div></div>
@@ -161,86 +158,82 @@
         <div class="sidebar-qr" onclick="toggleFullScreen()">
             <div class="qr-section">
                 <div class="qr-box">
-                    <img id="qr-sidebar-img" src="" alt="QR Code">
+                    <img id="qr-sidebar-img" src="" alt="QR Code" style="display:none;">
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.0 (SaaS Ready)</div>
+            <div class="version-tag">v: 1.1 (Supabase Integrado)</div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // ARQUITETURA MULTITENANT (PREPARO PARA SUPABASE)
+        // INTEGRAÇÃO SUPABASE - BANCO DE DADOS
         // ==========================================
         
-        let TENANT_CONFIG = {};
+        // ATENÇÃO: Cole suas chaves reais do projeto PRODUCAO aqui!
+        const SUPABASE_URL = 'SUA_URL_DO_SUPABASE_AQUI'; 
+        const SUPABASE_KEY = 'SUA_CHAVE_ANON_PUBLICA_AQUI'; 
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // Banco de Dados Mockado (Será substituído pela chamada ao Supabase na Versão 1.1)
-        const mockDatabase = {
-            'generic': {
-                neonColor: '#00ff88',
-                logoSrc: 'logo.png',
-                qrData: 'mailto:contato@boonus.app.br',
-                publiImages: ['publi1.mp4', 'publi2.png', 'publi3.png'],
-                urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=0&single=true&output=csv',
-                urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=82167012&single=true&output=csv',
-                urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRAOhT8trYO2BkjzBBZQsBdfuJSo5xA-3OljtFd9JkucbnDtC7J9komg3Glc0HlxUExTVqjapGeM3dY/pub?gid=327977986&single=true&output=csv',
-                urlContador: ''
-            },
-            'safra': {
-                neonColor: '#C29B0C',
-                logoSrc: 'logo-safra.png',
-                qrData: 'mailto:contato@boonus.app.br', // Substitua pelo e-mail desejado
-                publiImages: ['safra-publi1.png', 'safra-publi2.png', 'safra-publi3.png'],
-                urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRligWQ9c9JMzqTchd606jk1VGqTgpHjaQpEhqjMlG_3ecYbSZeuviFiFT6TAg9o7YmXdwRI16DI8cv/pub?gid=0&single=true&output=csv',
-                urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRligWQ9c9JMzqTchd606jk1VGqTgpHjaQpEhqjMlG_3ecYbSZeuviFiFT6TAg9o7YmXdwRI16DI8cv/pub?gid=82167012&single=true&output=csv',
-                urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRligWQ9c9JMzqTchd606jk1VGqTgpHjaQpEhqjMlG_3ecYbSZeuviFiFT6TAg9o7YmXdwRI16DI8cv/pub?gid=327977986&single=true&output=csv',
-                urlContador: 'https://script.google.com/macros/s/AKfycbzI8HxET-dGKkV5jcrAYxH7xcG2SjCJdfugrW0_1y4t8_Gil0rKjxjnt8R-oFEV27I6IQ/exec'
-            },
-            'btg': {
-                neonColor: '#00d2ff',
-                logoSrc: 'logo-btg.png',
-                qrData: 'mailto:contato@boonus.app.br',
-                publiImages: ['btg-publi1.png', 'btg-publi2.png', 'btg-publi3.png'],
-                urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPJE572HfEwmYWjjVAn3nE4mkP_YAzTM7UNad5sb8W1uZO7NsHQqZGY2AOTObqYDgc0f_oU0ulSL82/pub?gid=0&single=true&output=csv',
-                urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPJE572HfEwmYWjjVAn3nE4mkP_YAzTM7UNad5sb8W1uZO7NsHQqZGY2AOTObqYDgc0f_oU0ulSL82/pub?gid=82167012&single=true&output=csv',
-                urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQPJE572HfEwmYWjjVAn3nE4mkP_YAzTM7UNad5sb8W1uZO7NsHQqZGY2AOTObqYDgc0f_oU0ulSL82/pub?gid=327977986&single=true&output=csv',
-                urlContador: 'https://script.google.com/macros/s/AKfycbwksLJPfO9YyRGHKDCA6TkOtdhc3f7vNjJNNZNWtwv_TXPMWKdnAuBCfIoART3TmscMxw/exec'
-            },
-            'darioporto': {
-                neonColor: '#FFFFFF',
-                logoSrc: 'logo-darioporto.png?v=2',
-                qrData: 'https://wa.me/5521971213845',
-                publiImages: ['dp-publi1.png', 'dp-publi2.png', 'dp-publi3.png'],
-                urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFmc1NpRH8iG-TY9DPFcaLfDKpw-CNHI89vqPO_0JAJbjMnL3l3QS4hIHCzP58UDrFnNK6s0UqW8BO/pub?gid=0&single=true&output=csv',
-                urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQFmc1NpRH8iG-TY9DPFcaLfDKpw-CNHI89vqPO_0JAJbjMnL3l3QS4hIHCzP58UDrFnNK6s0UqW8BO/pub?gid=82167012&single=true&output=csv',
-                urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS9Pea0Jdg1zDprxm3RAgkOtDRH-2jT1LRSE1hncjxuTeqm9-B5rawgZok5iGRveEz3uGckx7PI3Ynh/pub?gid=327977986&single=true&output=csv',
-                urlContador: ''
-            }
+        let TENANT_CONFIG = {
+            // Objeto de segurança (fallback) caso o Supabase falhe ou falte internet
+            neonColor: '#00ff88',
+            logoSrc: 'logo.png',
+            qrData: 'mailto:contato@boonus.app.br',
+            publiImages: [], 
+            urlOpps: '', urlRadar: '', urlMacro: '', urlContador: ''
         };
 
-        // Esta função centraliza a inicialização do cliente
         async function loadTenantConfig() {
             const urlParams = new URLSearchParams(window.location.search);
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
-            // TODO (Versão 1.1): Aqui entra a requisição ao Supabase:
-            // const { data } = await supabase.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
-            // TENANT_CONFIG = data || mockDatabase['generic'];
+            try {
+                // Buscando as configurações do escritório no banco de dados
+                const { data, error } = await supabase
+                    .from('tv_escritorios')
+                    .select('*')
+                    .eq('slug', tenantParam)
+                    .single();
 
-            TENANT_CONFIG = mockDatabase[tenantParam] || mockDatabase['generic'];
+                if (error) throw error;
+                if (!data) throw new Error("Cliente não encontrado.");
+                
+                // Mapeando a tabela real para nossa configuração
+                TENANT_CONFIG = {
+                    neonColor: data.neon_color || '#00ff88',
+                    logoSrc: data.logo_src || '',
+                    qrData: data.qr_data || 'mailto:contato@boonus.app.br',
+                    publiImages: data.publi_images || [],
+                    urlOpps: data.url_opps || '',
+                    urlRadar: data.url_radar || '',
+                    urlMacro: data.url_macro || '',
+                    urlContador: data.url_contador || ''
+                };
+                console.log("Configurações do escritório carregadas com sucesso via Supabase.");
+                
+            } catch (err) {
+                console.warn(`Aviso: Falha ao carregar escritório '${tenantParam}'. Usando modo padrão de segurança.`, err.message);
+                // O TENANT_CONFIG já possui o fallback seguro declarado acima.
+                // Em um cenário futuro, poderíamos redirecionar para uma tela de erro se quisermos ser rígidos.
+            }
 
-            // Aplica as configurações na interface visual
+            // Aplicando o visual na interface
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
             
-            const logoEl = document.getElementById('header-logo');
-            logoEl.src = TENANT_CONFIG.logoSrc;
-            logoEl.style.display = 'block';
+            if (TENANT_CONFIG.logoSrc) {
+                const logoEl = document.getElementById('header-logo');
+                logoEl.src = TENANT_CONFIG.logoSrc;
+                logoEl.style.display = 'block';
+            }
 
-            document.getElementById('qr-sidebar-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(TENANT_CONFIG.qrData)}`;
+            if (TENANT_CONFIG.qrData) {
+                const qrImg = document.getElementById('qr-sidebar-img');
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(TENANT_CONFIG.qrData)}`;
+                qrImg.style.display = 'block';
+            }
             
-            // Registra o acesso inicial
             registrarAcesso();
         }
 
@@ -250,7 +243,7 @@
 
         function toggleFullScreen() {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(e => console.log("Erro de permissão FullScreen", e));
+                document.documentElement.requestFullscreen().catch(e => console.log("Erro FullScreen", e));
             } else {
                 if (document.exitFullscreen) document.exitFullscreen();
             }
@@ -279,7 +272,7 @@
                     mode: 'no-cors',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: regiaoDetectada })
-                }).catch(() => {}); // Oculta erros do no-cors no console
+                }).catch(() => {}); 
             } catch(e) {}
         }
 
@@ -330,10 +323,11 @@
         }
 
         // ==========================================
-        // WORKERS DE DADOS (COM STATE RETENTION PARA APIS)
+        // WORKERS DE DADOS (COM STATE RETENTION)
         // ==========================================
 
         async function fetchOpportunities() {
+            if (!TENANT_CONFIG.urlOpps) return;
             try {
                 const response = await fetch(TENANT_CONFIG.urlOpps + '&t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Falha na rede");
@@ -366,11 +360,12 @@
                 });
                 container.innerHTML = html + '</div>';
             } catch (e) {
-                console.warn("Retenção de estado: Mantendo oportunidades antigas devido à falha na API.");
+                console.warn("Retenção de estado: Mantendo oportunidades antigas.");
             }
         }
 
         async function fetchAgenda() {
+            if (!TENANT_CONFIG.urlRadar) return;
             try {
                 const response = await fetch(TENANT_CONFIG.urlRadar + '&t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Falha na rede");
@@ -404,13 +399,13 @@
                 });
                 container.innerHTML = html + '</div>';
             } catch (e) {
-                console.warn("Retenção de estado: Mantendo agenda antiga devido à falha na API.");
+                console.warn("Retenção de estado: Mantendo agenda antiga.");
             }
         }
 
         async function fetchMacro() {
+            if (!TENANT_CONFIG.urlMacro) return;
             try {
-                if (!TENANT_CONFIG.urlMacro) return; 
                 const response = await fetch(TENANT_CONFIG.urlMacro + '&t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Falha na rede");
                 const csvText = await response.text();
@@ -465,9 +460,7 @@
                     actions.slice(-10).reverse().forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="down">▼ ${s.change.toFixed(2)}%</span></span>`);
                     document.getElementById('stock-ticker').innerHTML = tickerHtml + tickerHtml;
                 }
-            } catch(e) {
-                console.warn("Retenção de estado: Ticker não será atualizado neste ciclo.");
-            }
+            } catch(e) {}
         }
 
         async function fetchAwesome() {
@@ -486,9 +479,7 @@
                 if(dB.EURBRL) updateC('eur', dB.EURBRL); 
                 if(dB.JPYBRL) updateC('jpy', dB.JPYBRL); 
                 if(dB.GBPBRL) updateC('gbp', dB.GBPBRL);
-            } catch(e) {
-                console.warn("Retenção de estado: Câmbio não será atualizado neste ciclo.");
-            }
+            } catch(e) {}
         }
 
         let newsList = [];
@@ -508,7 +499,6 @@
                 } catch(e) {}
             }
             
-            // Só substitui a lista de notícias se a API retornou algo válido, evitando tela preta
             if(tempNewsList.length > 0) {
                 newsList = tempNewsList.sort(() => Math.random() - 0.5);
             }
@@ -520,12 +510,13 @@
 
         async function initApp() {
             updateClocks();
+            // 1. OBRIGA O APLICATIVO A ESPERAR O SUPABASE RESPONDER ANTES DE RENDERIZAR
             await loadTenantConfig();
 
-            // Chamada inicial
+            // 2. DISPARA CHAMADAS INICIAIS
             fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
             
-            // Definição dos loops
+            // 3. SETA OS TEMPOS DE ATUALIZAÇÃO
             setInterval(fetchOpportunities, 300000); 
             setInterval(fetchMacro, 300000);         
             setInterval(fetchBrapi, 300000);         
@@ -573,7 +564,7 @@
                         if(blocks[bIdx] === 'block-publi') {
                             const vid = document.getElementById('publi-vid');
                             vid.pause();
-                            vid.removeAttribute('src'); // Força descarregamento de memória para vídeos na TV
+                            vid.removeAttribute('src'); 
                             vid.load();
                         }
                         
@@ -584,8 +575,8 @@
                             const imgPubli = document.getElementById('publi-img');
                             const vidPubli = document.getElementById('publi-vid');
                             
-                            // Acessa o publiImages dinâmico do config atual
-                            if(TENANT_CONFIG.publiImages.length > 0) {
+                            // Avalia se o cliente atual possui propagandas cadastradas no JSONB do Supabase
+                            if(TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0) {
                                 const currentMedia = TENANT_CONFIG.publiImages[pIdx];
                                 
                                 if(currentMedia.toLowerCase().endsWith('.mp4')) {
@@ -596,7 +587,7 @@
                                     
                                     let playPromise = vidPubli.play();
                                     if (playPromise !== undefined) {
-                                        playPromise.catch(error => { console.log("Falha no Autoplay:", error); });
+                                        playPromise.catch(error => {});
                                     }
                                 } else {
                                     vidPubli.style.display = 'none';
@@ -605,7 +596,7 @@
                                 }
                                 pIdx = (pIdx + 1) % TENANT_CONFIG.publiImages.length;
                             } else {
-                                // Pula o bloco se não tiver propaganda configurada
+                                // Pula o bloco de propagandas silenciosamente e vai para o próximo
                                 cycle();
                                 return;
                             }
@@ -622,7 +613,7 @@
             
             cycleTimeout = setTimeout(cycle, 60000);
 
-            // Gerenciamento de Pausa por Toque (Interatividade)
+            // Gerenciamento de Pausa por Toque
             const contentArea = document.getElementById('interactive-area');
             const pauseIndicator = document.getElementById('pause-indicator');
 
@@ -643,7 +634,7 @@
                         isPaused = false;
                         pauseIndicator.style.display = 'none';
                         cycle(); 
-                    }, 120000); // 2 Minutos de pausa antes de retomar
+                    }, 120000); 
                 }
             }
 
@@ -653,7 +644,6 @@
                 }
             });
 
-            // Prevenção de Desligamento da Tela
             let wakeLock = null;
             async function requestWakeLock() {
                 try {
@@ -669,7 +659,6 @@
             });
         }
 
-        // Executa o BootStrap da TV
         window.onload = initApp;
 
     </script>
