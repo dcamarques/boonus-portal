@@ -171,13 +171,12 @@
         // INTEGRAÇÃO SUPABASE - BANCO DE DADOS
         // ==========================================
         
-        // ATENÇÃO: Cole suas chaves reais do projeto PRODUCAO aqui!
-        const SUPABASE_URL = 'SUA_URL_DO_SUPABASE_AQUI'; 
-        const SUPABASE_KEY = 'SUA_CHAVE_ANON_PUBLICA_AQUI'; 
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let TENANT_CONFIG = {
-            // Objeto de segurança (fallback) caso o Supabase falhe ou falte internet
             neonColor: '#00ff88',
             logoSrc: 'logo.png',
             qrData: 'mailto:contato@boonus.app.br',
@@ -190,7 +189,6 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                // Buscando as configurações do escritório no banco de dados
                 const { data, error } = await supabase
                     .from('tv_escritorios')
                     .select('*')
@@ -200,7 +198,6 @@
                 if (error) throw error;
                 if (!data) throw new Error("Cliente não encontrado.");
                 
-                // Mapeando a tabela real para nossa configuração
                 TENANT_CONFIG = {
                     neonColor: data.neon_color || '#00ff88',
                     logoSrc: data.logo_src || '',
@@ -215,11 +212,8 @@
                 
             } catch (err) {
                 console.warn(`Aviso: Falha ao carregar escritório '${tenantParam}'. Usando modo padrão de segurança.`, err.message);
-                // O TENANT_CONFIG já possui o fallback seguro declarado acima.
-                // Em um cenário futuro, poderíamos redirecionar para uma tela de erro se quisermos ser rígidos.
             }
 
-            // Aplicando o visual na interface
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
             
             if (TENANT_CONFIG.logoSrc) {
@@ -510,13 +504,10 @@
 
         async function initApp() {
             updateClocks();
-            // 1. OBRIGA O APLICATIVO A ESPERAR O SUPABASE RESPONDER ANTES DE RENDERIZAR
             await loadTenantConfig();
 
-            // 2. DISPARA CHAMADAS INICIAIS
             fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
             
-            // 3. SETA OS TEMPOS DE ATUALIZAÇÃO
             setInterval(fetchOpportunities, 300000); 
             setInterval(fetchMacro, 300000);         
             setInterval(fetchBrapi, 300000);         
@@ -524,7 +515,6 @@
             setInterval(fetchAgenda, 300000);         
             setInterval(fetchNews, 1800000);          
 
-            // Rotatividade de Notícias
             let newsIdx = 0;
             setInterval(() => {
                 if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
@@ -541,7 +531,6 @@
                 }
             }, 15000);
 
-            // Engine de Ciclos dos Blocos
             const blocks = ['block-news', 'block-opps', 'block-publi', 'block-macro', 'block-agenda', 'block-coins'];
             let bIdx = 0; let pIdx = 0;
             let cycleTimeout;
@@ -575,7 +564,6 @@
                             const imgPubli = document.getElementById('publi-img');
                             const vidPubli = document.getElementById('publi-vid');
                             
-                            // Avalia se o cliente atual possui propagandas cadastradas no JSONB do Supabase
                             if(TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0) {
                                 const currentMedia = TENANT_CONFIG.publiImages[pIdx];
                                 
@@ -596,7 +584,6 @@
                                 }
                                 pIdx = (pIdx + 1) % TENANT_CONFIG.publiImages.length;
                             } else {
-                                // Pula o bloco de propagandas silenciosamente e vai para o próximo
                                 cycle();
                                 return;
                             }
@@ -613,7 +600,6 @@
             
             cycleTimeout = setTimeout(cycle, 60000);
 
-            // Gerenciamento de Pausa por Toque
             const contentArea = document.getElementById('interactive-area');
             const pauseIndicator = document.getElementById('pause-indicator');
 
