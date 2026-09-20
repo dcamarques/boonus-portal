@@ -174,14 +174,16 @@
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        // Objeto de Segurança e Fallback Genérico (Impede a tela preta)
         let TENANT_CONFIG = {
             neonColor: '#00ff88',
             logoSrc: 'logo.png',
             qrData: 'mailto:contato@boonus.app.br',
             publiImages: [], 
-            urlOpps: '', urlRadar: '', urlMacro: '', urlContador: ''
+            urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=0&single=true&output=csv',
+            urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=82167012&single=true&output=csv',
+            urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRAOhT8trYO2BkjzBBZQsBdfuJSo5xA-3OljtFd9JkucbnDtC7J9komg3Glc0HlxUExTVqjapGeM3dY/pub?gid=327977986&single=true&output=csv',
+            urlContador: ''
         };
 
         async function loadTenantConfig() {
@@ -189,7 +191,15 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                const { data, error } = await supabase
+                // Verificação de Segurança de Segunda Ordem
+                if (typeof window.supabase === 'undefined') {
+                    throw new Error("A biblioteca do Supabase não foi carregada pelo navegador.");
+                }
+
+                // Cria o cliente APENAS de forma segura dentro do try/catch
+                const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+                const { data, error } = await supabaseClient
                     .from('tv_escritorios')
                     .select('*')
                     .eq('slug', tenantParam)
@@ -198,6 +208,7 @@
                 if (error) throw error;
                 if (!data) throw new Error("Cliente não encontrado.");
                 
+                // Subscreve os dados reais do banco
                 TENANT_CONFIG = {
                     neonColor: data.neon_color || '#00ff88',
                     logoSrc: data.logo_src || '',
@@ -208,12 +219,13 @@
                     urlMacro: data.url_macro || '',
                     urlContador: data.url_contador || ''
                 };
-                console.log("Configurações do escritório carregadas com sucesso via Supabase.");
+                console.log("Configurações do escritório carregadas via Supabase.");
                 
             } catch (err) {
-                console.warn(`Aviso: Falha ao carregar escritório '${tenantParam}'. Usando modo padrão de segurança.`, err.message);
+                console.warn(`Aviso de Contingência: Falha ao carregar banco de dados. Ativando Layout Padrão. Detalhe do erro:`, err.message);
             }
 
+            // Aplica os dados (Seja do banco ou do fallback de segurança)
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
             
             if (TENANT_CONFIG.logoSrc) {
@@ -503,11 +515,16 @@
         // ==========================================
 
         async function initApp() {
+            // Dispara os relógios imediatamente
             updateClocks();
+            
+            // Carrega os dados de forma segura (Se falhar, assume os valores padrão)
             await loadTenantConfig();
 
+            // Dispara chamadas de dados financeiros
             fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
             
+            // Define o ritmo de atualizações
             setInterval(fetchOpportunities, 300000); 
             setInterval(fetchMacro, 300000);         
             setInterval(fetchBrapi, 300000);         
@@ -645,6 +662,7 @@
             });
         }
 
+        // Inicia a aplicação
         window.onload = initApp;
 
     </script>
