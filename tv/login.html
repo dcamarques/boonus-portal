@@ -164,7 +164,7 @@
         <!-- Tela de Bloqueio por Tentativas (Oculto por padrão) -->
         <div id="block-overlay">
             <h2 style="color: var(--negative-color);">ACESSO BLOQUEADO</h2>
-            <p style="color: #ccc; font-size: 0.9rem; margin: 10px 30px;">Foram detetadas 3 tentativas falhadas. Aguarde antes de tentar novamente.</p>
+            <p style="color: #ccc; font-size: 0.9rem; margin: 10px 30px;">Foram detectadas 3 tentativas falhas. Aguarde antes de tentar novamente.</p>
         </div>
 
         <div class="logo">BOONUS<span>.TV</span></div>
@@ -177,29 +177,29 @@
             </div>
 
             <div class="input-group">
-                <label for="password">Palavra-passe</label>
+                <label for="password">Senha</label>
                 <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
             </div>
 
             <button type="submit" class="btn-login" id="btn-submit">
-                <span id="btn-text">Aceder ao Painel</span>
+                <span id="btn-text">Acessar Painel</span>
                 <div class="loader" id="btn-loader"></div>
             </button>
             
-            <a class="forgot-password" onclick="recuperarSenha()">Esqueceu a sua palavra-passe?</a>
+            <a class="forgot-password" onclick="recuperarSenha()">Esqueceu sua senha?</a>
         </form>
     </div>
 
     <script>
         // ==========================================
-        // CONFIGURAÇÃO SUPABASE
+        // CONFIGURAÇÃO SUPABASE (Chaves já inseridas!)
         // ==========================================
-        const SUPABASE_URL = 'COLE_A_SUA_URL_DO_SUPABASE_AQUI'; 
-        const SUPABASE_KEY = 'COLE_A_SUA_CHAVE_ANON_PUBLICA_AQUI'; 
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // ==========================================
-        // LÓGICA DE SEGURANÇA E BLOQUEIO (Segunda Ordem)
+        // LÓGICA DE SEGURANÇA E BLOQUEIO
         // ==========================================
         let failedAttempts = parseInt(localStorage.getItem('boonus_login_attempts')) || 0;
         let lockTime = parseInt(localStorage.getItem('boonus_lock_time')) || 0;
@@ -258,7 +258,7 @@
                 Swal.fire({
                     icon: 'success',
                     title: 'Autenticado!',
-                    text: 'A redirecionar para o painel de controlo...',
+                    text: 'Redirecionando para o painel de controle...',
                     background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
                     timer: 1500, showConfirmButton: false
                 }).then(() => {
@@ -280,7 +280,7 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Acesso Negado',
-                        text: `Credenciais inválidas. Tem mais ${3 - failedAttempts} tentativa(s).`,
+                        text: `Credenciais inválidas. Você tem mais ${3 - failedAttempts} tentativa(s).`,
                         background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
                     });
                 }
@@ -290,13 +290,13 @@
         });
 
         // ==========================================
-        // RECUPERAÇÃO DE PALAVRA-PASSE
+        // RECUPERAÇÃO DE SENHA
         // ==========================================
         async function recuperarSenha() {
             const emailValue = document.getElementById('email').value.trim();
             
             const { value: emailToRecover } = await Swal.fire({
-                title: 'Recuperar Palavra-passe',
+                title: 'Recuperar Senha',
                 input: 'email',
                 inputLabel: 'Insira o seu e-mail corporativo',
                 inputValue: emailValue,
@@ -307,10 +307,10 @@
             });
 
             if (emailToRecover) {
-                Swal.fire({ title: 'A enviar...', allowOutsideClick: false, background: '#111', color: '#fff', didOpen: () => { Swal.showLoading(); }});
+                Swal.fire({ title: 'Enviando...', allowOutsideClick: false, background: '#111', color: '#fff', didOpen: () => { Swal.showLoading(); }});
                 
                 const { error } = await supabase.auth.resetPasswordForEmail(emailToRecover, {
-                    // URL para onde o utilizador regressará após criar a nova palavra-passe
+                    // URL para onde o usuário retornará após criar a nova senha
                     redirectTo: window.location.origin + '/redefinir-senha.html', 
                 });
 
