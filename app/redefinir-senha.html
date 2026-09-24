@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redefinir Senha - Boonus</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --neon-color: #00ff88;
+            --dark-bg: #050505;
+            --panel-bg: #111;
+            --text-color: #e0e0e0;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .login-container {
+            background-color: var(--panel-bg);
+            padding: 40px 50px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            border-top: 4px solid var(--neon-color);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; letter-spacing: 2px; }
+        .logo span { color: var(--neon-color); }
+        .subtitle { font-size: 0.9rem; color: #888; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
+        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; transition: border-color 0.3s; }
+        .input-group input:focus { outline: none; border-color: var(--neon-color); }
+
+        .btn-login { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: background-color 0.3s, transform 0.1s; margin-top: 10px; }
+        .btn-login:hover { background-color: #00cc6a; }
+        .btn-login:active { transform: scale(0.98); }
+        
+        .btn-login:disabled { background-color: #333; color: #666; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="logo">BOONUS<span>.TV</span></div>
+        <div class="subtitle">Criar Nova Senha</div>
+
+        <form id="reset-form">
+            <div class="input-group">
+                <label for="new-password">Nova Senha (Mín. 6 caracteres)</label>
+                <input type="password" id="new-password" required placeholder="••••••••" minlength="6">
+            </div>
+
+            <div class="input-group">
+                <label for="confirm-password">Confirmar Nova Senha</label>
+                <input type="password" id="confirm-password" required placeholder="••••••••" minlength="6">
+            </div>
+
+            <button type="submit" class="btn-login" id="btn-submit">Atualizar Senha</button>
+        </form>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Ouve a mudança na URL para processar o token que o Supabase envia pelo e-mail
+        window.addEventListener('hashchange', function() {
+           console.log("Token recebido do e-mail de recuperação.");
+        });
+
+        document.getElementById('reset-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const btnSubmit = document.getElementById('btn-submit');
+
+            if (newPassword !== confirmPassword) {
+                Swal.fire({ icon: 'error', title: 'Senhas Diferentes', text: 'As duas senhas precisam ser iguais.', background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                return;
+            }
+
+            btnSubmit.disabled = true;
+            btnSubmit.innerText = 'A atualizar...';
+
+            try {
+                // Comando do Supabase para atualizar a senha do utilizador autenticado pelo link
+                const { error } = await supabaseClient.auth.updateUser({
+                    password: newPassword
+                });
+
+                if (error) throw error;
+
+                // Sucesso! Limpamos qualquer bloqueio residual da tela de login
+                localStorage.removeItem('boonus_login_attempts');
+                localStorage.removeItem('boonus_login_blocked');
+                localStorage.removeItem('boonus_blocked_email');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Senha Atualizada!',
+                    text: 'A sua senha foi redefinida com sucesso. A redirecionar para o login...',
+                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                    timer: 2500, showConfirmButton: false
+                }).then(() => {
+                    // Redireciona de volta para fazer o login
+                    window.location.href = 'login.html';
+                });
+
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erro de Atualização',
+                    text: err.message || 'O link pode ter expirado ou ser inválido. Solicite uma nova recuperação.',
+                    background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
+                });
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = 'Atualizar Senha';
+            }
+        });
+    </script>
+</body>
+</html>
