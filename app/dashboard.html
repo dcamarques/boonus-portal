@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Boonus</title>
+    
+    <!-- Biblioteca do Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Alertas elegantes -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --neon-color: #00ff88;
+            --dark-bg: #050505;
+            --panel-bg: #111;
+            --card-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --text-muted: #888;
+            --border-color: #333;
+        }
+
+        /* Oculta o corpo inteiro da página até que a segurança libere o acesso */
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: none; /* Trava visual anti-curiosos */
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* ================= SIDEBAR (Menu Lateral) ================= */
+        .sidebar {
+            width: 250px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
+
+        .logo-area .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #fff;
+            letter-spacing: 2px;
+        }
+
+        .logo-area .logo span { color: var(--neon-color); }
+        .logo-area .badge { font-size: 0.7rem; background: #333; padding: 3px 8px; border-radius: 4px; color: #aaa; text-transform: uppercase; margin-top: 5px; display: inline-block; }
+
+        .nav-menu { flex: 1; display: flex; flex-direction: column; gap: 5px; padding: 0 15px; }
+        
+        .nav-item {
+            padding: 12px 15px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: background-color 0.3s, color 0.3s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item:hover { background-color: var(--card-bg); color: #fff; }
+        .nav-item.active { background-color: rgba(0, 255, 136, 0.1); color: var(--neon-color); border-left: 3px solid var(--neon-color); border-radius: 0 8px 8px 0; }
+        
+        .nav-divider { margin: 15px 0 5px 15px; font-size: 0.75rem; text-transform: uppercase; color: #555; font-weight: bold; letter-spacing: 1px; }
+
+        .user-profile {
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-color);
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .user-info .name { font-size: 0.95rem; font-weight: bold; color: #fff; margin-bottom: 2px; }
+        .user-info .role { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 1px; }
+        
+        .btn-logout { background: none; border: none; color: #888; cursor: pointer; font-size: 1.2rem; transition: color 0.3s; padding: 5px; }
+        .btn-logout:hover { color: #ff4444; }
+
+        /* ================= CONTEÚDO PRINCIPAL ================= */
+        .main-content {
+            flex: 1;
+            padding: 30px 40px;
+            overflow-y: auto;
+            background-color: var(--dark-bg);
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 1.8rem; color: #fff; }
+        .header .date { color: var(--text-muted); font-size: 0.9rem; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-top: 3px solid #333;
+            transition: transform 0.2s, border-color 0.3s;
+        }
+
+        .card:hover { transform: translateY(-3px); }
+        .card.highlight { border-top-color: var(--neon-color); }
+        .card.highlight-blue { border-top-color: #00aaff; }
+
+        .card-title { font-size: 0.85rem; text-transform: uppercase; color: var(--text-muted); font-weight: bold; margin-bottom: 15px; letter-spacing: 1px; }
+        .card-value { font-size: 2.2rem; font-weight: bold; color: #fff; margin-bottom: 5px; font-variant-numeric: tabular-nums; }
+        .card-subtext { font-size: 0.85rem; color: #666; }
+        .card-subtext.positive { color: var(--neon-color); }
+
+        /* Loader Inicialização */
+        #init-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--neon-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <!-- Trava de Carregamento Visível -->
+    <div id="init-loader">
+        <div class="spinner"></div>
+        <div style="color: #888; font-weight: bold; letter-spacing: 1px; text-transform: uppercase; font-size: 0.85rem;">Validando Credenciais...</div>
+    </div>
+
+    <div class="layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo-area">
+                <div class="logo">BOONUS<span>.TV</span></div>
+                <div class="badge">Performance Hub</div>
+            </div>
+
+            <div class="nav-menu" id="nav-menu-container">
+                <a class="nav-item active" onclick="loadView('home')">📊 Resumo Diário</a>
+                <a class="nav-item" onclick="loadView('lancar')">📝 Lançar Produção</a>
+                <a class="nav-item" onclick="loadView('metas')">🎯 Minhas Metas</a>
+                
+                <!-- Este bloco só aparecerá se o usuário for Admin -->
+                <div id="admin-menu" style="display: none;">
+                    <div class="nav-divider">Gestão do Escritório</div>
+                    <a class="nav-item" onclick="loadView('admin_geral')">🌍 Visão Consolidada</a>
+                    <a class="nav-item" onclick="loadView('admin_equipe')">👥 Gestão de Equipe</a>
+                    <a class="nav-item" onclick="loadView('admin_tv')">📺 Configuração TV</a>
+                </div>
+            </div>
+
+            <div class="user-profile">
+                <div class="user-info">
+                    <div class="name" id="display-name">Carregando...</div>
+                    <div class="role" id="display-role">...</div>
+                </div>
+                <button class="btn-logout" onclick="fazerLogoff()" title="Sair do Sistema">🚪</button>
+            </div>
+        </div>
+
+        <!-- Conteúdo -->
+        <div class="main-content">
+            <div class="header">
+                <h1 id="page-title">Resumo de Produção</h1>
+                <div class="date" id="current-date">-- de -- de ----</div>
+            </div>
+
+            <!-- Grade de Cartões (Placeholder) -->
+            <div class="dashboard-grid">
+                <div class="card highlight">
+                    <div class="card-title">Captação Líquida Mês</div>
+                    <div class="card-value">R$ 0,00</div>
+                    <div class="card-subtext positive">▲ 0% em relação à meta</div>
+                </div>
+                
+                <div class="card highlight-blue">
+                    <div class="card-title">ICM Global Alcançado</div>
+                    <div class="card-value">0%</div>
+                    <div class="card-subtext">Meta atual: 110% até Junho</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Receita Gerada Mês</div>
+                    <div class="card-value">R$ 0,00</div>
+                    <div class="card-subtext">0 operações fechadas</div>
+                </div>
+            </div>
+
+            <div class="card" style="min-height: 250px; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">📈</div>
+                <h3 style="color: #ccc; margin: 0;">Área de Gráficos e Histórico</h3>
+                <p style="color: #666; font-size: 0.9rem;">(A estrutura de dados de produção será conectada aqui no próximo passo)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURAÇÃO SUPABASE
+        // ==========================================
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        
+        let supabaseClient;
+        try {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        } catch (e) {
+            console.error("Erro fatal ao inicializar o banco de dados.", e);
+        }
+
+        // ==========================================
+        // GUARDIÃO DE ROTA (Segurança)
+        // ==========================================
+        async function validarSessao() {
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                
+                // Se não houver sessão ativa, expulsa sumariamente
+                if (error || !session) {
+                    console.warn("Acesso bloqueado: Sem credenciais válidas.");
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                console.log("Acesso Liberado para:", session.user.email);
+                
+                // Exibe a interface
+                document.body.style.display = 'block';
+                
+                // Atualiza dados na tela
+                document.getElementById('display-name').innerText = session.user.email.split('@')[0].toUpperCase();
+                
+                // Ajusta a data do cabeçalho
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('current-date').innerText = new Date().toLocaleDateString('pt-BR', options);
+                
+                // Dispara a rotina de busca de perfil no banco para saber se é Admin ou Consultor
+                buscarPerfilUtilizador(session.user.id);
+                
+                // Remove a tela preta de carregamento
+                setTimeout(() => {
+                    document.getElementById('init-loader').style.display = 'none';
+                }, 500);
+
+            } catch (err) {
+                window.location.href = 'login.html';
+            }
+        }
+
+        // ==========================================
+        // GESTÃO DE HIERARQUIA E DADOS
+        // ==========================================
+        async function buscarPerfilUtilizador(userId) {
+            try {
+                // Consulta à nossa tabela que criamos via SQL no Supabase
+                const { data, error } = await supabaseClient
+                    .from('tv_utilizadores')
+                    .select('perfil, nome_completo')
+                    .eq('id', userId)
+                    .single();
+
+                if (data) {
+                    // Atualiza Nome Real
+                    if (data.nome_completo) {
+                        document.getElementById('display-name').innerText = data.nome_completo;
+                    }
+
+                    // Se for administrador, exibe as opções de gestão B2B
+                    if (data.perfil === 'admin') {
+                        document.getElementById('display-role').innerText = 'Administrador(a)';
+                        document.getElementById('admin-menu').style.display = 'block';
+                    } else {
+                        document.getElementById('display-role').innerText = 'Consultor(a) Associado';
+                    }
+                } else {
+                    document.getElementById('display-role').innerText = 'Usuário Padrão';
+                }
+
+            } catch (err) {
+                console.warn("Não foi possível carregar o nível de acesso.", err);
+            }
+        }
+
+        // ==========================================
+        // NAVEGAÇÃO INTERNA (Single Page Application)
+        // ==========================================
+        function loadView(viewName) {
+            // Atualiza os estilos do menu lateral
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Atualiza o título do painel central conforme o clique
+            const titles = {
+                'home': 'Resumo de Produção',
+                'lancar': 'Lançar Novo Negócio',
+                'metas': 'Métricas e Objetivos',
+                'admin_geral': 'Consolidado do Escritório',
+                'admin_equipe': 'Gestão de Produtividade',
+                'admin_tv': 'Configurações da Recepção'
+            };
+
+            document.getElementById('page-title').innerText = titles[viewName] || 'Painel';
+            
+            // Aqui prepararemos a carga dinâmica dos cartões futuramente
+            console.log(`Carregando módulo: ${viewName}`);
+        }
+
+        // ==========================================
+        // FUNÇÃO DE LOGOFF SEGURO
+        // ==========================================
+        async function fazerLogoff() {
+            Swal.fire({
+                title: 'Encerrar sessão?',
+                text: "Tem a certeza que deseja sair do painel?",
+                icon: 'warning',
+                background: '#111', color: '#fff',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4444',
+                cancelButtonColor: '#333',
+                confirmButtonText: 'Sim, sair'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    document.getElementById('init-loader').style.display = 'flex';
+                    await supabaseClient.auth.signOut();
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        // BOOTSTRAP: Aciona a validação assim que a página abre
+        validarSessao();
+
+    </script>
+</body>
+</html>
