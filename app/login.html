@@ -191,17 +191,19 @@
     </div>
 
     <script>
-        console.log("Inicializando o sistema de Login V1.2...");
+        console.log("Inicializando o sistema de Login V1.3...");
 
         // ==========================================
         // CONFIGURAÇÃO SUPABASE
         // ==========================================
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
-        let supabase;
+        
+        // CORREÇÃO: Usar um nome de variável diferente para evitar colisão com o objeto global 'supabase' da CDN
+        let supabaseClient; 
 
         try {
-            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
             console.log("Conexão com Supabase configurada.");
         } catch (e) {
             console.error("ERRO CRÍTICO: Falha ao carregar a biblioteca do Supabase.", e);
@@ -259,7 +261,9 @@
 
             try {
                 console.log("A enviar pedido de autenticação para o Supabase...");
-                const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                
+                // Usando a nova variável 'supabaseClient'
+                const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
                 if (error) {
                     throw error;
@@ -304,9 +308,39 @@
             }
         });
 
+        // ==========================================
+        // RECUPERAÇÃO DE PALAVRA-PASSE
+        // ==========================================
         async function recuperarSenha() {
             console.log("Acionado pedido de recuperação de palavra-passe.");
-            // Lógica mantida...
+            
+            const emailValue = document.getElementById('email').value.trim();
+            
+            const { value: emailToRecover } = await Swal.fire({
+                title: 'Recuperar Palavra-passe',
+                input: 'email',
+                inputLabel: 'Insira o seu e-mail corporativo',
+                inputValue: emailValue,
+                background: '#111', color: '#fff', 
+                confirmButtonColor: '#00ff88', cancelButtonColor: '#333',
+                showCancelButton: true,
+                confirmButtonText: 'Enviar Link'
+            });
+
+            if (emailToRecover) {
+                Swal.fire({ title: 'A enviar...', allowOutsideClick: false, background: '#111', color: '#fff', didOpen: () => { Swal.showLoading(); }});
+                
+                // Usando a nova variável 'supabaseClient'
+                const { error } = await supabaseClient.auth.resetPasswordForEmail(emailToRecover, {
+                    redirectTo: window.location.origin + '/app/redefinir-senha.html', 
+                });
+
+                if (error) {
+                    Swal.fire('Erro!', 'Ocorreu um problema ao enviar o e-mail.', 'error');
+                } else {
+                    Swal.fire('Enviado!', 'Verifique a sua caixa de entrada.', 'success');
+                }
+            }
         }
     </script>
 </body>
