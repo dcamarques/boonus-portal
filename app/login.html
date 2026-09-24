@@ -17,6 +17,8 @@
             --dark-bg: #050505;
             --panel-bg: #111;
             --text-color: #e0e0e0;
+            --negative-color: #ff4444;
+            --warning-bg: rgba(255, 68, 68, 0.12);
         }
 
         body {
@@ -58,9 +60,32 @@
         .subtitle {
             font-size: 0.9rem;
             color: #888;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             text-transform: uppercase;
             letter-spacing: 1px;
+        }
+
+        /* Mensagem de Bloqueio Embutida */
+        #alert-box {
+            display: none;
+            background-color: var(--warning-bg);
+            border: 1px solid var(--negative-color);
+            color: #fff;
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 0.88rem;
+            line-height: 1.4;
+        }
+
+        #alert-box strong {
+            color: var(--negative-color);
+            display: block;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
         }
 
         .input-group {
@@ -86,12 +111,19 @@
             color: #fff;
             font-size: 1rem;
             box-sizing: border-box;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, opacity 0.3s;
         }
 
         .input-group input:focus {
             outline: none;
             border-color: var(--neon-color);
+        }
+
+        .input-group input:disabled {
+            background-color: #0d0d0d;
+            border-color: #222;
+            color: #555;
+            cursor: not-allowed;
         }
 
         .btn-login {
@@ -105,16 +137,22 @@
             font-weight: bold;
             cursor: pointer;
             text-transform: uppercase;
-            transition: background-color 0.3s, transform 0.1s;
+            transition: background-color 0.3s, transform 0.1s, opacity 0.3s;
             margin-top: 10px;
         }
 
-        .btn-login:hover {
+        .btn-login:hover:not(:disabled) {
             background-color: #00cc6a;
         }
 
-        .btn-login:active {
+        .btn-login:active:not(:disabled) {
             transform: scale(0.98);
+        }
+
+        .btn-login:disabled {
+            background-color: #222;
+            color: #555;
+            cursor: not-allowed;
         }
 
         .forgot-password {
@@ -129,19 +167,6 @@
 
         .forgot-password:hover {
             color: var(--neon-color);
-        }
-
-        /* Overlay de bloqueio */
-        #block-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(17, 17, 17, 0.95);
-            border-radius: 12px;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
         }
 
         .loader {
@@ -161,14 +186,14 @@
 <body>
 
     <div class="login-container">
-        <!-- Tela de Bloqueio por Tentativas -->
-        <div id="block-overlay">
-            <h2 style="color: var(--negative-color);">ACESSO BLOQUEADO</h2>
-            <p style="color: #ccc; font-size: 0.9rem; margin: 10px 30px;">Foram detetadas 3 tentativas falhadas. Aguarde antes de tentar novamente.</p>
-        </div>
-
         <div class="logo">BOONUS<span>.TV</span></div>
         <div class="subtitle">Gestão de Performance Interativa</div>
+
+        <!-- Mensagem de Bloqueio Direta na Tela -->
+        <div id="alert-box">
+            <strong>Acesso Bloqueado</strong>
+            <span id="alert-text">Limite de tentativas atingido. Um e-mail com as orientações para redefinição de senha foi enviado.</span>
+        </div>
 
         <form id="login-form">
             <div class="input-group">
@@ -177,67 +202,71 @@
             </div>
 
             <div class="input-group">
-                <label for="password">Palavra-passe</label>
+                <label for="password">Senha</label>
                 <input type="password" id="password" required placeholder="••••••••" autocomplete="current-password">
             </div>
 
             <button type="submit" class="btn-login" id="btn-submit">
-                <span id="btn-text">Aceder ao Painel</span>
+                <span id="btn-text">Acessar Painel</span>
                 <div class="loader" id="btn-loader"></div>
             </button>
             
-            <a class="forgot-password" onclick="recuperarSenha()">Esqueceu a sua palavra-passe?</a>
+            <a class="forgot-password" id="btn-forgot" onclick="recuperarSenhaManual()">Esqueceu sua senha?</a>
         </form>
     </div>
 
     <script>
-        console.log("Inicializando o sistema de Login V1.3...");
-
         // ==========================================
         // CONFIGURAÇÃO SUPABASE
         // ==========================================
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         
-        // CORREÇÃO: Usar um nome de variável diferente para evitar colisão com o objeto global 'supabase' da CDN
-        let supabaseClient; 
-
+        let supabaseClient;
         try {
             supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-            console.log("Conexão com Supabase configurada.");
         } catch (e) {
-            console.error("ERRO CRÍTICO: Falha ao carregar a biblioteca do Supabase.", e);
+            console.error("Erro ao inicializar Supabase:", e);
         }
 
         // ==========================================
-        // LÓGICA DE SEGURANÇA E BLOQUEIO
+        // LÓGICA DE BLOQUEIO RIGOROSO
         // ==========================================
         let failedAttempts = parseInt(localStorage.getItem('boonus_login_attempts')) || 0;
-        let lockTime = parseInt(localStorage.getItem('boonus_lock_time')) || 0;
+        let isBlocked = localStorage.getItem('boonus_login_blocked') === 'true';
 
-        console.log(`Estado atual - Tentativas falhadas: ${failedAttempts}`);
+        function aplicarBloqueioInterface(emailDestino) {
+            const alertBox = document.getElementById('alert-box');
+            const alertText = document.getElementById('alert-text');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
+            const btnSubmit = document.getElementById('btn-submit');
 
-        function verificarBloqueio() {
-            const now = new Date().getTime();
-            if (lockTime > now) {
-                console.log("O sistema está atualmente BLOQUEADO.");
-                document.getElementById('block-overlay').style.display = 'flex';
-                const relogio = setInterval(() => {
-                    if (new Date().getTime() > lockTime) {
-                        clearInterval(relogio);
-                        localStorage.removeItem('boonus_lock_time');
-                        localStorage.removeItem('boonus_login_attempts');
-                        failedAttempts = 0;
-                        document.getElementById('block-overlay').style.display = 'none';
-                        console.log("Bloqueio removido pelo tempo expirado.");
-                    }
-                }, 1000);
+            // Desativa os campos
+            emailInput.disabled = true;
+            passwordInput.disabled = true;
+            btnSubmit.disabled = true;
+
+            // Mensagem direta e explicativa na tela
+            if (emailDestino) {
+                alertText.innerHTML = `Limite de 3 tentativas excedido. Um link de redefinição de senha foi enviado para <b>${emailDestino}</b>.`;
+            } else {
+                alertText.innerHTML = `Limite de 3 tentativas excedido. Um link para redefinição de senha foi enviado para o seu e-mail corporativo.`;
+            }
+
+            alertBox.style.display = 'block';
+        }
+
+        function checarBloqueioInicial() {
+            if (isBlocked) {
+                const savedEmail = localStorage.getItem('boonus_blocked_email') || '';
+                aplicarBloqueioInterface(savedEmail);
                 return true;
             }
             return false;
         }
 
-        verificarBloqueio();
+        checarBloqueioInicial();
 
         function toggleLoading(isLoading) {
             document.getElementById('btn-text').style.display = isLoading ? 'none' : 'block';
@@ -246,13 +275,11 @@
         }
 
         // ==========================================
-        // PROCESSO DE LOGIN
+        // SUBMISSÃO DO LOGIN
         // ==========================================
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            console.log("Formulário submetido. Iniciando validação...");
-
-            if (verificarBloqueio()) return;
+            if (isBlocked) return;
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
@@ -260,47 +287,58 @@
             toggleLoading(true);
 
             try {
-                console.log("A enviar pedido de autenticação para o Supabase...");
-                
-                // Usando a nova variável 'supabaseClient'
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
-                if (error) {
-                    throw error;
-                }
+                if (error) throw error;
 
-                console.log("Login com Sucesso!", data);
+                // Sucesso: Zera contadores
                 localStorage.removeItem('boonus_login_attempts');
-                localStorage.removeItem('boonus_lock_time');
+                localStorage.removeItem('boonus_login_blocked');
+                localStorage.removeItem('boonus_blocked_email');
                 
                 Swal.fire({
                     icon: 'success',
-                    title: 'Autenticado!',
-                    text: 'A redirecionar para o painel de controlo...',
+                    title: 'Autenticado com sucesso!',
+                    text: 'Redirecionando...',
                     background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
                     timer: 1500, showConfirmButton: false
                 }).then(() => {
-                    console.log("Redirecionamento será implementado aqui.");
+                    console.log("Sessão validada:", data.session);
                 });
 
             } catch (err) {
-                console.error("Erro capturado durante o login:", err.message);
-                
                 failedAttempts++;
                 localStorage.setItem('boonus_login_attempts', failedAttempts);
-                console.log(`Nova contagem de tentativas: ${failedAttempts}`);
 
                 if (failedAttempts >= 3) {
-                    console.warn("Limite de tentativas atingido. Bloqueando acesso.");
-                    const blockDuration = 5 * 60 * 1000; // 5 minutos de bloqueio
-                    localStorage.setItem('boonus_lock_time', new Date().getTime() + blockDuration);
-                    verificarBloqueio();
+                    // Marca o bloqueio sem prazo/tempo na máquina
+                    isBlocked = true;
+                    localStorage.setItem('boonus_login_blocked', 'true');
+                    localStorage.setItem('boonus_blocked_email', email);
+
+                    // Dispara o e-mail de redefinição pelo Supabase
+                    if (email) {
+                        try {
+                            await supabaseClient.auth.resetPasswordForEmail(email, {
+                                redirectTo: window.location.origin + '/app/redefinir-senha.html',
+                            });
+                        } catch (mailErr) {
+                            console.warn("Falha ao enviar e-mail:", mailErr);
+                        }
+                    }
+
+                    // Aplica o bloqueio visual e a mensagem na tela
+                    aplicarBloqueioInterface(email);
+
                 } else {
+                    const restantes = 3 - failedAttempts;
                     Swal.fire({
                         icon: 'error',
-                        title: 'Acesso Negado',
-                        text: `Credenciais inválidas. Tem mais ${3 - failedAttempts} tentativa(s).`,
-                        background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
+                        title: 'Dados Incorretos',
+                        text: `E-mail ou senha inválidos. Resta(m) ${restantes} tentativa(s).`,
+                        background: '#111',
+                        color: '#fff',
+                        confirmButtonColor: '#ff4444'
                     });
                 }
             } finally {
@@ -309,36 +347,51 @@
         });
 
         // ==========================================
-        // RECUPERAÇÃO DE PALAVRA-PASSE
+        // RECUPERAÇÃO MANUAL
         // ==========================================
-        async function recuperarSenha() {
-            console.log("Acionado pedido de recuperação de palavra-passe.");
-            
+        async function recuperarSenhaManual() {
+            if (isBlocked) return;
+
             const emailValue = document.getElementById('email').value.trim();
             
             const { value: emailToRecover } = await Swal.fire({
-                title: 'Recuperar Palavra-passe',
+                title: 'Recuperar Senha',
                 input: 'email',
-                inputLabel: 'Insira o seu e-mail corporativo',
+                inputLabel: 'Informe seu e-mail corporativo',
                 inputValue: emailValue,
                 background: '#111', color: '#fff', 
                 confirmButtonColor: '#00ff88', cancelButtonColor: '#333',
                 showCancelButton: true,
-                confirmButtonText: 'Enviar Link'
+                confirmButtonText: 'Enviar Link',
+                cancelButtonText: 'Cancelar'
             });
 
             if (emailToRecover) {
-                Swal.fire({ title: 'A enviar...', allowOutsideClick: false, background: '#111', color: '#fff', didOpen: () => { Swal.showLoading(); }});
+                Swal.fire({ 
+                    title: 'Enviando...', 
+                    allowOutsideClick: false, 
+                    background: '#111', color: '#fff', 
+                    didOpen: () => { Swal.showLoading(); }
+                });
                 
-                // Usando a nova variável 'supabaseClient'
                 const { error } = await supabaseClient.auth.resetPasswordForEmail(emailToRecover, {
                     redirectTo: window.location.origin + '/app/redefinir-senha.html', 
                 });
 
                 if (error) {
-                    Swal.fire('Erro!', 'Ocorreu um problema ao enviar o e-mail.', 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erro!',
+                        text: 'Não foi possível enviar o e-mail de recuperação.',
+                        background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
+                    });
                 } else {
-                    Swal.fire('Enviado!', 'Verifique a sua caixa de entrada.', 'success');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'E-mail Enviado!',
+                        text: 'Confira sua caixa de entrada para criar uma nova senha.',
+                        background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+                    });
                 }
             }
         }
