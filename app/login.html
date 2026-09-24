@@ -79,8 +79,6 @@
     <script>
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
-        
-        // A URL DEFINITIVA DE REDIRECIONAMENTO (Cravada no código para não falhar)
         const URL_REDEFINICAO = 'https://boonus.app.br/app/redefinir-senha.html';
         
         let supabaseClient;
@@ -135,7 +133,8 @@
                     icon: 'success', title: 'Autenticado com sucesso!', text: 'Redirecionando...',
                     background: '#111', color: '#fff', confirmButtonColor: '#00ff88', timer: 1500, showConfirmButton: false
                 }).then(() => {
-                    console.log("Sessão validada:", data.session);
+                    // AQUI ESTÁ A CORREÇÃO: O redirecionamento real para o Dashboard
+                    window.location.href = 'dashboard.html';
                 });
 
             } catch (err) {
@@ -149,7 +148,6 @@
 
                     if (email) {
                         try {
-                            // Envio com a URL hardcoded para garantir o caminho
                             await supabaseClient.auth.resetPasswordForEmail(email, {
                                 redirectTo: URL_REDEFINICAO,
                             });
@@ -164,9 +162,7 @@
             }
         });
 
-        // Recuperação liberada (mesmo se bloqueado), garantindo que a pessoa sempre pode pedir novo link
         async function recuperarSenhaManual() {
-            // Pegar o e-mail do localStorage caso a tela esteja bloqueada, senão pega do input
             let savedEmail = localStorage.getItem('boonus_blocked_email');
             let inputEmail = document.getElementById('email').value.trim();
             let defaultEmail = savedEmail ? savedEmail : inputEmail;
