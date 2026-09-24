@@ -270,7 +270,6 @@
         try { supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } 
         catch (e) { console.error(e); }
 
-        // Variável Global para segurar os IDs invisíveis (Segurança de Injeção)
         let sessaoAtual = {
             usuario_id: null,
             escritorio_id: null,
@@ -278,7 +277,7 @@
             nivel: 1
         };
 
-        // 1. GUARDIÃO DE ROTA E CARREGAMENTO INICIAL
+        // 1. GUARDIÃO DE ROTA COM RAIO-X DE ERROS DE BANCO
         async function validarSessao() {
             try {
                 const { data: { session }, error } = await supabaseClient.auth.getSession();
@@ -286,12 +285,17 @@
 
                 sessaoAtual.usuario_id = session.user.id;
                 
-                // Pega os dados do consultor e os IDs estruturais (Grupo/Escritório)
-                const { data: userDb } = await supabaseClient
+                // Faz a consulta e CAPTURA o erro (se houver)
+                const { data: userDb, error: userError } = await supabaseClient
                     .from('tv_utilizadores')
                     .select('nome_completo, perfil, nivel, escritorio_id, grupo_id')
                     .eq('id', session.user.id)
                     .single();
+
+                // SE O BANCO BLOQUEAR, VAI GRITAR O MOTIVO AQUI NA TELA:
+                if (userError) {
+                    alert("⚠️ ERRO EXATO DO BANCO: " + JSON.stringify(userError));
+                }
 
                 if (userDb) {
                     document.getElementById('user-name').innerText = (userDb.nome_completo || session.user.email).split(' ')[0];
@@ -312,7 +316,9 @@
                 // Preenche a data padrão do formulário como HOJE
                 document.getElementById('form-data').valueAsDate = new Date();
 
-            } catch (err) { window.location.href = 'login.html'; }
+            } catch (err) { 
+                alert("ERRO CRÍTICO NO CÓDIGO: " + err.message); 
+            }
         }
 
         // 2. CONTROLE DO BOTTOM SHEET (Modal Mobile)
@@ -325,7 +331,7 @@
                 overlay.style.opacity = '1'; 
                 sheet.style.bottom = '0'; 
             }, 10);
-            carregarClassesCatalogo(); // Tenta puxar o catálogo do banco
+            carregarClassesCatalogo(); 
         }
 
         function fecharLancamento() {
@@ -337,11 +343,10 @@
             document.getElementById('box-pipeline').style.display = 'none';
         }
 
-        // 3. LÓGICA DO FORMULÁRIO EM CASCATA (Simulando o Catálogo Vazio)
+        // 3. LÓGICA DO FORMULÁRIO EM CASCATA
         async function carregarClassesCatalogo() {
             const selectClasse = document.getElementById('form-classe');
             
-            // Aqui ele tentará ler a tabela tv_catalogo_classes
             const { data: classes } = await supabaseClient
                 .from('tv_catalogo_classes')
                 .select('*')
@@ -351,15 +356,12 @@
                 selectClasse.innerHTML = '<option disabled selected>Catálogo Vazio (Avise o Gestor Nível 3)</option>';
                 return;
             }
-
-            // Futuro: Popular a cascata. Por enquanto, a interface avisa que o N3 precisa parametrizar as opções.
         }
 
         // 4. LÓGICA DE REATIVIDADE
         function onStatusChange() {
             const statusBox = document.getElementById('form-status');
             const pipelineBox = document.getElementById('box-pipeline');
-            // Se o texto incluir "Pipeline", mostra o campo de temperatura
             if (statusBox.value && statusBox.value.toLowerCase().includes('pipeline')) {
                 pipelineBox.style.display = 'block';
                 document.getElementById('form-pipeline').required = true;
@@ -369,11 +371,9 @@
             }
         }
 
-        // 5. SUBMISSÃO (MOCK DE AUDITORIA)
+        // 5. SUBMISSÃO (MOCK)
         document.getElementById('form-producao').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            // O formulário travará aqui porque o Nível 3 ainda não cadastrou o catálogo
             Swal.fire({
                 icon: 'info',
                 title: 'Aviso de Estrutura',
