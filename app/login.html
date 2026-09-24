@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Interno - Boonus</title>
     
-    <!-- Biblioteca do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- Alertas elegantes via SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
@@ -21,165 +18,30 @@
             --warning-bg: rgba(255, 68, 68, 0.12);
         }
 
-        body {
-            background-color: var(--dark-bg);
-            color: var(--text-color);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            overflow: hidden;
-        }
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        .login-container { background-color: var(--panel-bg); padding: 40px 50px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-top: 4px solid var(--neon-color); width: 100%; max-width: 400px; text-align: center; position: relative; }
+        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; letter-spacing: 2px; }
+        .logo span { color: var(--neon-color); }
+        .subtitle { font-size: 0.9rem; color: #888; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 1px; }
 
-        .login-container {
-            background-color: var(--panel-bg);
-            padding: 40px 50px;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-            border-top: 4px solid var(--neon-color);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-            position: relative;
-        }
+        #alert-box { display: none; background-color: var(--warning-bg); border: 1px solid var(--negative-color); color: #fff; padding: 14px; border-radius: 8px; margin-bottom: 20px; text-align: left; font-size: 0.88rem; line-height: 1.4; }
+        #alert-box strong { color: var(--negative-color); display: block; margin-bottom: 4px; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
 
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #fff;
-            margin-bottom: 5px;
-            letter-spacing: 2px;
-        }
+        .input-group { margin-bottom: 20px; text-align: left; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
+        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; transition: border-color 0.3s, opacity 0.3s; }
+        .input-group input:focus { outline: none; border-color: var(--neon-color); }
+        .input-group input:disabled { background-color: #0d0d0d; border-color: #222; color: #555; cursor: not-allowed; }
 
-        .logo span {
-            color: var(--neon-color);
-        }
+        .btn-login { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: background-color 0.3s, transform 0.1s, opacity 0.3s; margin-top: 10px; }
+        .btn-login:hover:not(:disabled) { background-color: #00cc6a; }
+        .btn-login:active:not(:disabled) { transform: scale(0.98); }
+        .btn-login:disabled { background-color: #222; color: #555; cursor: not-allowed; }
 
-        .subtitle {
-            font-size: 0.9rem;
-            color: #888;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .forgot-password { display: block; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; transition: color 0.3s; cursor: pointer; }
+        .forgot-password:hover { color: var(--neon-color); }
 
-        /* Mensagem de Bloqueio Embutida */
-        #alert-box {
-            display: none;
-            background-color: var(--warning-bg);
-            border: 1px solid var(--negative-color);
-            color: #fff;
-            padding: 14px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: left;
-            font-size: 0.88rem;
-            line-height: 1.4;
-        }
-
-        #alert-box strong {
-            color: var(--negative-color);
-            display: block;
-            margin-bottom: 4px;
-            text-transform: uppercase;
-            font-size: 0.8rem;
-            letter-spacing: 0.5px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-size: 0.85rem;
-            color: #aaa;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 12px 15px;
-            background-color: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 1rem;
-            box-sizing: border-box;
-            transition: border-color 0.3s, opacity 0.3s;
-        }
-
-        .input-group input:focus {
-            outline: none;
-            border-color: var(--neon-color);
-        }
-
-        .input-group input:disabled {
-            background-color: #0d0d0d;
-            border-color: #222;
-            color: #555;
-            cursor: not-allowed;
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background-color: var(--neon-color);
-            color: #000;
-            border: none;
-            border-radius: 6px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: background-color 0.3s, transform 0.1s, opacity 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-login:hover:not(:disabled) {
-            background-color: #00cc6a;
-        }
-
-        .btn-login:active:not(:disabled) {
-            transform: scale(0.98);
-        }
-
-        .btn-login:disabled {
-            background-color: #222;
-            color: #555;
-            cursor: not-allowed;
-        }
-
-        .forgot-password {
-            display: block;
-            margin-top: 20px;
-            color: #888;
-            text-decoration: none;
-            font-size: 0.85rem;
-            transition: color 0.3s;
-            cursor: pointer;
-        }
-
-        .forgot-password:hover {
-            color: var(--neon-color);
-        }
-
-        .loader {
-            border: 4px solid #333;
-            border-top: 4px solid var(--neon-color);
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            display: none;
-            margin: 0 auto;
-        }
-
+        .loader { border: 4px solid #333; border-top: 4px solid var(--neon-color); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -189,7 +51,6 @@
         <div class="logo">BOONUS<span>.TV</span></div>
         <div class="subtitle">Gestão de Performance Interativa</div>
 
-        <!-- Mensagem de Bloqueio Direta na Tela -->
         <div id="alert-box">
             <strong>Acesso Bloqueado</strong>
             <span id="alert-text">Limite de tentativas atingido. Um e-mail com as orientações para redefinição de senha foi enviado.</span>
@@ -211,16 +72,16 @@
                 <div class="loader" id="btn-loader"></div>
             </button>
             
-            <a class="forgot-password" id="btn-forgot" onclick="recuperarSenhaManual()">Esqueceu sua senha?</a>
+            <a class="forgot-password" id="btn-forgot" onclick="recuperarSenhaManual()">Esqueceu sua senha ou precisa de um novo link?</a>
         </form>
     </div>
 
     <script>
-        // ==========================================
-        // CONFIGURAÇÃO SUPABASE
-        // ==========================================
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        
+        // A URL DEFINITIVA DE REDIRECIONAMENTO (Cravada no código para não falhar)
+        const URL_REDEFINICAO = 'https://boonus.app.br/app/redefinir-senha.html';
         
         let supabaseClient;
         try {
@@ -229,44 +90,24 @@
             console.error("Erro ao inicializar Supabase:", e);
         }
 
-        // ==========================================
-        // LÓGICA DE BLOQUEIO RIGOROSO
-        // ==========================================
         let failedAttempts = parseInt(localStorage.getItem('boonus_login_attempts')) || 0;
         let isBlocked = localStorage.getItem('boonus_login_blocked') === 'true';
 
         function aplicarBloqueioInterface(emailDestino) {
-            const alertBox = document.getElementById('alert-box');
+            document.getElementById('email').disabled = true;
+            document.getElementById('password').disabled = true;
+            document.getElementById('btn-submit').disabled = true;
+
             const alertText = document.getElementById('alert-text');
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-            const btnSubmit = document.getElementById('btn-submit');
-
-            // Desativa os campos
-            emailInput.disabled = true;
-            passwordInput.disabled = true;
-            btnSubmit.disabled = true;
-
-            // Mensagem direta e explicativa na tela
             if (emailDestino) {
-                alertText.innerHTML = `Limite de 3 tentativas excedido. Um link de redefinição de senha foi enviado para <b>${emailDestino}</b>.`;
-            } else {
-                alertText.innerHTML = `Limite de 3 tentativas excedido. Um link para redefinição de senha foi enviado para o seu e-mail corporativo.`;
+                alertText.innerHTML = `Limite excedido. Um link de redefinição foi enviado para <b>${emailDestino}</b>.`;
             }
-
-            alertBox.style.display = 'block';
+            document.getElementById('alert-box').style.display = 'block';
         }
 
-        function checarBloqueioInicial() {
-            if (isBlocked) {
-                const savedEmail = localStorage.getItem('boonus_blocked_email') || '';
-                aplicarBloqueioInterface(savedEmail);
-                return true;
-            }
-            return false;
+        if (isBlocked) {
+            aplicarBloqueioInterface(localStorage.getItem('boonus_blocked_email'));
         }
-
-        checarBloqueioInicial();
 
         function toggleLoading(isLoading) {
             document.getElementById('btn-text').style.display = isLoading ? 'none' : 'block';
@@ -274,34 +115,25 @@
             document.getElementById('btn-submit').disabled = isLoading;
         }
 
-        // ==========================================
-        // SUBMISSÃO DO LOGIN
-        // ==========================================
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (isBlocked) return;
 
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-
             toggleLoading(true);
 
             try {
                 const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
-
                 if (error) throw error;
 
-                // Sucesso: Zera contadores
                 localStorage.removeItem('boonus_login_attempts');
                 localStorage.removeItem('boonus_login_blocked');
                 localStorage.removeItem('boonus_blocked_email');
                 
                 Swal.fire({
-                    icon: 'success',
-                    title: 'Autenticado com sucesso!',
-                    text: 'Redirecionando...',
-                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                    timer: 1500, showConfirmButton: false
+                    icon: 'success', title: 'Autenticado com sucesso!', text: 'Redirecionando...',
+                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88', timer: 1500, showConfirmButton: false
                 }).then(() => {
                     console.log("Sessão validada:", data.session);
                 });
@@ -311,87 +143,55 @@
                 localStorage.setItem('boonus_login_attempts', failedAttempts);
 
                 if (failedAttempts >= 3) {
-                    // Marca o bloqueio sem prazo/tempo na máquina
                     isBlocked = true;
                     localStorage.setItem('boonus_login_blocked', 'true');
                     localStorage.setItem('boonus_blocked_email', email);
 
-                    // Dispara o e-mail de redefinição pelo Supabase
                     if (email) {
                         try {
+                            // Envio com a URL hardcoded para garantir o caminho
                             await supabaseClient.auth.resetPasswordForEmail(email, {
-                                redirectTo: window.location.origin + '/app/redefinir-senha.html',
+                                redirectTo: URL_REDEFINICAO,
                             });
-                        } catch (mailErr) {
-                            console.warn("Falha ao enviar e-mail:", mailErr);
-                        }
+                        } catch (mailErr) {}
                     }
-
-                    // Aplica o bloqueio visual e a mensagem na tela
                     aplicarBloqueioInterface(email);
-
                 } else {
-                    const restantes = 3 - failedAttempts;
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Dados Incorretos',
-                        text: `E-mail ou senha inválidos. Resta(m) ${restantes} tentativa(s).`,
-                        background: '#111',
-                        color: '#fff',
-                        confirmButtonColor: '#ff4444'
-                    });
+                    Swal.fire({ icon: 'error', title: 'Dados Incorretos', text: `Restam ${3 - failedAttempts} tentativa(s).`, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
                 }
             } finally {
                 toggleLoading(false);
             }
         });
 
-        // ==========================================
-        // RECUPERAÇÃO MANUAL
-        // ==========================================
+        // Recuperação liberada (mesmo se bloqueado), garantindo que a pessoa sempre pode pedir novo link
         async function recuperarSenhaManual() {
-            if (isBlocked) return;
-
-            const emailValue = document.getElementById('email').value.trim();
+            // Pegar o e-mail do localStorage caso a tela esteja bloqueada, senão pega do input
+            let savedEmail = localStorage.getItem('boonus_blocked_email');
+            let inputEmail = document.getElementById('email').value.trim();
+            let defaultEmail = savedEmail ? savedEmail : inputEmail;
             
             const { value: emailToRecover } = await Swal.fire({
                 title: 'Recuperar Senha',
                 input: 'email',
                 inputLabel: 'Informe seu e-mail corporativo',
-                inputValue: emailValue,
+                inputValue: defaultEmail,
                 background: '#111', color: '#fff', 
                 confirmButtonColor: '#00ff88', cancelButtonColor: '#333',
-                showCancelButton: true,
-                confirmButtonText: 'Enviar Link',
-                cancelButtonText: 'Cancelar'
+                showCancelButton: true, confirmButtonText: 'Enviar Novo Link', cancelButtonText: 'Cancelar'
             });
 
             if (emailToRecover) {
-                Swal.fire({ 
-                    title: 'Enviando...', 
-                    allowOutsideClick: false, 
-                    background: '#111', color: '#fff', 
-                    didOpen: () => { Swal.showLoading(); }
-                });
+                Swal.fire({ title: 'Enviando...', allowOutsideClick: false, background: '#111', color: '#fff', didOpen: () => { Swal.showLoading(); }});
                 
                 const { error } = await supabaseClient.auth.resetPasswordForEmail(emailToRecover, {
-                    redirectTo: window.location.origin + '/app/redefinir-senha.html', 
+                    redirectTo: URL_REDEFINICAO, 
                 });
 
                 if (error) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Erro!',
-                        text: 'Não foi possível enviar o e-mail de recuperação.',
-                        background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
-                    });
+                    Swal.fire({ icon: 'error', title: 'Aguarde...', text: 'Por segurança, aguarde cerca de 60 segundos antes de pedir um novo link.', background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
                 } else {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'E-mail Enviado!',
-                        text: 'Confira sua caixa de entrada para criar uma nova senha.',
-                        background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-                    });
+                    Swal.fire({ icon: 'success', title: 'Novo E-mail Enviado!', text: 'Confira sua caixa de entrada (e pasta de spam).', background: '#111', color: '#fff', confirmButtonColor: '#00ff88' });
                 }
             }
         }
