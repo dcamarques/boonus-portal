@@ -36,7 +36,6 @@
         .header-title { margin: 0; font-size: 1.2rem; color: #fff; }
         .header-subtitle { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 1px; }
         
-        /* Botão de voltar corrigido */
         .btn-back { background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 0 10px 0 0; transition: color 0.2s; }
         .btn-back:hover { color: var(--neon-color); }
 
@@ -56,7 +55,6 @@
         .classe-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
         .classe-title { margin: 0; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 10px; }
         
-        /* Botões de Ação Menores */
         .btn-edit, .btn-delete { background: none; border: none; font-size: 0.9rem; cursor: pointer; padding: 0; opacity: 0.6; transition: opacity 0.2s; }
         .btn-edit:hover, .btn-delete:hover { opacity: 1; }
 
@@ -139,8 +137,7 @@
                         tv_catalogo_subitens (id, nome)
                     )
                 `)
-                .eq('grupo_id', sessaoAtual.grupo_id)
-                .order('created_at', { ascending: true });
+                .eq('grupo_id', sessaoAtual.grupo_id);
 
             const container = document.getElementById('catalogo-container');
             container.innerHTML = '';
@@ -148,12 +145,24 @@
             if (!classes || classes.length === 0) {
                 container.innerHTML = '<div class="empty-state">O catálogo está vazio. Comece adicionando a primeira Classe (ex: Contas, Produtos).</div>';
             } else {
+                
+                // ORDENAÇÃO ALFABÉTICA DAS CLASSES (Respeitando acentuação PT-BR)
+                classes.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+
                 classes.forEach(cls => {
                     let itensHTML = '';
                     if (cls.tv_catalogo_itens && cls.tv_catalogo_itens.length > 0) {
+                        
+                        // ORDENAÇÃO ALFABÉTICA DOS ITENS
+                        cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                        
                         cls.tv_catalogo_itens.forEach(item => {
                             let subsHTML = '';
                             if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
+                                
+                                // ORDENAÇÃO ALFABÉTICA DOS SUBITENS
+                                item.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                                
                                 item.tv_catalogo_subitens.forEach(sub => {
                                     subsHTML += `
                                         <div class="subitem-row">
