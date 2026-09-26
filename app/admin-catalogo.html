@@ -35,7 +35,10 @@
 
         .header-title { margin: 0; font-size: 1.2rem; color: #fff; }
         .header-subtitle { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 1px; }
-        .btn-back { color: #fff; text-decoration: none; font-size: 1.5rem; }
+        
+        /* Botão de voltar corrigido */
+        .btn-back { background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 0 10px 0 0; transition: color 0.2s; }
+        .btn-back:hover { color: var(--neon-color); }
 
         .main-content { flex: 1; overflow-y: auto; padding: 20px; }
 
@@ -51,20 +54,25 @@
         }
 
         .classe-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .classe-title { margin: 0; font-size: 1.1rem; color: #fff; }
+        .classe-title { margin: 0; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 10px; }
+        
+        /* Botões de Ação Menores */
+        .btn-edit, .btn-delete { background: none; border: none; font-size: 0.9rem; cursor: pointer; padding: 0; opacity: 0.6; transition: opacity 0.2s; }
+        .btn-edit:hover, .btn-delete:hover { opacity: 1; }
+
         .classe-status { font-size: 0.75rem; color: var(--muted); margin-top: 5px; display: block; }
         
         .btn-add-item { background: #333; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s; }
         .btn-add-item:hover { background: var(--neon-color); color: #000; }
 
         .item-list { background: #0d0d0d; border-radius: 8px; padding: 10px; margin-top: 10px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
+        .item-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #222; }
         .item-row:last-child { border-bottom: none; }
         .item-name { font-size: 0.95rem; font-weight: 500; }
         .item-type { font-size: 0.7rem; color: #666; text-transform: uppercase; background: #222; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
         
-        .subitem-list { margin-top: 5px; padding-left: 15px; border-left: 2px solid #333; }
-        .subitem-row { font-size: 0.85rem; color: var(--muted); padding: 5px 0; }
+        .subitem-list { margin-top: 10px; padding-left: 15px; border-left: 2px solid #333; }
+        .subitem-row { font-size: 0.85rem; color: var(--muted); padding: 5px 0; display: flex; justify-content: space-between; align-items: center; }
 
         .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 0.9rem; }
 
@@ -78,7 +86,7 @@
     <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">CARREGANDO CATÁLOGO...</div></div>
 
     <header class="app-header">
-        <a href="dashboard.html" class="btn-back">⬅️</a>
+        <button class="btn-back" onclick="window.location.href='dashboard.html'" title="Voltar ao Dashboard">&#8592;</button>
         <div style="text-align: right;">
             <h1 class="header-title">Catálogo Global</h1>
             <div class="header-subtitle">Nível 3 - Master</div>
@@ -97,7 +105,6 @@
 
         let sessaoAtual = { usuario_id: null, grupo_id: null, nivel: 1 };
 
-        // Validação de Segurança (Só Nível 3 entra)
         async function validarSessao() {
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error || !session) { window.location.href = 'login.html'; return; }
@@ -120,7 +127,6 @@
             carregarCatalogo();
         }
 
-        // Motor de Renderização (Busca Classes, Itens e Subitens de uma vez)
         async function carregarCatalogo() {
             document.getElementById('init-loader').style.display = 'flex';
             
@@ -140,7 +146,7 @@
             container.innerHTML = '';
 
             if (!classes || classes.length === 0) {
-                container.innerHTML = '<div class="empty-state">O catálogo está vazio. Comece adicionando a primeira Classe (ex: Investimentos, Crédito).</div>';
+                container.innerHTML = '<div class="empty-state">O catálogo está vazio. Comece adicionando a primeira Classe (ex: Contas, Produtos).</div>';
             } else {
                 classes.forEach(cls => {
                     let itensHTML = '';
@@ -149,15 +155,27 @@
                             let subsHTML = '';
                             if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
                                 item.tv_catalogo_subitens.forEach(sub => {
-                                    subsHTML += `<div class="subitem-row">↳ ${sub.nome}</div>`;
+                                    subsHTML += `
+                                        <div class="subitem-row">
+                                            <span>↳ ${sub.nome}</span>
+                                            <div>
+                                                <button class="btn-edit" onclick="editarSubitem('${sub.id}', '${sub.nome}')">✏️</button>
+                                                <button class="btn-delete" onclick="excluirSubitem('${sub.id}', '${sub.nome}')">❌</button>
+                                            </div>
+                                        </div>
+                                    `;
                                 });
                             }
                             
                             itensHTML += `
                                 <div class="item-row">
-                                    <div>
-                                        <span class="item-name">${item.nome}</span>
-                                        <span class="item-type">${item.tipo_medida}</span>
+                                    <div style="flex:1;">
+                                        <div style="display:flex; align-items:center; gap:8px;">
+                                            <span class="item-name">${item.nome}</span>
+                                            <span class="item-type">${item.tipo_medida}</span>
+                                            <button class="btn-edit" onclick="editarItem('${item.id}', '${item.nome}', '${item.tipo_medida}')">✏️</button>
+                                            <button class="btn-delete" onclick="excluirItem('${item.id}', '${item.nome}')">❌</button>
+                                        </div>
                                         <div class="subitem-list">${subsHTML}</div>
                                     </div>
                                     <button class="btn-add-item" style="background:#222; font-size:0.7rem;" onclick="criarSubitem('${item.id}', '${item.nome}')">+ Subitem</button>
@@ -172,7 +190,11 @@
                         <div class="classe-card">
                             <div class="classe-header">
                                 <div>
-                                    <h3 class="classe-title">${cls.nome}</h3>
+                                    <h3 class="classe-title">
+                                        ${cls.nome}
+                                        <button class="btn-edit" title="Editar Classe" onclick="editarClasse('${cls.id}', '${cls.nome}', '${cls.opcoes_status.join(', ')}')">✏️</button>
+                                        <button class="btn-delete" title="Excluir Classe" onclick="excluirClasse('${cls.id}', '${cls.nome}')">❌</button>
+                                    </h3>
                                     <span class="classe-status">Status Permitidos: ${cls.opcoes_status.join(', ')}</span>
                                 </div>
                                 <button class="btn-add-item" onclick="criarItem('${cls.id}', '${cls.nome}')">➕ Item</button>
@@ -185,7 +207,7 @@
             document.getElementById('init-loader').style.display = 'none';
         }
 
-        // Criar Nova Classe
+        // --- FUNÇÕES DE CRIAÇÃO ---
         async function criarClasse() {
             const { value: formValues } = await Swal.fire({
                 title: 'Nova Classe',
@@ -211,16 +233,11 @@
 
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_classes').insert({
-                    grupo_id: sessaoAtual.grupo_id,
-                    nome: formValues.nome,
-                    opcoes_status: formValues.status
-                });
+                await supabaseClient.from('tv_catalogo_classes').insert({ grupo_id: sessaoAtual.grupo_id, nome: formValues.nome, opcoes_status: formValues.status });
                 carregarCatalogo();
             }
         }
 
-        // Criar Novo Item
         async function criarItem(classeId, classeNome) {
             const { value: formValues } = await Swal.fire({
                 title: `Novo Item em ${classeNome}`,
@@ -249,32 +266,123 @@
 
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_itens').insert({
-                    classe_id: classeId,
-                    nome: formValues.nome,
-                    tipo_medida: formValues.tipo
-                });
+                await supabaseClient.from('tv_catalogo_itens').insert({ classe_id: classeId, nome: formValues.nome, tipo_medida: formValues.tipo });
                 carregarCatalogo();
             }
         }
 
-        // Criar Novo Subitem
         async function criarSubitem(itemId, itemNome) {
             const { value: nome } = await Swal.fire({
                 title: `Subitem para ${itemNome}`,
                 input: 'text',
-                inputLabel: 'Nome do Subitem (Ex: Dólar, IPCA)',
-                inputPlaceholder: 'Digite o nome...',
+                inputLabel: 'Nome do Subitem',
                 background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
                 inputValidator: (value) => { if (!value) return 'O nome é obrigatório!'; }
             });
 
             if (nome) {
                 document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_subitens').insert({
-                    item_id: itemId,
-                    nome: nome.trim()
-                });
+                await supabaseClient.from('tv_catalogo_subitens').insert({ item_id: itemId, nome: nome.trim() });
+                carregarCatalogo();
+            }
+        }
+
+        // --- FUNÇÕES DE EDIÇÃO E EXCLUSÃO ---
+        async function editarClasse(id, nomeAtual, statusAtual) {
+            const { value: formValues } = await Swal.fire({
+                title: 'Editar Classe',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Nome da Classe</label>
+                        <input id="swal-nome-edit" class="swal2-input" value="${nomeAtual}" style="width: 85%;">
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">Status Permitidos (separados por vírgula)</label>
+                        <input id="swal-status-edit" class="swal2-input" value="${statusAtual}" style="width: 85%;">
+                    </div>
+                `,
+                focusConfirm: false, background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                preConfirm: () => {
+                    const nome = document.getElementById('swal-nome-edit').value.trim();
+                    const status = document.getElementById('swal-status-edit').value.trim();
+                    if (!nome || !status) { Swal.showValidationMessage('Preencha todos os campos'); return null; }
+                    return { nome, status: status.split(',').map(s => s.trim()) };
+                }
+            });
+
+            if (formValues) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_catalogo_classes').update({ nome: formValues.nome, opcoes_status: formValues.status }).eq('id', id);
+                carregarCatalogo();
+            }
+        }
+
+        async function excluirClasse(id, nome) {
+            const res = await Swal.fire({ title: `Excluir a classe "${nome}"?`, text: "Não é possível excluir se houver itens associados a ela. Remova os itens primeiro.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim, Excluir', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                const { error } = await supabaseClient.from('tv_catalogo_classes').delete().eq('id', id);
+                if (error) Swal.fire('Erro', 'Remova os Itens desta classe primeiro.', 'error');
+                carregarCatalogo();
+            }
+        }
+
+        async function editarItem(id, nomeAtual, tipoAtual) {
+            const { value: formValues } = await Swal.fire({
+                title: 'Editar Item',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Nome do Item</label>
+                        <input id="swal-item-nome-edit" class="swal2-input" value="${nomeAtual}" style="width: 85%;">
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">Tipo de Medida</label>
+                        <select id="swal-item-tipo-edit" class="swal2-input" style="width: 85%;">
+                            <option value="valor" ${tipoAtual === 'valor' ? 'selected' : ''}>Financeiro (R$ Valor)</option>
+                            <option value="quantidade" ${tipoAtual === 'quantidade' ? 'selected' : ''}>Unidades (Quantidade)</option>
+                        </select>
+                    </div>
+                `,
+                focusConfirm: false, background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                preConfirm: () => {
+                    const nome = document.getElementById('swal-item-nome-edit').value.trim();
+                    const tipo = document.getElementById('swal-item-tipo-edit').value;
+                    if (!nome) { Swal.showValidationMessage('Informe o nome'); return null; }
+                    return { nome, tipo };
+                }
+            });
+
+            if (formValues) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_catalogo_itens').update({ nome: formValues.nome, tipo_medida: formValues.tipo }).eq('id', id);
+                carregarCatalogo();
+            }
+        }
+
+        async function excluirItem(id, nome) {
+            const res = await Swal.fire({ title: `Excluir "${nome}"?`, text: "Remova os subitens associados primeiro, se houver.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim, Excluir', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                const { error } = await supabaseClient.from('tv_catalogo_itens').delete().eq('id', id);
+                if (error) Swal.fire('Erro', 'Remova os Subitens associados primeiro.', 'error');
+                carregarCatalogo();
+            }
+        }
+
+        async function editarSubitem(id, nomeAtual) {
+            const { value: nome } = await Swal.fire({ title: 'Editar Subitem', input: 'text', inputValue: nomeAtual, background: '#111', color: '#fff', confirmButtonColor: '#00ff88', inputValidator: (value) => { if (!value) return 'O nome é obrigatório!'; } });
+            if (nome) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_catalogo_subitens').update({ nome: nome.trim() }).eq('id', id);
+                carregarCatalogo();
+            }
+        }
+
+        async function excluirSubitem(id, nome) {
+            const res = await Swal.fire({ title: `Excluir Subitem "${nome}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_catalogo_subitens').delete().eq('id', id);
                 carregarCatalogo();
             }
         }
