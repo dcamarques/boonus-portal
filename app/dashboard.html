@@ -16,7 +16,7 @@
         .user-greeting { font-size: 1.1rem; font-weight: bold; color: #fff; margin: 0; }
         .user-role { font-size: 0.7rem; color: var(--neon-color); text-transform: uppercase; }
         
-        /* FILTROS (Tempo e Hierarquia) */
+        /* FILTROS */
         .filters-bar { background: #0a0a0a; padding: 10px 20px; display: flex; gap: 10px; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
         .filter-input { background: #222; border: 1px solid var(--border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; flex: 1; }
         .filter-input:focus { border-color: var(--neon-color); }
@@ -39,10 +39,10 @@
         .progress-bar { background: var(--neon-color); height: 100%; width: 0%; transition: width 1s ease-in-out; }
         .progress-text { font-size: 0.75rem; color: var(--muted); text-align: right; }
 
-        /* NOVA SESSÃO: PIPELINE */
+        /* SESSÃO PIPELINE */
         .pipe-section { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border); }
 
-        /* MENU INFERIOR E MODAL */
+        /* MENU E MODAL */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
         .nav-item.active { color: var(--neon-color); }
@@ -108,6 +108,13 @@
             <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
             <div class="input-group"><label>Status</label><select id="form-status" required disabled onchange="onStatusChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
             <div class="input-group" id="box-pipeline" style="display: none;"><label>Temperatura do Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
+            
+            <!-- NOVO CAMPO: DESCRIÇÃO -->
+            <div class="input-group">
+                <label>Descrição / Cliente (Opcional)</label>
+                <input type="text" id="form-descricao" placeholder="Nome do cliente, conta ou observação">
+            </div>
+
             <div class="input-group"><label id="label-valor">Valor / Qtd</label><input type="number" id="form-valor" required placeholder="0.00" step="0.01"></div>
             <button type="submit" class="btn-submit">Registrar Produção</button>
         </form>
@@ -194,22 +201,17 @@
                 if (!classe.tv_catalogo_itens) return;
                 
                 classe.tv_catalogo_itens.forEach(item => {
-                    
-                    // 1. DADOS DO ITEM PRINCIPAL (COM SEPARAÇÃO REAL x PIPELINE)
                     let realMesItem = 0; let realDiaItem = 0;
                     let pQuenteItem = 0; let pMornoItem = 0; let pFrioItem = 0;
                     
                     producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
                         const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
-                        
-                        // SEPARAÇÃO: Verifica se o status é Pipeline
                         if (p.status.toLowerCase().includes('pipeline')) {
                             const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
                             if (pipeLevel === 'quente') pQuenteItem += val;
                             else if (pipeLevel === 'morno') pMornoItem += val;
-                            else pFrioItem += val; // Frio é o padrão se não vier preenchido
+                            else pFrioItem += val; 
                         } else {
-                            // Se não for Pipeline, entra no Realizado
                             realMesItem += val;
                             if (p.data_producao === dataFiltro) realDiaItem += val;
                         }
@@ -226,7 +228,6 @@
                         container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', realDiaItem, realMesItem, metaItem, percentItem, pQuenteItem, pMornoItem, pFrioItem, fmt, sufixo);
                     }
 
-                    // 2. DADOS DOS SUBITENS
                     if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
                         item.tv_catalogo_subitens.forEach(sub => {
                             let realMesSub = 0; let realDiaSub = 0;
@@ -234,7 +235,6 @@
 
                             producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
                                 const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
-                                
                                 if (p.status.toLowerCase().includes('pipeline')) {
                                     const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
                                     if (pipeLevel === 'quente') pQuenteSub += val;
@@ -258,22 +258,16 @@
                 });
             });
 
-            // Anima a barra respeitando o limite físico visual de 100%
             setTimeout(() => {
-                document.querySelectorAll('.progress-bar').forEach(bar => {
-                    bar.style.width = bar.getAttribute('data-target-width');
-                });
+                document.querySelectorAll('.progress-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-target-width'); });
             }, 100);
 
             document.getElementById('init-loader').style.display = 'none';
         }
 
-        // Função de Geração de Cartão com Pipeline
         function gerarHtmlCartao(classeNome, itemNome, subitemNome, realDia, realMes, metaMes, percentual, pQuente, pMorno, pFrio, formatador, sufixo) {
             const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem de ${itemNome}</span>` : itemNome;
             const totalPipe = pQuente + pMorno + pFrio;
-            
-            // Trava visual da barra: ela nunca passa de 100% para não quebrar a tela, mas o texto % mostra o real
             const larguraVisual = Math.min(percentual, 100);
 
             return `
@@ -299,7 +293,6 @@
                     <div class="progress-container">
                         <div class="progress-bar" style="width: 0%;" data-target-width="${larguraVisual}%"></div>
                     </div>
-                    <!-- Mostra o percentual real, sem limite, logo abaixo da barra -->
                     <div class="progress-text">${percentual.toFixed(1)}% atingido do mês</div>
 
                     <div class="pipe-section">
@@ -326,7 +319,6 @@
             `;
         }
 
-        // --- RESTANTE DO CÓDIGO (Igual) ---
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
             const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
@@ -404,7 +396,8 @@
                 data_producao: document.getElementById('form-data-lancamento').value,
                 classe_nome: classe.nome, item_nome: item.nome, subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
                 status: document.getElementById('form-status').value, pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
-                tipo_medida: item.tipo_medida, valor: item.tipo_medida === 'valor' ? numDigitado : 0, quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0
+                tipo_medida: item.tipo_medida, valor: item.tipo_medida === 'valor' ? numDigitado : 0, quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0,
+                descricao: document.getElementById('form-descricao').value.trim() || null
             };
 
             const { error } = await supabaseClient.from('tv_producao').insert([payload]);
