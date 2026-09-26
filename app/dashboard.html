@@ -39,6 +39,9 @@
         .progress-bar { background: var(--neon-color); height: 100%; width: 0%; transition: width 1s ease-in-out; }
         .progress-text { font-size: 0.75rem; color: var(--muted); text-align: right; }
 
+        /* NOVA SESSÃO: PIPELINE */
+        .pipe-section { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border); }
+
         /* MENU INFERIOR E MODAL */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
@@ -75,18 +78,14 @@
         <a href="admin-catalogo.html" id="admin-icon" style="display: none; font-size: 1.5rem; text-decoration: none;" title="Configurar Catálogo">⚙️</a>
     </header>
 
-    <!-- BARRA DE FILTROS SUPERIOR -->
     <div class="filters-bar">
-        <!-- Único campo de Data. Ele define o Dia e o Mês simultaneamente -->
         <input type="date" id="filtro-data" class="filter-input" onchange="carregarPainel()" title="Escolha uma data">
-        
         <select id="filtro-hierarquia" class="filter-input" style="display: none;" onchange="carregarPainel()">
             <option value="meu_perfil">Minha Produção</option>
             <option value="grupo">Todo o Grupo (Visão Master)</option>
         </select>
     </div>
 
-    <!-- ÁREA ONDE OS CARTÕES SERÃO GERADOS -->
     <main class="main-content" id="cards-container">
         <!-- Injetado via JS -->
     </main>
@@ -99,7 +98,6 @@
         <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
     </nav>
 
-    <!-- FORMULÁRIO DE LANÇAMENTO -->
     <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
     <div class="bottom-sheet" id="sheet-lancamento">
         <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharLancamento()">×</button></div>
@@ -109,7 +107,7 @@
             <div class="input-group"><label>Item</label><select id="form-item" required disabled onchange="onItemChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
             <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
             <div class="input-group"><label>Status</label><select id="form-status" required disabled onchange="onStatusChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
-            <div class="input-group" id="box-pipeline" style="display: none;"><label>Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
+            <div class="input-group" id="box-pipeline" style="display: none;"><label>Temperatura do Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
             <div class="input-group"><label id="label-valor">Valor / Qtd</label><input type="number" id="form-valor" required placeholder="0.00" step="0.01"></div>
             <button type="submit" class="btn-submit">Registrar Produção</button>
         </form>
@@ -140,13 +138,12 @@
                 if (userDb.nivel === 3) {
                     document.getElementById('user-role').innerText = 'Sócio Diretor (Master)';
                     document.getElementById('admin-icon').style.display = 'block';
-                    document.getElementById('filtro-hierarquia').style.display = 'block'; // Filtro Master
+                    document.getElementById('filtro-hierarquia').style.display = 'block'; 
                 } else if (userDb.nivel === 2) {
                     document.getElementById('user-role').innerText = 'Gestor de Escritório';
                 }
             }
 
-            // Define a data de hoje formatada corretamente para o fuso horário (YYYY-MM-DD)
             const hoje = new Date();
             const offset = hoje.getTimezoneOffset() * 60000;
             const dataLocal = (new Date(hoje - offset)).toISOString().slice(0, 10);
@@ -161,23 +158,17 @@
             document.getElementById('init-loader').style.display = 'none';
         }
 
-        // --- CONSTRUÇÃO DOS CARTÕES DINÂMICOS ---
         async function carregarPainel() {
             document.getElementById('init-loader').style.display = 'flex';
 
-            const dataFiltro = document.getElementById('filtro-data').value; // Ex: 2026-09-26
+            const dataFiltro = document.getElementById('filtro-data').value; 
             if (!dataFiltro) return;
 
-            // Extrai o ano e o mês para saber o início e o fim do mês selecionado
             const ano = dataFiltro.substring(0, 4);
             const mes = dataFiltro.substring(5, 7);
-            
-            // A MÁGICA: O JavaScript descobre automaticamente qual é o último dia desse mês específico (28, 29, 30 ou 31)
             const ultimoDiaDoMes = new Date(ano, mes, 0).getDate();
-
             const visao = document.getElementById('filtro-hierarquia').value;
 
-            // Busca toda a Produção do Mês exato (sem quebrar o banco de dados)
             let query = supabaseClient.from('tv_producao').select('*')
                 .eq('ativo', true)
                 .gte('data_producao', `${ano}-${mes}-01`)
@@ -187,11 +178,7 @@
             else if (visao === 'grupo' && sessaoAtual.nivel === 3) query = query.eq('grupo_id', sessaoAtual.grupo_id);
 
             const { data: producoes, error } = await query;
-            
-            if (error) {
-                alert("Erro ao ler dados: " + error.message);
-            }
-
+            if (error) alert("Erro ao ler dados: " + error.message);
             const producoesArray = producoes || [];
 
             const container = document.getElementById('cards-container');
@@ -203,54 +190,75 @@
                 return;
             }
 
-            // GERAÇÃO DOS CARTÕES BASEADA NO CATÁLOGO
             catalogoCache.forEach(classe => {
                 if (!classe.tv_catalogo_itens) return;
                 
                 classe.tv_catalogo_itens.forEach(item => {
-                    // 1. DADOS DO ITEM PRINCIPAL
-                    let totalMesItem = 0; let totalDiaItem = 0;
+                    
+                    // 1. DADOS DO ITEM PRINCIPAL (COM SEPARAÇÃO REAL x PIPELINE)
+                    let realMesItem = 0; let realDiaItem = 0;
+                    let pQuenteItem = 0; let pMornoItem = 0; let pFrioItem = 0;
                     
                     producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
                         const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
-                        totalMesItem += val;
-                        if (p.data_producao === dataFiltro) totalDiaItem += val; // Usa a data selecionada como filtro do Dia
+                        
+                        // SEPARAÇÃO: Verifica se o status é Pipeline
+                        if (p.status.toLowerCase().includes('pipeline')) {
+                            const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
+                            if (pipeLevel === 'quente') pQuenteItem += val;
+                            else if (pipeLevel === 'morno') pMornoItem += val;
+                            else pFrioItem += val; // Frio é o padrão se não vier preenchido
+                        } else {
+                            // Se não for Pipeline, entra no Realizado
+                            realMesItem += val;
+                            if (p.data_producao === dataFiltro) realDiaItem += val;
+                        }
                     });
 
-                    // Se não tem Subitens OU se já tem produções registadas no item "Pai"
-                    if (!item.tv_catalogo_subitens || item.tv_catalogo_subitens.length === 0 || totalMesItem > 0) {
+                    const totalPipeItem = pQuenteItem + pMornoItem + pFrioItem;
+
+                    if (!item.tv_catalogo_subitens || item.tv_catalogo_subitens.length === 0 || realMesItem > 0 || totalPipeItem > 0) {
                         const metaItem = item.tipo_medida === 'valor' ? 100000 : 20; 
-                        let percentItem = (totalMesItem / metaItem) * 100;
-                        if (percentItem > 100) percentItem = 100;
+                        let percentItem = (realMesItem / metaItem) * 100;
                         const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
                         const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
 
-                        container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', totalDiaItem, totalMesItem, metaItem, percentItem, fmt, sufixo);
+                        container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', realDiaItem, realMesItem, metaItem, percentItem, pQuenteItem, pMornoItem, pFrioItem, fmt, sufixo);
                     }
 
-                    // 2. DADOS DOS SUBITENS (Cartões Independentes)
+                    // 2. DADOS DOS SUBITENS
                     if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
                         item.tv_catalogo_subitens.forEach(sub => {
-                            let totalMesSub = 0; let totalDiaSub = 0;
+                            let realMesSub = 0; let realDiaSub = 0;
+                            let pQuenteSub = 0; let pMornoSub = 0; let pFrioSub = 0;
+
                             producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
                                 const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
-                                totalMesSub += val;
-                                if (p.data_producao === dataFiltro) totalDiaSub += val;
+                                
+                                if (p.status.toLowerCase().includes('pipeline')) {
+                                    const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
+                                    if (pipeLevel === 'quente') pQuenteSub += val;
+                                    else if (pipeLevel === 'morno') pMornoSub += val;
+                                    else pFrioSub += val;
+                                } else {
+                                    realMesSub += val;
+                                    if (p.data_producao === dataFiltro) realDiaSub += val;
+                                }
                             });
 
+                            const totalPipeSub = pQuenteSub + pMornoSub + pFrioSub;
                             const metaSub = item.tipo_medida === 'valor' ? 50000 : 10; 
-                            let percentSub = (totalMesSub / metaSub) * 100;
-                            if (percentSub > 100) percentSub = 100;
+                            let percentSub = (realMesSub / metaSub) * 100;
                             const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
                             const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
 
-                            container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, sub.nome, totalDiaSub, totalMesSub, metaSub, percentSub, fmt, sufixo);
+                            container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, sub.nome, realDiaSub, realMesSub, metaSub, percentSub, pQuenteSub, pMornoSub, pFrioSub, fmt, sufixo);
                         });
                     }
                 });
             });
 
-            // Delayzinho para a animação da barra de progresso encher de forma suave
+            // Anima a barra respeitando o limite físico visual de 100%
             setTimeout(() => {
                 document.querySelectorAll('.progress-bar').forEach(bar => {
                     bar.style.width = bar.getAttribute('data-target-width');
@@ -260,10 +268,14 @@
             document.getElementById('init-loader').style.display = 'none';
         }
 
-        // Função auxiliar para desenhar o Cartão
-        function gerarHtmlCartao(classeNome, itemNome, subitemNome, realDia, realMes, metaMes, percentual, formatador, sufixo) {
+        // Função de Geração de Cartão com Pipeline
+        function gerarHtmlCartao(classeNome, itemNome, subitemNome, realDia, realMes, metaMes, percentual, pQuente, pMorno, pFrio, formatador, sufixo) {
             const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem de ${itemNome}</span>` : itemNome;
+            const totalPipe = pQuente + pMorno + pFrio;
             
+            // Trava visual da barra: ela nunca passa de 100% para não quebrar a tela, mas o texto % mostra o real
+            const larguraVisual = Math.min(percentual, 100);
+
             return `
                 <div class="prod-card">
                     <div class="prod-classe">${classeNome}</div>
@@ -285,15 +297,36 @@
                     </div>
 
                     <div class="progress-container">
-                        <div class="progress-bar" style="width: 0%;" data-target-width="${percentual}%"></div>
+                        <div class="progress-bar" style="width: 0%;" data-target-width="${larguraVisual}%"></div>
                     </div>
+                    <!-- Mostra o percentual real, sem limite, logo abaixo da barra -->
                     <div class="progress-text">${percentual.toFixed(1)}% atingido do mês</div>
+
+                    <div class="pipe-section">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase;">Pipeline (Mês)</span>
+                            <span style="font-size: 0.85rem; font-weight: bold; color: #fff;">Total: ${formatador.format(totalPipe)}${sufixo}</span>
+                        </div>
+                        <div class="prod-stats" style="margin-bottom: 0;">
+                            <div class="stat-box" style="border-left: 3px solid #ff4444; background: #1a0a0a;">
+                                <span class="stat-label">Quente</span>
+                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pQuente)}${sufixo}</span>
+                            </div>
+                            <div class="stat-box" style="border-left: 3px solid #ffbb33; background: #1a150a;">
+                                <span class="stat-label">Morno</span>
+                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pMorno)}${sufixo}</span>
+                            </div>
+                            <div class="stat-box" style="border-left: 3px solid #33b5e5; background: #0a151a;">
+                                <span class="stat-label">Frio</span>
+                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pFrio)}${sufixo}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
         }
 
-
-        // --- RESTANTE DO CÓDIGO DO FORMULÁRIO ---
+        // --- RESTANTE DO CÓDIGO (Igual) ---
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
             const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
@@ -316,7 +349,6 @@
             document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
             setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
             document.getElementById('form-producao').reset(); 
-            // Resetar a data do modal para a data que está filtrada na tela principal
             document.getElementById('form-data-lancamento').value = document.getElementById('filtro-data').value;
             document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('box-subitem').style.display = 'none';
             document.getElementById('form-item').disabled = true; document.getElementById('form-status').disabled = true;
