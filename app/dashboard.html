@@ -11,23 +11,41 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--dark-bg); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; display: none; height: 100vh; overflow: hidden; flex-direction: column; }
         
-        .app-header { padding: 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-        .user-greeting { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
-        .user-role { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; }
+        /* HEADER */
+        .app-header { padding: 15px 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .user-greeting { font-size: 1.1rem; font-weight: bold; color: #fff; margin: 0; }
+        .user-role { font-size: 0.7rem; color: var(--neon-color); text-transform: uppercase; }
         
+        /* FILTROS (Tempo e Hierarquia) */
+        .filters-bar { background: #0a0a0a; padding: 10px 20px; display: flex; gap: 10px; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
+        .filter-input { background: #222; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .filter-input:focus { border-color: var(--neon-color); }
+        
+        /* ÁREA PRINCIPAL E CARTÕES */
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
-        .section-title { font-size: 0.9rem; text-transform: uppercase; color: var(--muted); margin-bottom: 15px; }
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 4px solid var(--neon-color); }
-        .card-value { font-size: 2rem; font-weight: bold; margin: 5px 0; color: #fff; }
-        .card-label { font-size: 0.85rem; color: var(--muted); }
         
+        .prod-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .prod-classe { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .prod-item { font-size: 1.3rem; font-weight: bold; color: #fff; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .prod-subitem-badge { font-size: 0.7rem; background: #333; padding: 3px 8px; border-radius: 12px; color: var(--neon-color); }
+        
+        .prod-stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
+        .stat-box { flex: 1; background: #111; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #222; }
+        .stat-box.highlight { border-color: var(--neon-color); background: rgba(0, 255, 136, 0.05); }
+        .stat-label { display: block; font-size: 0.65rem; color: var(--muted); text-transform: uppercase; margin-bottom: 5px; }
+        .stat-val { display: block; font-size: 1rem; font-weight: bold; color: #fff; }
+        
+        .progress-container { background: #222; border-radius: 10px; height: 8px; width: 100%; overflow: hidden; margin-bottom: 8px; }
+        .progress-bar { background: var(--neon-color); height: 100%; width: 0%; transition: width 1s ease-in-out; }
+        .progress-text { font-size: 0.75rem; color: var(--muted); text-align: right; }
+
+        /* MENU INFERIOR E MODAL (Igual ao anterior) */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
         .nav-item.active { color: var(--neon-color); }
         .nav-icon { font-size: 1.5rem; }
         .nav-fab { background: var(--neon-color); color: #000; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; margin-top: -30px; box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4); }
         
-        /* Modal Bottom Sheet */
         .bottom-sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s; }
         .bottom-sheet { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--panel-bg); border-radius: 20px 20px 0 0; z-index: 1000; padding: 20px; transition: bottom 0.4s; max-height: 90vh; overflow-y: auto; border-top: 2px solid var(--neon-color); }
         .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -47,7 +65,7 @@
 </head>
 <body>
 
-    <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">AUTENTICANDO...</div></div>
+    <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">CARREGANDO DADOS...</div></div>
     
     <header class="app-header">
         <div>
@@ -57,20 +75,19 @@
         <a href="admin-catalogo.html" id="admin-icon" style="display: none; font-size: 1.5rem; text-decoration: none;" title="Configurar Catálogo">⚙️</a>
     </header>
 
-    <main class="main-content">
-        <div class="section-title">Minha Produção (Hoje)</div>
-        <div class="card">
-            <div class="card-label">Captação / Investimentos</div>
-            <!-- IDs adicionados para podermos injetar os valores -->
-            <div class="card-value" id="resumo-valor">R$ 0,00</div>
-        </div>
-        <div class="card" style="border-left-color: #00aaff;">
-            <div class="card-label">Produtos / Contas</div>
-            <div class="card-value" id="resumo-qtd">0 un.</div>
-        </div>
-        <div style="text-align: center; color: var(--muted); margin-top: 40px; font-size: 0.9rem;">
-            Selecione ➕ abaixo para lançar produção.
-        </div>
+    <!-- BARRA DE FILTROS SUPERIOR -->
+    <div class="filters-bar">
+        <input type="month" id="filtro-mes" class="filter-input" onchange="carregarPainel()">
+        <input type="date" id="filtro-dia" class="filter-input" onchange="carregarPainel()">
+        <select id="filtro-hierarquia" class="filter-input" style="display: none;" onchange="carregarPainel()">
+            <option value="meu_perfil">Minha Produção</option>
+            <option value="grupo">Todo o Grupo (Visão Master)</option>
+        </select>
+    </div>
+
+    <!-- ÁREA ONDE OS CARTÕES SERÃO GERADOS -->
+    <main class="main-content" id="cards-container">
+        <!-- Injetado via JS -->
     </main>
 
     <nav class="bottom-nav">
@@ -81,62 +98,18 @@
         <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
     </nav>
 
-    <!-- FORMULÁRIO DE LANÇAMENTO -->
+    <!-- FORMULÁRIO DE LANÇAMENTO (Fica Oculto) -->
     <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
     <div class="bottom-sheet" id="sheet-lancamento">
-        <div class="sheet-header">
-            <h2 class="sheet-title">Novo Lançamento</h2>
-            <button class="btn-close" onclick="fecharLancamento()">×</button>
-        </div>
-        
+        <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharLancamento()">×</button></div>
         <form id="form-producao">
-            <div class="input-group">
-                <label>Data</label>
-                <input type="date" id="form-data" required>
-            </div>
-            
-            <div class="input-group">
-                <label>Classe</label>
-                <select id="form-classe" required onchange="onClasseChange()">
-                    <option value="" disabled selected>A carregar...</option>
-                </select>
-            </div>
-            
-            <div class="input-group">
-                <label>Item</label>
-                <select id="form-item" required disabled onchange="onItemChange()">
-                    <option value="" disabled selected>Aguardando Classe...</option>
-                </select>
-            </div>
-            
-            <div class="input-group" id="box-subitem" style="display: none;">
-                <label>Subitem</label>
-                <select id="form-subitem">
-                    <option value="">Nenhum</option>
-                </select>
-            </div>
-            
-            <div class="input-group">
-                <label>Status</label>
-                <select id="form-status" required disabled onchange="onStatusChange()">
-                    <option value="" disabled selected>Aguardando Classe...</option>
-                </select>
-            </div>
-            
-            <div class="input-group" id="box-pipeline" style="display: none;">
-                <label>Temperatura do Pipeline</label>
-                <select id="form-pipeline">
-                    <option value="Quente">Quente</option>
-                    <option value="Morno">Morno</option>
-                    <option value="Frio">Frio</option>
-                </select>
-            </div>
-            
-            <div class="input-group">
-                <label id="label-valor">Valor / Qtd</label>
-                <input type="number" id="form-valor" required placeholder="0.00" step="0.01">
-            </div>
-            
+            <div class="input-group"><label>Data</label><input type="date" id="form-data" required></div>
+            <div class="input-group"><label>Classe</label><select id="form-classe" required onchange="onClasseChange()"><option value="" disabled selected>A carregar...</option></select></div>
+            <div class="input-group"><label>Item</label><select id="form-item" required disabled onchange="onItemChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
+            <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
+            <div class="input-group"><label>Status</label><select id="form-status" required disabled onchange="onStatusChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
+            <div class="input-group" id="box-pipeline" style="display: none;"><label>Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
+            <div class="input-group"><label id="label-valor">Valor / Qtd</label><input type="number" id="form-valor" required placeholder="0.00" step="0.01"></div>
             <button type="submit" class="btn-submit">Registrar Produção</button>
         </form>
     </div>
@@ -149,6 +122,9 @@
         let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
         let catalogoCache = []; 
 
+        const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
+
         async function validarSessao() {
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error || !session) { window.location.href = 'login.html'; return; }
@@ -158,71 +134,144 @@
             
             if (userDb) {
                 document.getElementById('user-name').innerText = (userDb.nome_completo || session.user.email).split(' ')[0];
-                sessaoAtual.escritorio_id = userDb.escritorio_id; 
-                sessaoAtual.grupo_id = userDb.grupo_id; 
-                sessaoAtual.nivel = userDb.nivel || 1;
+                sessaoAtual.escritorio_id = userDb.escritorio_id; sessaoAtual.grupo_id = userDb.grupo_id; sessaoAtual.nivel = userDb.nivel || 1;
                 
-                if (userDb.nivel === 2) document.getElementById('user-role').innerText = 'Gestor de Escritório';
                 if (userDb.nivel === 3) {
                     document.getElementById('user-role').innerText = 'Sócio Diretor (Master)';
                     document.getElementById('admin-icon').style.display = 'block';
+                    document.getElementById('filtro-hierarquia').style.display = 'block'; // Mostra filtro Master
+                } else if (userDb.nivel === 2) {
+                    document.getElementById('user-role').innerText = 'Gestor de Escritório';
                 }
             }
+
+            // Configura datas iniciais nos filtros
+            const hoje = new Date();
+            document.getElementById('filtro-mes').value = hoje.toISOString().substring(0, 7); // YYYY-MM
+            document.getElementById('filtro-dia').value = hoje.toISOString().substring(0, 10); // YYYY-MM-DD
+            document.getElementById('form-data').valueAsDate = hoje;
+
+            await carregarCatalogoDoBanco(); // Carrega o esqueleto
+            await carregarPainel(); // Preenche os números
+            
             document.body.style.display = 'flex'; 
             document.getElementById('init-loader').style.display = 'none';
-            document.getElementById('form-data').valueAsDate = new Date();
-
-            // Puxa os dados para popular os cartões da tela inicial
-            carregarResumo();
         }
 
-        // --- FUNÇÃO QUE CARREGA OS NÚMEROS NA TELA ---
-        async function carregarResumo() {
-            const hoje = new Date().toISOString().split('T')[0];
+        // --- CONSTRUÇÃO DOS CARTÕES DINÂMICOS ---
+        async function carregarPainel() {
+            document.getElementById('init-loader').style.display = 'flex';
 
-            const { data, error } = await supabaseClient
-                .from('tv_producao')
-                .select('valor, quantidade, tipo_medida')
-                .eq('utilizador_id', sessaoAtual.usuario_id)
-                .eq('data_producao', hoje)
-                .eq('ativo', true);
+            const mesFiltro = document.getElementById('filtro-mes').value; // YYYY-MM
+            const diaFiltro = document.getElementById('filtro-dia').value; // YYYY-MM-DD
+            const visao = document.getElementById('filtro-hierarquia').value;
 
-            let totalValor = 0;
-            let totalQtd = 0;
+            // Busca Produção do Mês
+            let query = supabaseClient.from('tv_producao').select('*')
+                .eq('ativo', true)
+                .gte('data_producao', `${mesFiltro}-01`)
+                .lte('data_producao', `${mesFiltro}-31`); // Abordagem simples para o fim do mês
 
-            if (data && !error) {
-                data.forEach(p => {
-                    if (p.tipo_medida === 'valor') totalValor += parseFloat(p.valor || 0);
-                    if (p.tipo_medida === 'quantidade') totalQtd += parseFloat(p.quantidade || 0);
-                });
+            if (visao === 'meu_perfil') query = query.eq('utilizador_id', sessaoAtual.usuario_id);
+            else if (visao === 'grupo' && sessaoAtual.nivel === 3) query = query.eq('grupo_id', sessaoAtual.grupo_id);
+
+            const { data: producoes } = await query;
+            const producoesArray = producoes || [];
+
+            const container = document.getElementById('cards-container');
+            container.innerHTML = '';
+
+            if (catalogoCache.length === 0) {
+                container.innerHTML = '<div style="text-align:center; color:#888;">Catálogo não configurado.</div>';
+                document.getElementById('init-loader').style.display = 'none';
+                return;
             }
 
-            const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-            document.getElementById('resumo-valor').innerText = formatadorBRL.format(totalValor);
-            document.getElementById('resumo-qtd').innerText = totalQtd + ' un.';
+            // GERAÇÃO DOS CARTÕES BASEADA NO CATÁLOGO
+            catalogoCache.forEach(classe => {
+                if (!classe.tv_catalogo_itens) return;
+                
+                classe.tv_catalogo_itens.forEach(item => {
+                    // 1. DADOS DO ITEM PRINCIPAL (Soma de tudo o que for deste item)
+                    let totalMesItem = 0; let totalDiaItem = 0;
+                    
+                    producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
+                        const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
+                        totalMesItem += val;
+                        if (p.data_producao === diaFiltro) totalDiaItem += val;
+                    });
+
+                    // Metas Simuladas para Efeito Visual (Fixo por enquanto)
+                    const metaItem = item.tipo_medida === 'valor' ? 100000 : 20; 
+                    let percentItem = (totalMesItem / metaItem) * 100;
+                    if (percentItem > 100) percentItem = 100;
+
+                    const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
+                    const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
+
+                    container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', totalDiaItem, totalMesItem, metaItem, percentItem, fmt, sufixo);
+
+                    // 2. DADOS DOS SUBITENS (Cartões Independentes)
+                    if (item.tv_catalogo_subitens) {
+                        item.tv_catalogo_subitens.forEach(sub => {
+                            let totalMesSub = 0; let totalDiaSub = 0;
+                            producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
+                                const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
+                                totalMesSub += val;
+                                if (p.data_producao === diaFiltro) totalDiaSub += val;
+                            });
+
+                            const metaSub = item.tipo_medida === 'valor' ? 50000 : 10; 
+                            let percentSub = (totalMesSub / metaSub) * 100;
+                            if (percentSub > 100) percentSub = 100;
+
+                            container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, sub.nome, totalDiaSub, totalMesSub, metaSub, percentSub, fmt, sufixo);
+                        });
+                    }
+                });
+            });
+
+            document.getElementById('init-loader').style.display = 'none';
         }
 
-        async function abrirLancamento() {
-            document.getElementById('sheet-overlay').style.display = 'block';
-            setTimeout(() => { document.getElementById('sheet-overlay').style.opacity = '1'; document.getElementById('sheet-lancamento').style.bottom = '0'; }, 10);
-            if (catalogoCache.length === 0) await carregarCatalogoDoBanco();
+        // Função auxiliar para desenhar o Cartão
+        function gerarHtmlCartao(classeNome, itemNome, subitemNome, realDia, realMes, metaMes, percentual, formatador, sufixo) {
+            const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem</span>` : itemNome;
+            
+            return `
+                <div class="prod-card">
+                    <div class="prod-classe">${classeNome} ${subitemNome ? `> ${itemNome}` : ''}</div>
+                    <div class="prod-item">${tituloFinal}</div>
+                    
+                    <div class="prod-stats">
+                        <div class="stat-box">
+                            <span class="stat-label">Real Dia</span>
+                            <span class="stat-val">${formatador.format(realDia)}${sufixo}</span>
+                        </div>
+                        <div class="stat-box highlight">
+                            <span class="stat-label">Real Mês</span>
+                            <span class="stat-val">${formatador.format(realMes)}${sufixo}</span>
+                        </div>
+                        <div class="stat-box" style="border-color: #333; opacity: 0.8;">
+                            <span class="stat-label">Meta (Simulada)</span>
+                            <span class="stat-val">${formatador.format(metaMes)}${sufixo}</span>
+                        </div>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-bar" style="width: ${percentual}%;"></div>
+                    </div>
+                    <div class="progress-text">${percentual.toFixed(1)}% atingido do mês</div>
+                </div>
+            `;
         }
 
-        function fecharLancamento() {
-            document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
-            setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
-            document.getElementById('form-producao').reset(); 
-            document.getElementById('form-data').valueAsDate = new Date(); 
-            document.getElementById('box-pipeline').style.display = 'none';
-            document.getElementById('box-subitem').style.display = 'none';
-            document.getElementById('form-item').disabled = true;
-            document.getElementById('form-status').disabled = true;
-        }
 
+        // --- RESTANTE DO CÓDIGO DO FORMULÁRIO (Igual ao anterior) ---
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
             const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
-            if (!data || data.length === 0) { selectClasse.innerHTML = '<option disabled selected>Catálogo Vazio (Avise o Gestor)</option>'; return; }
+            if (!data) return;
 
             data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
             data.forEach(cls => { if (cls.tv_catalogo_itens) { cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); cls.tv_catalogo_itens.forEach(item => { if (item.tv_catalogo_subitens) item.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); }); } });
@@ -232,22 +281,31 @@
             catalogoCache.forEach((cls, index) => { selectClasse.innerHTML += `<option value="${index}">${cls.nome}</option>`; });
         }
 
+        function abrirLancamento() {
+            document.getElementById('sheet-overlay').style.display = 'block';
+            setTimeout(() => { document.getElementById('sheet-overlay').style.opacity = '1'; document.getElementById('sheet-lancamento').style.bottom = '0'; }, 10);
+        }
+
+        function fecharLancamento() {
+            document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
+            setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
+            document.getElementById('form-producao').reset(); document.getElementById('form-data').valueAsDate = new Date(); 
+            document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('box-subitem').style.display = 'none';
+            document.getElementById('form-item').disabled = true; document.getElementById('form-status').disabled = true;
+        }
+
         function onClasseChange() {
             const classe = catalogoCache[document.getElementById('form-classe').value];
-            
             const selectItem = document.getElementById('form-item');
-            selectItem.disabled = false;
-            selectItem.innerHTML = '<option value="" disabled selected>Selecione o Item...</option>';
+            selectItem.disabled = false; selectItem.innerHTML = '<option value="" disabled selected>Selecione o Item...</option>';
             if (classe.tv_catalogo_itens) classe.tv_catalogo_itens.forEach((item, idx) => selectItem.innerHTML += `<option value="${idx}">${item.nome}</option>`);
 
             const selectStatus = document.getElementById('form-status');
-            selectStatus.disabled = false;
-            selectStatus.innerHTML = '<option value="" disabled selected>Selecione o Status...</option>';
+            selectStatus.disabled = false; selectStatus.innerHTML = '<option value="" disabled selected>Selecione o Status...</option>';
             if (classe.opcoes_status) classe.opcoes_status.forEach(status => selectStatus.innerHTML += `<option value="${status}">${status}</option>`);
 
             document.getElementById('box-subitem').style.display = 'none'; document.getElementById('form-subitem').required = false;
             document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('form-pipeline').required = false;
-            document.getElementById('label-valor').innerText = 'Valor / Qtd';
         }
 
         function onItemChange() {
@@ -273,48 +331,31 @@
             else { pipelineBox.style.display = 'none'; document.getElementById('form-pipeline').required = false; }
         }
 
-        // --- O GRAVADOR DEFINITIVO NO BANCO DE DADOS ---
         document.getElementById('form-producao').addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            document.getElementById('init-loader').style.display = 'flex'; // Exibe bolinha carregando
-
-            // Pega as opções selecionadas pelo usuário
+            document.getElementById('init-loader').style.display = 'flex';
+            
             const classe = catalogoCache[document.getElementById('form-classe').value];
             const item = classe.tv_catalogo_itens[document.getElementById('form-item').value];
             const numDigitado = parseFloat(document.getElementById('form-valor').value) || 0;
 
-            // Monta o "Pacote" de dados exato para a tabela SQL
             const payload = {
-                utilizador_id: sessaoAtual.usuario_id,
-                escritorio_id: sessaoAtual.escritorio_id,
-                grupo_id: sessaoAtual.grupo_id,
+                utilizador_id: sessaoAtual.usuario_id, escritorio_id: sessaoAtual.escritorio_id, grupo_id: sessaoAtual.grupo_id,
                 data_producao: document.getElementById('form-data').value,
-                classe_nome: classe.nome,
-                item_nome: item.nome,
-                subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
-                status: document.getElementById('form-status').value,
-                pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
-                tipo_medida: item.tipo_medida,
-                valor: item.tipo_medida === 'valor' ? numDigitado : 0,
-                quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0
+                classe_nome: classe.nome, item_nome: item.nome, subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
+                status: document.getElementById('form-status').value, pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
+                tipo_medida: item.tipo_medida, valor: item.tipo_medida === 'valor' ? numDigitado : 0, quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0
             };
 
-            // Dispara para o banco de dados
             const { error } = await supabaseClient.from('tv_producao').insert([payload]);
-
-            document.getElementById('init-loader').style.display = 'none';
-
-            if (error) {
-                Swal.fire('Erro!', 'Falha ao gravar: ' + error.message, 'error');
-            } else {
-                Swal.fire({ icon: 'success', title: 'Produção Registrada!', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff' });
-                fecharLancamento();
-                carregarResumo(); // Atualiza a tela automaticamente!
+            if (error) { Swal.fire('Erro!', error.message, 'error'); document.getElementById('init-loader').style.display = 'none'; } 
+            else { 
+                Swal.fire({ icon: 'success', title: 'Salvo!', showConfirmButton: false, timer: 1000, background: '#111', color: '#fff' });
+                fecharLancamento(); carregarPainel(); 
             }
         });
 
         async function fazerLogoff() { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
-        
         validarSessao();
     </script>
 </body>
