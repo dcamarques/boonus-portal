@@ -18,7 +18,7 @@
         
         /* FILTROS (Tempo e Hierarquia) */
         .filters-bar { background: #0a0a0a; padding: 10px 20px; display: flex; gap: 10px; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
-        .filter-input { background: #222; border: 1px solid var(--border); color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; outline: none; }
+        .filter-input { background: #222; border: 1px solid var(--border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; flex: 1; }
         .filter-input:focus { border-color: var(--neon-color); }
         
         /* ÁREA PRINCIPAL E CARTÕES */
@@ -27,7 +27,7 @@
         .prod-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .prod-classe { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
         .prod-item { font-size: 1.3rem; font-weight: bold; color: #fff; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .prod-subitem-badge { font-size: 0.7rem; background: #333; padding: 3px 8px; border-radius: 12px; color: var(--neon-color); }
+        .prod-subitem-badge { font-size: 0.7rem; background: #333; padding: 3px 8px; border-radius: 12px; color: var(--neon-color); border: 1px solid var(--neon-color); }
         
         .prod-stats { display: flex; justify-content: space-between; margin-bottom: 15px; gap: 10px; }
         .stat-box { flex: 1; background: #111; padding: 10px; border-radius: 8px; text-align: center; border: 1px solid #222; }
@@ -39,7 +39,7 @@
         .progress-bar { background: var(--neon-color); height: 100%; width: 0%; transition: width 1s ease-in-out; }
         .progress-text { font-size: 0.75rem; color: var(--muted); text-align: right; }
 
-        /* MENU INFERIOR E MODAL (Igual ao anterior) */
+        /* MENU INFERIOR E MODAL */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
         .nav-item.active { color: var(--neon-color); }
@@ -77,8 +77,9 @@
 
     <!-- BARRA DE FILTROS SUPERIOR -->
     <div class="filters-bar">
-        <input type="month" id="filtro-mes" class="filter-input" onchange="carregarPainel()">
-        <input type="date" id="filtro-dia" class="filter-input" onchange="carregarPainel()">
+        <!-- Único campo de Data. Ele define o Dia e o Mês simultaneamente -->
+        <input type="date" id="filtro-data" class="filter-input" onchange="carregarPainel()" title="Escolha uma data">
+        
         <select id="filtro-hierarquia" class="filter-input" style="display: none;" onchange="carregarPainel()">
             <option value="meu_perfil">Minha Produção</option>
             <option value="grupo">Todo o Grupo (Visão Master)</option>
@@ -98,12 +99,12 @@
         <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
     </nav>
 
-    <!-- FORMULÁRIO DE LANÇAMENTO (Fica Oculto) -->
+    <!-- FORMULÁRIO DE LANÇAMENTO -->
     <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
     <div class="bottom-sheet" id="sheet-lancamento">
         <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharLancamento()">×</button></div>
         <form id="form-producao">
-            <div class="input-group"><label>Data</label><input type="date" id="form-data" required></div>
+            <div class="input-group"><label>Data</label><input type="date" id="form-data-lancamento" required></div>
             <div class="input-group"><label>Classe</label><select id="form-classe" required onchange="onClasseChange()"><option value="" disabled selected>A carregar...</option></select></div>
             <div class="input-group"><label>Item</label><select id="form-item" required disabled onchange="onItemChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
             <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
@@ -139,20 +140,22 @@
                 if (userDb.nivel === 3) {
                     document.getElementById('user-role').innerText = 'Sócio Diretor (Master)';
                     document.getElementById('admin-icon').style.display = 'block';
-                    document.getElementById('filtro-hierarquia').style.display = 'block'; // Mostra filtro Master
+                    document.getElementById('filtro-hierarquia').style.display = 'block'; // Filtro Master
                 } else if (userDb.nivel === 2) {
                     document.getElementById('user-role').innerText = 'Gestor de Escritório';
                 }
             }
 
-            // Configura datas iniciais nos filtros
+            // Define a data de hoje formatada corretamente para o fuso horário (YYYY-MM-DD)
             const hoje = new Date();
-            document.getElementById('filtro-mes').value = hoje.toISOString().substring(0, 7); // YYYY-MM
-            document.getElementById('filtro-dia').value = hoje.toISOString().substring(0, 10); // YYYY-MM-DD
-            document.getElementById('form-data').valueAsDate = hoje;
+            const offset = hoje.getTimezoneOffset() * 60000;
+            const dataLocal = (new Date(hoje - offset)).toISOString().slice(0, 10);
+            
+            document.getElementById('filtro-data').value = dataLocal;
+            document.getElementById('form-data-lancamento').value = dataLocal;
 
-            await carregarCatalogoDoBanco(); // Carrega o esqueleto
-            await carregarPainel(); // Preenche os números
+            await carregarCatalogoDoBanco(); 
+            await carregarPainel(); 
             
             document.body.style.display = 'flex'; 
             document.getElementById('init-loader').style.display = 'none';
@@ -162,20 +165,33 @@
         async function carregarPainel() {
             document.getElementById('init-loader').style.display = 'flex';
 
-            const mesFiltro = document.getElementById('filtro-mes').value; // YYYY-MM
-            const diaFiltro = document.getElementById('filtro-dia').value; // YYYY-MM-DD
+            const dataFiltro = document.getElementById('filtro-data').value; // Ex: 2026-09-26
+            if (!dataFiltro) return;
+
+            // Extrai o ano e o mês para saber o início e o fim do mês selecionado
+            const ano = dataFiltro.substring(0, 4);
+            const mes = dataFiltro.substring(5, 7);
+            
+            // A MÁGICA: O JavaScript descobre automaticamente qual é o último dia desse mês específico (28, 29, 30 ou 31)
+            const ultimoDiaDoMes = new Date(ano, mes, 0).getDate();
+
             const visao = document.getElementById('filtro-hierarquia').value;
 
-            // Busca Produção do Mês
+            // Busca toda a Produção do Mês exato (sem quebrar o banco de dados)
             let query = supabaseClient.from('tv_producao').select('*')
                 .eq('ativo', true)
-                .gte('data_producao', `${mesFiltro}-01`)
-                .lte('data_producao', `${mesFiltro}-31`); // Abordagem simples para o fim do mês
+                .gte('data_producao', `${ano}-${mes}-01`)
+                .lte('data_producao', `${ano}-${mes}-${ultimoDiaDoMes}`); 
 
             if (visao === 'meu_perfil') query = query.eq('utilizador_id', sessaoAtual.usuario_id);
             else if (visao === 'grupo' && sessaoAtual.nivel === 3) query = query.eq('grupo_id', sessaoAtual.grupo_id);
 
-            const { data: producoes } = await query;
+            const { data: producoes, error } = await query;
+            
+            if (error) {
+                alert("Erro ao ler dados: " + error.message);
+            }
+
             const producoesArray = producoes || [];
 
             const container = document.getElementById('cards-container');
@@ -192,38 +208,41 @@
                 if (!classe.tv_catalogo_itens) return;
                 
                 classe.tv_catalogo_itens.forEach(item => {
-                    // 1. DADOS DO ITEM PRINCIPAL (Soma de tudo o que for deste item)
+                    // 1. DADOS DO ITEM PRINCIPAL
                     let totalMesItem = 0; let totalDiaItem = 0;
                     
                     producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
                         const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
                         totalMesItem += val;
-                        if (p.data_producao === diaFiltro) totalDiaItem += val;
+                        if (p.data_producao === dataFiltro) totalDiaItem += val; // Usa a data selecionada como filtro do Dia
                     });
 
-                    // Metas Simuladas para Efeito Visual (Fixo por enquanto)
-                    const metaItem = item.tipo_medida === 'valor' ? 100000 : 20; 
-                    let percentItem = (totalMesItem / metaItem) * 100;
-                    if (percentItem > 100) percentItem = 100;
+                    // Se não tem Subitens OU se já tem produções registadas no item "Pai"
+                    if (!item.tv_catalogo_subitens || item.tv_catalogo_subitens.length === 0 || totalMesItem > 0) {
+                        const metaItem = item.tipo_medida === 'valor' ? 100000 : 20; 
+                        let percentItem = (totalMesItem / metaItem) * 100;
+                        if (percentItem > 100) percentItem = 100;
+                        const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
+                        const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
 
-                    const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
-                    const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
-
-                    container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', totalDiaItem, totalMesItem, metaItem, percentItem, fmt, sufixo);
+                        container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, '', totalDiaItem, totalMesItem, metaItem, percentItem, fmt, sufixo);
+                    }
 
                     // 2. DADOS DOS SUBITENS (Cartões Independentes)
-                    if (item.tv_catalogo_subitens) {
+                    if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
                         item.tv_catalogo_subitens.forEach(sub => {
                             let totalMesSub = 0; let totalDiaSub = 0;
                             producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
                                 const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
                                 totalMesSub += val;
-                                if (p.data_producao === diaFiltro) totalDiaSub += val;
+                                if (p.data_producao === dataFiltro) totalDiaSub += val;
                             });
 
                             const metaSub = item.tipo_medida === 'valor' ? 50000 : 10; 
                             let percentSub = (totalMesSub / metaSub) * 100;
                             if (percentSub > 100) percentSub = 100;
+                            const fmt = item.tipo_medida === 'valor' ? formatadorBRL : formatadorQtd;
+                            const sufixo = item.tipo_medida === 'quantidade' ? ' un.' : '';
 
                             container.innerHTML += gerarHtmlCartao(classe.nome, item.nome, sub.nome, totalDiaSub, totalMesSub, metaSub, percentSub, fmt, sufixo);
                         });
@@ -231,16 +250,23 @@
                 });
             });
 
+            // Delayzinho para a animação da barra de progresso encher de forma suave
+            setTimeout(() => {
+                document.querySelectorAll('.progress-bar').forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-target-width');
+                });
+            }, 100);
+
             document.getElementById('init-loader').style.display = 'none';
         }
 
         // Função auxiliar para desenhar o Cartão
         function gerarHtmlCartao(classeNome, itemNome, subitemNome, realDia, realMes, metaMes, percentual, formatador, sufixo) {
-            const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem</span>` : itemNome;
+            const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem de ${itemNome}</span>` : itemNome;
             
             return `
                 <div class="prod-card">
-                    <div class="prod-classe">${classeNome} ${subitemNome ? `> ${itemNome}` : ''}</div>
+                    <div class="prod-classe">${classeNome}</div>
                     <div class="prod-item">${tituloFinal}</div>
                     
                     <div class="prod-stats">
@@ -253,13 +279,13 @@
                             <span class="stat-val">${formatador.format(realMes)}${sufixo}</span>
                         </div>
                         <div class="stat-box" style="border-color: #333; opacity: 0.8;">
-                            <span class="stat-label">Meta (Simulada)</span>
+                            <span class="stat-label">Meta Mês</span>
                             <span class="stat-val">${formatador.format(metaMes)}${sufixo}</span>
                         </div>
                     </div>
 
                     <div class="progress-container">
-                        <div class="progress-bar" style="width: ${percentual}%;"></div>
+                        <div class="progress-bar" style="width: 0%;" data-target-width="${percentual}%"></div>
                     </div>
                     <div class="progress-text">${percentual.toFixed(1)}% atingido do mês</div>
                 </div>
@@ -267,7 +293,7 @@
         }
 
 
-        // --- RESTANTE DO CÓDIGO DO FORMULÁRIO (Igual ao anterior) ---
+        // --- RESTANTE DO CÓDIGO DO FORMULÁRIO ---
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
             const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
@@ -289,7 +315,9 @@
         function fecharLancamento() {
             document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
             setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
-            document.getElementById('form-producao').reset(); document.getElementById('form-data').valueAsDate = new Date(); 
+            document.getElementById('form-producao').reset(); 
+            // Resetar a data do modal para a data que está filtrada na tela principal
+            document.getElementById('form-data-lancamento').value = document.getElementById('filtro-data').value;
             document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('box-subitem').style.display = 'none';
             document.getElementById('form-item').disabled = true; document.getElementById('form-status').disabled = true;
         }
@@ -341,7 +369,7 @@
 
             const payload = {
                 utilizador_id: sessaoAtual.usuario_id, escritorio_id: sessaoAtual.escritorio_id, grupo_id: sessaoAtual.grupo_id,
-                data_producao: document.getElementById('form-data').value,
+                data_producao: document.getElementById('form-data-lancamento').value,
                 classe_nome: classe.nome, item_nome: item.nome, subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
                 status: document.getElementById('form-status').value, pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
                 tipo_medida: item.tipo_medida, valor: item.tipo_medida === 'valor' ? numDigitado : 0, quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0
