@@ -11,17 +11,14 @@
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { background-color: var(--dark-bg); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; display: none; height: 100vh; overflow: hidden; flex-direction: column; }
         
-        /* HEADER */
         .app-header { padding: 15px 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .user-greeting { font-size: 1.1rem; font-weight: bold; color: #fff; margin: 0; }
         .user-role { font-size: 0.7rem; color: var(--neon-color); text-transform: uppercase; }
         
-        /* FILTROS */
         .filters-bar { background: #0a0a0a; padding: 10px 20px; display: flex; gap: 10px; border-bottom: 1px solid var(--border); overflow-x: auto; white-space: nowrap; }
         .filter-input { background: #222; border: 1px solid var(--border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; flex: 1; }
         .filter-input:focus { border-color: var(--neon-color); }
         
-        /* ÁREA PRINCIPAL E CARTÕES */
         .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
         
         .prod-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
@@ -38,11 +35,12 @@
         .progress-container { background: #222; border-radius: 10px; height: 8px; width: 100%; overflow: hidden; margin-bottom: 8px; }
         .progress-bar { background: var(--neon-color); height: 100%; width: 0%; transition: width 1s ease-in-out; }
         .progress-text { font-size: 0.75rem; color: var(--muted); text-align: right; }
-
-        /* SESSÃO PIPELINE */
+        
         .pipe-section { margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border); }
+        
+        .btn-detalhes { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; margin-top: 15px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s; }
+        .btn-detalhes:hover { background: #333; border-color: var(--neon-color); }
 
-        /* MENU E MODAL */
         .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
         .nav-item.active { color: var(--neon-color); }
@@ -61,6 +59,16 @@
         .input-group select:disabled { opacity: 0.5; }
         .btn-submit { width: 100%; padding: 15px; background: var(--neon-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; text-transform: uppercase; }
         
+        /* TABELA DE DETALHES COM COLUNA FIXA */
+        .table-container { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; margin-top: 10px; }
+        .data-table { width: 100%; border-collapse: collapse; color: #e0e0e0; font-size: 0.85rem; min-width: 700px; }
+        .data-table th, .data-table td { padding: 12px 10px; border-bottom: 1px solid #222; text-align: left; white-space: nowrap; }
+        .data-table th { background: #111; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 1px; }
+        .col-acoes { position: sticky; left: 0; background: #1a1a1a; z-index: 2; width: 80px; text-align: center; border-right: 2px solid #333; }
+        .data-table th.col-acoes { background: #111; }
+        .btn-acao { background: none; border: none; cursor: pointer; font-size: 1.1rem; margin: 0 5px; opacity: 0.8; transition: opacity 0.2s; }
+        .btn-acao:hover { opacity: 1; }
+
         #init-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--neon-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -79,16 +87,14 @@
     </header>
 
     <div class="filters-bar">
-        <input type="date" id="filtro-data" class="filter-input" onchange="carregarPainel()" title="Escolha uma data">
+        <input type="date" id="filtro-data" class="filter-input" onchange="carregarPainel()">
         <select id="filtro-hierarquia" class="filter-input" style="display: none;" onchange="carregarPainel()">
             <option value="meu_perfil">Minha Produção</option>
             <option value="grupo">Todo o Grupo (Visão Master)</option>
         </select>
     </div>
 
-    <main class="main-content" id="cards-container">
-        <!-- Injetado via JS -->
-    </main>
+    <main class="main-content" id="cards-container"></main>
 
     <nav class="bottom-nav">
         <div class="nav-item active"><span class="nav-icon">📊</span><span>Resumo</span></div>
@@ -98,9 +104,11 @@
         <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
     </nav>
 
-    <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
+    <!-- FORMULÁRIO DE LANÇAMENTO -->
+    <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharModais()"></div>
+    
     <div class="bottom-sheet" id="sheet-lancamento">
-        <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharLancamento()">×</button></div>
+        <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharModais()">×</button></div>
         <form id="form-producao">
             <div class="input-group"><label>Data</label><input type="date" id="form-data-lancamento" required></div>
             <div class="input-group"><label>Classe</label><select id="form-classe" required onchange="onClasseChange()"><option value="" disabled selected>A carregar...</option></select></div>
@@ -108,16 +116,19 @@
             <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
             <div class="input-group"><label>Status</label><select id="form-status" required disabled onchange="onStatusChange()"><option value="" disabled selected>Aguardando Classe...</option></select></div>
             <div class="input-group" id="box-pipeline" style="display: none;"><label>Temperatura do Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
-            
-            <!-- NOVO CAMPO: DESCRIÇÃO -->
-            <div class="input-group">
-                <label>Descrição / Cliente (Opcional)</label>
-                <input type="text" id="form-descricao" placeholder="Nome do cliente, conta ou observação">
-            </div>
-
+            <div class="input-group"><label>Descrição / Cliente (Opcional)</label><input type="text" id="form-descricao" placeholder="Nome do cliente, conta ou observação"></div>
             <div class="input-group"><label id="label-valor">Valor / Qtd</label><input type="number" id="form-valor" required placeholder="0.00" step="0.01"></div>
             <button type="submit" class="btn-submit">Registrar Produção</button>
         </form>
+    </div>
+
+    <!-- MODAL DE LISTAGEM DE DETALHES -->
+    <div class="bottom-sheet" id="sheet-detalhes" style="height: 85vh;">
+        <div class="sheet-header">
+            <h2 class="sheet-title" id="detalhes-titulo">Detalhes da Produção</h2>
+            <button class="btn-close" onclick="fecharModais()">×</button>
+        </div>
+        <div id="detalhes-conteudo"></div>
     </div>
 
     <script>
@@ -127,6 +138,8 @@
         
         let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
         let catalogoCache = []; 
+        let producoesGlobais = []; // Guarda todos os lançamentos da tela para o Modal
+        let mapaNomesConsultores = {}; // Dicionário para mostrar o nome do consultor na tabela
 
         const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
@@ -150,6 +163,10 @@
                     document.getElementById('user-role').innerText = 'Gestor de Escritório';
                 }
             }
+
+            // Mapear nomes de utilizadores para a tabela
+            const { data: usersInfo } = await supabaseClient.from('tv_utilizadores').select('id, nome_completo');
+            if (usersInfo) { usersInfo.forEach(u => mapaNomesConsultores[u.id] = u.nome_completo.split(' ').slice(0, 2).join(' ')); }
 
             const hoje = new Date();
             const offset = hoje.getTimezoneOffset() * 60000;
@@ -186,7 +203,7 @@
 
             const { data: producoes, error } = await query;
             if (error) alert("Erro ao ler dados: " + error.message);
-            const producoesArray = producoes || [];
+            producoesGlobais = producoes || [];
 
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
@@ -204,7 +221,7 @@
                     let realMesItem = 0; let realDiaItem = 0;
                     let pQuenteItem = 0; let pMornoItem = 0; let pFrioItem = 0;
                     
-                    producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
+                    producoesGlobais.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome).forEach(p => {
                         const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
                         if (p.status.toLowerCase().includes('pipeline')) {
                             const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
@@ -233,7 +250,7 @@
                             let realMesSub = 0; let realDiaSub = 0;
                             let pQuenteSub = 0; let pMornoSub = 0; let pFrioSub = 0;
 
-                            producoesArray.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
+                            producoesGlobais.filter(p => p.classe_nome === classe.nome && p.item_nome === item.nome && p.subitem_nome === sub.nome).forEach(p => {
                                 const val = parseFloat(item.tipo_medida === 'valor' ? p.valor : p.quantidade) || 0;
                                 if (p.status.toLowerCase().includes('pipeline')) {
                                     const pipeLevel = p.pipeline ? p.pipeline.toLowerCase() : '';
@@ -258,10 +275,7 @@
                 });
             });
 
-            setTimeout(() => {
-                document.querySelectorAll('.progress-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-target-width'); });
-            }, 100);
-
+            setTimeout(() => { document.querySelectorAll('.progress-bar').forEach(bar => { bar.style.width = bar.getAttribute('data-target-width'); }); }, 100);
             document.getElementById('init-loader').style.display = 'none';
         }
 
@@ -269,6 +283,7 @@
             const tituloFinal = subitemNome ? `${subitemNome} <span class="prod-subitem-badge">Subitem de ${itemNome}</span>` : itemNome;
             const totalPipe = pQuente + pMorno + pFrio;
             const larguraVisual = Math.min(percentual, 100);
+            const argSub = subitemNome ? `'${subitemNome}'` : "null"; // Passagem segura para função JS
 
             return `
                 <div class="prod-card">
@@ -290,9 +305,7 @@
                         </div>
                     </div>
 
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: 0%;" data-target-width="${larguraVisual}%"></div>
-                    </div>
+                    <div class="progress-container"><div class="progress-bar" style="width: 0%;" data-target-width="${larguraVisual}%"></div></div>
                     <div class="progress-text">${percentual.toFixed(1)}% atingido do mês</div>
 
                     <div class="pipe-section">
@@ -301,24 +314,138 @@
                             <span style="font-size: 0.85rem; font-weight: bold; color: #fff;">Total: ${formatador.format(totalPipe)}${sufixo}</span>
                         </div>
                         <div class="prod-stats" style="margin-bottom: 0;">
-                            <div class="stat-box" style="border-left: 3px solid #ff4444; background: #1a0a0a;">
-                                <span class="stat-label">Quente</span>
-                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pQuente)}${sufixo}</span>
-                            </div>
-                            <div class="stat-box" style="border-left: 3px solid #ffbb33; background: #1a150a;">
-                                <span class="stat-label">Morno</span>
-                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pMorno)}${sufixo}</span>
-                            </div>
-                            <div class="stat-box" style="border-left: 3px solid #33b5e5; background: #0a151a;">
-                                <span class="stat-label">Frio</span>
-                                <span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pFrio)}${sufixo}</span>
-                            </div>
+                            <div class="stat-box" style="border-left: 3px solid #ff4444; background: #1a0a0a;"><span class="stat-label">Quente</span><span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pQuente)}${sufixo}</span></div>
+                            <div class="stat-box" style="border-left: 3px solid #ffbb33; background: #1a150a;"><span class="stat-label">Morno</span><span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pMorno)}${sufixo}</span></div>
+                            <div class="stat-box" style="border-left: 3px solid #33b5e5; background: #0a151a;"><span class="stat-label">Frio</span><span class="stat-val" style="font-size: 0.85rem;">${formatador.format(pFrio)}${sufixo}</span></div>
                         </div>
                     </div>
+                    
+                    <!-- BOTÃO PARA ABRIR A LISTA DE DETALHES -->
+                    <button class="btn-detalhes" onclick="abrirDetalhes('${classeNome}', '${itemNome}', ${argSub})">🔍 Ver Lançamentos</button>
                 </div>
             `;
         }
 
+        // --- SISTEMA DE TABELA E AÇÕES ---
+        function abrirDetalhes(classe, item, subitem) {
+            document.getElementById('detalhes-titulo').innerText = subitem ? `Lançamentos: ${subitem}` : `Lançamentos: ${item}`;
+            
+            // Filtra os registos específicos deste cartão
+            let lista = producoesGlobais.filter(p => p.classe_nome === classe && p.item_nome === item);
+            if (subitem) lista = lista.filter(p => p.subitem_nome === subitem);
+
+            let htmlTabela = '';
+            if (lista.length === 0) {
+                htmlTabela = '<div style="text-align:center; padding: 40px; color:#666;">Nenhum lançamento encontrado.</div>';
+            } else {
+                // Ordena por data mais recente
+                lista.sort((a, b) => new Date(b.data_producao) - new Date(a.data_producao));
+
+                htmlTabela = `
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-acoes">Ações</th>
+                                    <th>Data</th>
+                                    <th>Consultor</th>
+                                    <th>Status</th>
+                                    <th>Descrição / Cliente</th>
+                                    <th>Valor / Qtd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                lista.forEach(p => {
+                    const dataBr = p.data_producao.split('-').reverse().join('/');
+                    const consultor = mapaNomesConsultores[p.utilizador_id] || 'Desconhecido';
+                    const valorFormatado = p.tipo_medida === 'valor' ? formatadorBRL.format(p.valor) : formatadorQtd.format(p.quantidade) + ' un.';
+                    const badgePipe = p.status.toLowerCase().includes('pipeline') ? `<span style="color:#ffbb33; font-size:0.7rem;">(${p.pipeline})</span>` : '';
+
+                    htmlTabela += `
+                        <tr>
+                            <td class="col-acoes">
+                                <button class="btn-acao" onclick="editarProducao('${p.id}')">✏️</button>
+                                <button class="btn-acao" onclick="excluirProducao('${p.id}')">❌</button>
+                            </td>
+                            <td>${dataBr}</td>
+                            <td style="color:var(--neon-color); font-weight:bold;">${consultor}</td>
+                            <td>${p.status} ${badgePipe}</td>
+                            <td style="color:#aaa;">${p.descricao || '-'}</td>
+                            <td style="font-weight:bold;">${valorFormatado}</td>
+                        </tr>
+                    `;
+                });
+
+                htmlTabela += `</tbody></table></div>`;
+            }
+
+            document.getElementById('detalhes-conteudo').innerHTML = htmlTabela;
+            
+            document.getElementById('sheet-overlay').style.display = 'block';
+            setTimeout(() => { 
+                document.getElementById('sheet-overlay').style.opacity = '1'; 
+                document.getElementById('sheet-detalhes').style.bottom = '0'; 
+            }, 10);
+        }
+
+        async function excluirProducao(id) {
+            const res = await Swal.fire({ title: 'Apagar lançamento?', text: "Esta ação não pode ser desfeita.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim, Apagar', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                const { error } = await supabaseClient.from('tv_producao').delete().eq('id', id);
+                if (error) { Swal.fire('Erro', error.message, 'error'); document.getElementById('init-loader').style.display = 'none'; }
+                else { fecharModais(); carregarPainel(); }
+            }
+        }
+
+        async function editarProducao(id) {
+            const prod = producoesGlobais.find(p => p.id === id);
+            if(!prod) return;
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Editar Produção',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Data</label>
+                        <input type="date" id="swal-edit-data" class="swal2-input" value="${prod.data_producao}" style="width: 85%;">
+                    </div>
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Descrição / Cliente</label>
+                        <input type="text" id="swal-edit-desc" class="swal2-input" value="${prod.descricao || ''}" style="width: 85%;">
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">Valor numérico puro (Use ponto para centavos)</label>
+                        <input type="number" id="swal-edit-val" class="swal2-input" value="${prod.tipo_medida === 'valor' ? prod.valor : prod.quantidade}" step="0.01" style="width: 85%;">
+                    </div>
+                `,
+                focusConfirm: false, background: '#111', color: '#fff', confirmButtonColor: '#00ff88', showCancelButton: true, cancelButtonColor: '#333',
+                preConfirm: () => {
+                    const data = document.getElementById('swal-edit-data').value;
+                    const desc = document.getElementById('swal-edit-desc').value;
+                    const val = parseFloat(document.getElementById('swal-edit-val').value) || 0;
+                    if (!data) { Swal.showValidationMessage('A data é obrigatória'); return null; }
+                    return { data, desc, val };
+                }
+            });
+
+            if (formValues) {
+                document.getElementById('init-loader').style.display = 'flex';
+                const payload = {
+                    data_producao: formValues.data,
+                    descricao: formValues.desc || null,
+                };
+                if(prod.tipo_medida === 'valor') payload.valor = formValues.val;
+                else payload.quantidade = formValues.val;
+
+                const { error } = await supabaseClient.from('tv_producao').update(payload).eq('id', id);
+                if (error) { Swal.fire('Erro', error.message, 'error'); document.getElementById('init-loader').style.display = 'none'; }
+                else { fecharModais(); carregarPainel(); }
+            }
+        }
+
+        // --- SISTEMA DE FORMULÁRIO E SESSÃO ---
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
             const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
@@ -337,9 +464,12 @@
             setTimeout(() => { document.getElementById('sheet-overlay').style.opacity = '1'; document.getElementById('sheet-lancamento').style.bottom = '0'; }, 10);
         }
 
-        function fecharLancamento() {
-            document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
+        function fecharModais() {
+            document.getElementById('sheet-lancamento').style.bottom = '-100%'; 
+            document.getElementById('sheet-detalhes').style.bottom = '-100%'; 
+            document.getElementById('sheet-overlay').style.opacity = '0';
             setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
+            
             document.getElementById('form-producao').reset(); 
             document.getElementById('form-data-lancamento').value = document.getElementById('filtro-data').value;
             document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('box-subitem').style.display = 'none';
@@ -404,7 +534,7 @@
             if (error) { Swal.fire('Erro!', error.message, 'error'); document.getElementById('init-loader').style.display = 'none'; } 
             else { 
                 Swal.fire({ icon: 'success', title: 'Salvo!', showConfirmButton: false, timer: 1000, background: '#111', color: '#fff' });
-                fecharLancamento(); carregarPainel(); 
+                fecharModais(); carregarPainel(); 
             }
         });
 
