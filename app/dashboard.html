@@ -3,319 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Administração de Catálogo - Boonus</title>
-    
+    <title>Boonus - App do Consultor</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <style>
-        :root {
-            --neon-color: #00ff88;
-            --dark-bg: #050505;
-            --panel-bg: #111;
-            --card-bg: #1a1a1a;
-            --text-color: #e0e0e0;
-            --muted: #888;
-            --border: #333;
-        }
-
+        :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --card-bg: #1a1a1a; --text-color: #e0e0e0; --muted: #888; --border: #333; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-        body {
-            background-color: var(--dark-bg);
-            color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; display: none; height: 100vh; flex-direction: column;
-        }
-
-        .app-header {
-            padding: 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        .header-title { margin: 0; font-size: 1.2rem; color: #fff; }
-        .header-subtitle { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 1px; }
-        .btn-back { color: #fff; text-decoration: none; font-size: 1.5rem; }
-
-        .main-content { flex: 1; overflow-y: auto; padding: 20px; }
-
-        .btn-primary {
-            width: 100%; padding: 15px; background: var(--neon-color); color: #000;
-            border: none; border-radius: 8px; font-weight: bold; font-size: 1rem;
-            margin-bottom: 20px; cursor: pointer; text-transform: uppercase;
-        }
-
-        .classe-card {
-            background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
-            padding: 20px; margin-bottom: 20px; border-top: 4px solid var(--neon-color);
-        }
-
-        .classe-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .classe-title { margin: 0; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 10px; }
-        .btn-edit { background: none; border: none; font-size: 1rem; cursor: pointer; padding: 0; opacity: 0.7; transition: opacity 0.2s; }
-        .btn-edit:hover { opacity: 1; }
-        .classe-status { font-size: 0.75rem; color: var(--muted); margin-top: 5px; display: block; }
-        
-        .btn-add-item { background: #333; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; transition: background 0.2s; }
-        .btn-add-item:hover { background: var(--neon-color); color: #000; }
-
-        .item-list { background: #0d0d0d; border-radius: 8px; padding: 10px; margin-top: 10px; }
-        .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #222; }
-        .item-row:last-child { border-bottom: none; }
-        .item-name { font-size: 0.95rem; font-weight: 500; }
-        .item-type { font-size: 0.7rem; color: #666; text-transform: uppercase; background: #222; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
-        
-        .subitem-list { margin-top: 5px; padding-left: 15px; border-left: 2px solid #333; }
-        .subitem-row { font-size: 0.85rem; color: var(--muted); padding: 5px 0; }
-
-        .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 0.9rem; }
-
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: sans-serif; margin: 0; display: none; height: 100vh; overflow: hidden; flex-direction: column; }
+        .app-header { padding: 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .user-greeting { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
+        .user-role { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; }
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
+        .section-title { font-size: 0.9rem; text-transform: uppercase; color: var(--muted); margin-bottom: 15px; }
+        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 15px; border-left: 4px solid var(--neon-color); }
+        .card-value { font-size: 2rem; font-weight: bold; margin: 5px 0; color: #fff; }
+        .card-label { font-size: 0.85rem; color: var(--muted); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 10px 0 25px 0; z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--muted); text-decoration: none; font-size: 0.75rem; gap: 5px; cursor: pointer; transition: color 0.3s; }
+        .nav-item.active { color: var(--neon-color); }
+        .nav-icon { font-size: 1.5rem; }
+        .nav-fab { background: var(--neon-color); color: #000; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; margin-top: -30px; box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4); }
+        .bottom-sheet-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 999; display: none; opacity: 0; transition: opacity 0.3s; }
+        .bottom-sheet { position: fixed; bottom: -100%; left: 0; width: 100%; background: var(--panel-bg); border-radius: 20px 20px 0 0; z-index: 1000; padding: 20px; transition: bottom 0.4s; max-height: 90vh; overflow-y: auto; border-top: 2px solid var(--neon-color); }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sheet-title { margin: 0; font-size: 1.2rem; color: #fff; }
+        .btn-close { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #1a1a1a; color: #fff; font-size: 1rem; }
+        .btn-submit { width: 100%; padding: 15px; background: var(--neon-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 10px; cursor: pointer; }
         #init-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
         .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--neon-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
-    <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">CARREGANDO CATÁLOGO...</div></div>
-
+    <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem;">AUTENTICANDO...</div></div>
     <header class="app-header">
-        <a href="dashboard.html" class="btn-back">⬅️</a>
-        <div style="text-align: right;">
-            <h1 class="header-title">Catálogo Global</h1>
-            <div class="header-subtitle">Nível 3 - Master</div>
+        <div>
+            <h1 class="user-greeting">Olá, <span id="user-name">...</span></h1>
+            <div class="user-role" id="user-role">Consultor</div>
         </div>
+        <a href="admin-catalogo.html" id="admin-icon" style="display: none; font-size: 1.5rem; text-decoration: none;" title="Configurar Catálogo">⚙️</a>
     </header>
-
     <main class="main-content">
-        <button class="btn-primary" onclick="criarClasse()">➕ Adicionar Nova Classe</button>
-        <div id="catalogo-container"></div>
+        <div class="section-title">Minha Produção (Hoje)</div>
+        <div class="card"><div class="card-label">Captação / Investimentos</div><div class="card-value">R$ 0,00</div></div>
+        <div class="card" style="border-left-color: #00aaff;"><div class="card-label">Produtos / Contas</div><div class="card-value">0 un.</div></div>
+        <div style="text-align: center; color: var(--muted); margin-top: 40px; font-size: 0.9rem;">Selecione ➕ abaixo para lançar produção.</div>
     </main>
-
+    <nav class="bottom-nav">
+        <div class="nav-item active"><span class="nav-icon">📊</span><span>Resumo</span></div>
+        <div class="nav-item"><span class="nav-icon">🎯</span><span>Metas</span></div>
+        <div class="nav-item" onclick="abrirLancamento()"><div class="nav-fab">➕</div></div>
+        <div class="nav-item"><span class="nav-icon">🏆</span><span>Ranking</span></div>
+        <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
+    </nav>
+    <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
+    <div class="bottom-sheet" id="sheet-lancamento">
+        <div class="sheet-header"><h2 class="sheet-title">Novo Lançamento</h2><button class="btn-close" onclick="fecharLancamento()">×</button></div>
+        <form id="form-producao">
+            <div class="input-group"><label>Data</label><input type="date" id="form-data" required></div>
+            <div class="input-group"><label>Classe</label><select id="form-classe" required><option value="" disabled selected>Selecione a Classe...</option></select></div>
+            <div class="input-group"><label>Item</label><select id="form-item" required disabled><option value="" disabled selected>Aguardando Classe...</option></select></div>
+            <div class="input-group" id="box-subitem" style="display: none;"><label>Subitem</label><select id="form-subitem"><option value="">Nenhum</option></select></div>
+            <div class="input-group"><label>Status</label><select id="form-status" required disabled><option value="" disabled selected>Aguardando Classe...</option></select></div>
+            <div class="input-group" id="box-pipeline" style="display: none;"><label>Pipeline</label><select id="form-pipeline"><option value="Quente">Quente</option><option value="Morno">Morno</option><option value="Frio">Frio</option></select></div>
+            <div class="input-group"><label>Valor / Qtd</label><input type="number" id="form-valor" required placeholder="0.00" step="0.01"></div>
+            <button type="submit" class="btn-submit">Registrar</button>
+        </form>
+    </div>
     <script>
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        let sessaoAtual = { usuario_id: null, grupo_id: null, nivel: 1 };
-
+        let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
         async function validarSessao() {
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error || !session) { window.location.href = 'login.html'; return; }
-
-            const { data: userDb } = await supabaseClient
-                .from('tv_utilizadores')
-                .select('nivel, grupo_id')
-                .eq('id', session.user.id).single();
-
-            if (!userDb || userDb.nivel !== 3) {
-                alert("Acesso Negado. Apenas o Sócio Diretor (Nível 3) pode parametrizar o catálogo.");
-                window.location.href = 'dashboard.html';
-                return;
-            }
-
             sessaoAtual.usuario_id = session.user.id;
-            sessaoAtual.grupo_id = userDb.grupo_id;
-            
-            document.body.style.display = 'flex';
-            carregarCatalogo();
-        }
-
-        async function carregarCatalogo() {
-            document.getElementById('init-loader').style.display = 'flex';
-            
-            const { data: classes, error } = await supabaseClient
-                .from('tv_catalogo_classes')
-                .select(`
-                    id, nome, opcoes_status,
-                    tv_catalogo_itens (
-                        id, nome, tipo_medida,
-                        tv_catalogo_subitens (id, nome)
-                    )
-                `)
-                .eq('grupo_id', sessaoAtual.grupo_id)
-                .order('created_at', { ascending: true });
-
-            const container = document.getElementById('catalogo-container');
-            container.innerHTML = '';
-
-            if (!classes || classes.length === 0) {
-                container.innerHTML = '<div class="empty-state">O catálogo está vazio. Comece adicionando a primeira Classe (ex: Investimentos, Crédito).</div>';
-            } else {
-                classes.forEach(cls => {
-                    let itensHTML = '';
-                    if (cls.tv_catalogo_itens && cls.tv_catalogo_itens.length > 0) {
-                        cls.tv_catalogo_itens.forEach(item => {
-                            let subsHTML = '';
-                            if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
-                                item.tv_catalogo_subitens.forEach(sub => {
-                                    subsHTML += `<div class="subitem-row">↳ ${sub.nome}</div>`;
-                                });
-                            }
-                            
-                            itensHTML += `
-                                <div class="item-row">
-                                    <div>
-                                        <span class="item-name">${item.nome}</span>
-                                        <span class="item-type">${item.tipo_medida}</span>
-                                        <div class="subitem-list">${subsHTML}</div>
-                                    </div>
-                                    <button class="btn-add-item" style="background:#222; font-size:0.7rem;" onclick="criarSubitem('${item.id}', '${item.nome}')">+ Subitem</button>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        itensHTML = '<div style="color:#666; font-size:0.8rem; padding: 10px 0;">Nenhum item cadastrado nesta classe.</div>';
-                    }
-
-                    // A alteração central está aqui: Inclusão do botão btn-edit chamando a nova função editarClasse()
-                    container.innerHTML += `
-                        <div class="classe-card">
-                            <div class="classe-header">
-                                <div>
-                                    <h3 class="classe-title">
-                                        ${cls.nome}
-                                        <button class="btn-edit" title="Editar Classe" onclick="editarClasse('${cls.id}', '${cls.nome}', '${cls.opcoes_status.join(', ')}')">✏️</button>
-                                    </h3>
-                                    <span class="classe-status">Status Permitidos: ${cls.opcoes_status.join(', ')}</span>
-                                </div>
-                                <button class="btn-add-item" onclick="criarItem('${cls.id}', '${cls.nome}')">➕ Item</button>
-                            </div>
-                            <div class="item-list">${itensHTML}</div>
-                        </div>
-                    `;
-                });
-            }
-            document.getElementById('init-loader').style.display = 'none';
-        }
-
-        async function criarClasse() {
-            const { value: formValues } = await Swal.fire({
-                title: 'Nova Classe',
-                html: `
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Nome da Classe</label>
-                        <input id="swal-nome" class="swal2-input" placeholder="Ex: Contas, Investimentos" style="width: 85%;">
-                    </div>
-                    <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Status Permitidos (separados por vírgula)</label>
-                        <input id="swal-status" class="swal2-input" placeholder="Ex: Realizado, Negado, Pipeline" style="width: 85%;">
-                    </div>
-                `,
-                focusConfirm: false,
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                preConfirm: () => {
-                    const nome = document.getElementById('swal-nome').value.trim();
-                    const statusText = document.getElementById('swal-status').value.trim();
-                    if (!nome || !statusText) { Swal.showValidationMessage('Preencha ambos os campos'); return null; }
-                    return { nome, status: statusText.split(',').map(s => s.trim()) };
+            const { data: userDb } = await supabaseClient.from('tv_utilizadores').select('nome_completo, perfil, nivel, escritorio_id, grupo_id').eq('id', session.user.id).single();
+            if (userDb) {
+                document.getElementById('user-name').innerText = (userDb.nome_completo || session.user.email).split(' ')[0];
+                sessaoAtual.escritorio_id = userDb.escritorio_id; sessaoAtual.grupo_id = userDb.grupo_id; sessaoAtual.nivel = userDb.nivel || 1;
+                if (userDb.nivel === 2) document.getElementById('user-role').innerText = 'Gestor de Escritório';
+                if (userDb.nivel === 3) {
+                    document.getElementById('user-role').innerText = 'Sócio Diretor (Master)';
+                    document.getElementById('admin-icon').style.display = 'block';
                 }
-            });
-
-            if (formValues) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_classes').insert({
-                    grupo_id: sessaoAtual.grupo_id,
-                    nome: formValues.nome,
-                    opcoes_status: formValues.status
-                });
-                carregarCatalogo();
             }
+            document.body.style.display = 'flex'; document.getElementById('init-loader').style.display = 'none';
+            document.getElementById('form-data').valueAsDate = new Date();
         }
-
-        // Nova função para Editar Classe
-        async function editarClasse(classeId, nomeAtual, statusAtual) {
-            const { value: formValues } = await Swal.fire({
-                title: 'Editar Classe',
-                html: `
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Nome da Classe</label>
-                        <input id="swal-nome-edit" class="swal2-input" value="${nomeAtual}" style="width: 85%;">
-                    </div>
-                    <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Status Permitidos (separados por vírgula)</label>
-                        <input id="swal-status-edit" class="swal2-input" value="${statusAtual}" style="width: 85%;">
-                    </div>
-                `,
-                focusConfirm: false,
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                preConfirm: () => {
-                    const nome = document.getElementById('swal-nome-edit').value.trim();
-                    const statusText = document.getElementById('swal-status-edit').value.trim();
-                    if (!nome || !statusText) { Swal.showValidationMessage('Preencha ambos os campos'); return null; }
-                    return { nome, status: statusText.split(',').map(s => s.trim()) };
-                }
-            });
-
-            if (formValues) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_classes')
-                    .update({
-                        nome: formValues.nome,
-                        opcoes_status: formValues.status
-                    })
-                    .eq('id', classeId);
-                carregarCatalogo();
-            }
+        function abrirLancamento() {
+            document.getElementById('sheet-overlay').style.display = 'block';
+            setTimeout(() => { document.getElementById('sheet-overlay').style.opacity = '1'; document.getElementById('sheet-lancamento').style.bottom = '0'; }, 10);
         }
-
-        async function criarItem(classeId, classeNome) {
-            const { value: formValues } = await Swal.fire({
-                title: `Novo Item em ${classeNome}`,
-                html: `
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Nome do Produto/Item</label>
-                        <input id="swal-item-nome" class="swal2-input" placeholder="Ex: COE, Cartão de Crédito" style="width: 85%;">
-                    </div>
-                    <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Como é medido?</label>
-                        <select id="swal-item-tipo" class="swal2-input" style="width: 85%;">
-                            <option value="valor">Financeiro (R$ Valor)</option>
-                            <option value="quantidade">Unidades (Quantidade)</option>
-                        </select>
-                    </div>
-                `,
-                focusConfirm: false,
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                preConfirm: () => {
-                    const nome = document.getElementById('swal-item-nome').value.trim();
-                    const tipo = document.getElementById('swal-item-tipo').value;
-                    if (!nome) { Swal.showValidationMessage('Informe o nome do item'); return null; }
-                    return { nome, tipo };
-                }
-            });
-
-            if (formValues) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_itens').insert({
-                    classe_id: classeId,
-                    nome: formValues.nome,
-                    tipo_medida: formValues.tipo
-                });
-                carregarCatalogo();
-            }
+        function fecharLancamento() {
+            document.getElementById('sheet-lancamento').style.bottom = '-100%'; document.getElementById('sheet-overlay').style.opacity = '0';
+            setTimeout(() => { document.getElementById('sheet-overlay').style.display = 'none'; }, 300);
+            document.getElementById('form-producao').reset(); document.getElementById('form-data').valueAsDate = new Date(); document.getElementById('box-pipeline').style.display = 'none';
         }
-
-        async function criarSubitem(itemId, itemNome) {
-            const { value: nome } = await Swal.fire({
-                title: `Subitem para ${itemNome}`,
-                input: 'text',
-                inputLabel: 'Nome do Subitem (Ex: Dólar, IPCA)',
-                inputPlaceholder: 'Digite o nome...',
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                inputValidator: (value) => { if (!value) return 'O nome é obrigatório!'; }
-            });
-
-            if (nome) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_subitens').insert({
-                    item_id: itemId,
-                    nome: nome.trim()
-                });
-                carregarCatalogo();
-            }
-        }
-
+        document.getElementById('form-status').addEventListener('change', (e) => {
+            const pipelineBox = document.getElementById('box-pipeline');
+            if (e.target.value.toLowerCase().includes('pipeline')) { pipelineBox.style.display = 'block'; document.getElementById('form-pipeline').required = true; } 
+            else { pipelineBox.style.display = 'none'; document.getElementById('form-pipeline').required = false; }
+        });
+        document.getElementById('form-producao').addEventListener('submit', (e) => {
+            e.preventDefault(); Swal.fire({ icon: 'info', title: 'Integração', text: 'Catálogo pendente.', background: '#111', color: '#fff', confirmButtonColor: '#00ff88' }); fecharLancamento();
+        });
+        async function fazerLogoff() { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
         validarSessao();
     </script>
 </body>
