@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gestão de Metas - Boonus</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --card-bg: #1a1a1a; --text-color: #e0e0e0; --muted: #888; --border: #333; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; display: none; height: 100vh; flex-direction: column; }
+        
+        .app-header { padding: 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .header-title { margin: 0; font-size: 1.2rem; color: #fff; }
+        .header-subtitle { font-size: 0.75rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 1px; }
+        .btn-back { background: none; border: none; color: #fff; font-size: 1.8rem; cursor: pointer; padding: 0 10px 0 0; transition: color 0.2s; }
+        .btn-back:hover { color: var(--neon-color); }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 20px; }
+        
+        .section-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+        .section-title { font-size: 1.1rem; color: var(--neon-color); margin-top: 0; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
+        .input-group select, .input-group input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0a0a0a; color: #fff; font-size: 1rem; }
+        
+        .btn-primary { width: 100%; padding: 12px; background: var(--neon-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; text-transform: uppercase; transition: opacity 0.2s; }
+        .btn-primary:hover { opacity: 0.8; }
+        .btn-secondary { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        
+        .table-container { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; margin-top: 15px; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        .data-table th { background: #111; color: var(--muted); text-transform: uppercase; font-size: 0.75rem; }
+        .data-table tr:hover { background: #151515; }
+        .btn-acao { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.7; }
+        .btn-acao:hover { opacity: 1; }
+        
+        .badge-subitem { font-size: 0.65rem; background: #333; padding: 2px 6px; border-radius: 8px; color: var(--neon-color); margin-left: 5px; }
+
+        #init-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid var(--neon-color); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="init-loader"><div class="spinner"></div><div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">CARREGANDO DADOS...</div></div>
+
+    <header class="app-header">
+        <button class="btn-back" onclick="window.location.href='dashboard.html'" title="Voltar ao Dashboard">&#8592;</button>
+        <div style="text-align: right;">
+            <h1 class="header-title">Gestão de Metas</h1>
+            <div class="header-subtitle" id="nivel-label">Carregando...</div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        
+        <!-- SESSÃO 1: METAS PADRÃO (Visível só para Nível 3) -->
+        <div class="section-box" id="box-padrao" style="display: none;">
+            <h2 class="section-title">1. Template Padrão do Grupo</h2>
+            <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 15px;">Defina a régua de metas base que será aplicada aos consultores.</p>
+            <button class="btn-secondary" onclick="abrirModalNovaMetaPadrao()" style="margin-top: 0; margin-bottom: 15px;">➕ Adicionar Regra Padrão</button>
+            
+            <div class="table-container">
+                <table class="data-table">
+                    <thead><tr><th style="width: 70px;">Ações</th><th>Produto</th><th>Medida</th><th>Meta Base</th></tr></thead>
+                    <tbody id="tabela-padrao"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SESSÃO 2: METAS POR CONSULTOR (Visível para Nível 2 e 3) -->
+        <div class="section-box" id="box-consultores">
+            <h2 class="section-title">2. Metas Individuais (Equipa)</h2>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="input-group" style="flex: 1;">
+                    <label>Mês de Referência</label>
+                    <input type="month" id="filtro-mes" onchange="carregarMetasConsultor()">
+                </div>
+                <div class="input-group" style="flex: 2;">
+                    <label>Selecionar Consultor</label>
+                    <select id="filtro-consultor" onchange="carregarMetasConsultor()">
+                        <option value="" disabled selected>Aguardando...</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="carregarPadraoParaConsultor()">🎯 Injetar Metas Padrão no Consultor</button>
+
+            <div class="table-container" style="margin-top: 20px;">
+                <table class="data-table">
+                    <thead><tr><th style="width: 70px;">Ações</th><th>Produto</th><th>Medida</th><th>Meta Atribuída</th></tr></thead>
+                    <tbody id="tabela-consultor"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
+        let catalogoCache = [];
+        let metasPadraoCache = [];
+
+        const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
+
+        async function iniciar() {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (error || !session) { window.location.href = 'login.html'; return; }
+
+            const { data: userDb } = await supabaseClient.from('tv_utilizadores').select('nivel, escritorio_id, grupo_id').eq('id', session.user.id).single();
+            if (!userDb || userDb.nivel === 1) {
+                alert("Acesso Negado. Apenas Gestores e Diretores podem aceder a este painel.");
+                window.location.href = 'dashboard.html'; return;
+            }
+
+            sessaoAtual = { usuario_id: session.user.id, escritorio_id: userDb.escritorio_id, grupo_id: userDb.grupo_id, nivel: userDb.nivel };
+            document.getElementById('nivel-label').innerText = userDb.nivel === 3 ? 'Nível 3 (Master)' : 'Nível 2 (Gestor)';
+
+            // Define mês atual no filtro
+            const hoje = new Date();
+            const offset = hoje.getTimezoneOffset() * 60000;
+            document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
+
+            if (sessaoAtual.nivel === 3) {
+                document.getElementById('box-padrao').style.display = 'block';
+                await carregarMetasPadrao();
+            }
+
+            await carregarCatalogoDoBanco();
+            await carregarFiltroConsultores();
+
+            document.body.style.display = 'flex';
+            document.getElementById('init-loader').style.display = 'none';
+        }
+
+        async function carregarCatalogoDoBanco() {
+            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
+            if (data) {
+                data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+                data.forEach(cls => { if (cls.tv_catalogo_itens) { cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); cls.tv_catalogo_itens.forEach(i => { if (i.tv_catalogo_subitens) i.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); }); } });
+                catalogoCache = data;
+            }
+        }
+
+        async function carregarFiltroConsultores() {
+            let query = supabaseClient.from('tv_utilizadores').select('id, nome_completo').eq('grupo_id', sessaoAtual.grupo_id).eq('nivel', 1).order('nome_completo', { ascending: true });
+            if (sessaoAtual.nivel === 2) query = query.eq('escritorio_id', sessaoAtual.escritorio_id); // Gestor só vê a sua equipa
+            
+            const { data } = await query;
+            const select = document.getElementById('filtro-consultor');
+            select.innerHTML = '<option value="" disabled selected>Selecione um Consultor...</option>';
+            
+            if (data) {
+                data.forEach(u => select.innerHTML += `<option value="${u.id}">${u.nome_completo}</option>`);
+            }
+        }
+
+        // --- GESTÃO: METAS PADRÃO ---
+        async function carregarMetasPadrao() {
+            const { data } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id).order('classe_nome').order('item_nome');
+            metasPadraoCache = data || [];
+            
+            const tbody = document.getElementById('tabela-padrao');
+            tbody.innerHTML = '';
+            
+            if (metasPadraoCache.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum template definido.</td></tr>';
+                return;
+            }
+
+            metasPadraoCache.forEach(m => {
+                const badge = m.subitem_nome ? `<span class="badge-subitem">Subitem: ${m.subitem_nome}</span>` : '';
+                const formatado = m.tipo_medida === 'valor' ? formatadorBRL.format(m.meta_valor) : formatadorQtd.format(m.meta_quantidade) + ' un.';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <button class="btn-acao" onclick="editarMetaPadrao('${m.id}')" title="Editar">✏️</button>
+                            <button class="btn-acao" onclick="excluirMetaPadrao('${m.id}')" title="Excluir">❌</button>
+                        </td>
+                        <td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td>
+                        <td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td>
+                        <td style="color: var(--neon-color); font-weight: bold;">${formatado}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function abrirModalNovaMetaPadrao() {
+            // Constrói options de Classes e Itens baseados no catálogo
+            let optionsHTML = '<option value="" disabled selected>Selecione o Produto...</option>';
+            catalogoCache.forEach(cls => {
+                if (cls.tv_catalogo_itens) {
+                    cls.tv_catalogo_itens.forEach(item => {
+                        // Option para o Item principal
+                        const valItem = `${cls.nome}|${item.nome}||${item.tipo_medida}`;
+                        optionsHTML += `<option value="${valItem}">${cls.nome} > ${item.nome}</option>`;
+                        // Options para Subitens
+                        if (item.tv_catalogo_subitens) {
+                            item.tv_catalogo_subitens.forEach(sub => {
+                                const valSub = `${cls.nome}|${item.nome}|${sub.nome}|${item.tipo_medida}`;
+                                optionsHTML += `<option value="${valSub}">${cls.nome} > ${item.nome} > [Subitem: ${sub.nome}]</option>`;
+                            });
+                        }
+                    });
+                }
+            });
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Nova Meta Padrão',
+                html: `
+                    <div style="text-align:left; margin-bottom:15px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Produto do Catálogo</label>
+                        <select id="swal-produto" class="swal2-input" style="width: 85%; font-size:0.85rem;">${optionsHTML}</select>
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">Valor Numérico da Meta (Use ponto para centavos)</label>
+                        <input type="number" id="swal-meta-val" class="swal2-input" placeholder="Ex: 300000.00 ou 50" step="0.01" style="width: 85%;">
+                    </div>
+                `,
+                focusConfirm: false, background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                preConfirm: () => {
+                    const prod = document.getElementById('swal-produto').value;
+                    const val = parseFloat(document.getElementById('swal-meta-val').value);
+                    if (!prod || isNaN(val)) { Swal.showValidationMessage('Preencha os dois campos corretamente.'); return null; }
+                    return { prod, val };
+                }
+            });
+
+            if (formValues) {
+                document.getElementById('init-loader').style.display = 'flex';
+                const [classe_nome, item_nome, subitem_nome, tipo_medida] = formValues.prod.split('|');
+                
+                const payload = {
+                    grupo_id: sessaoAtual.grupo_id,
+                    classe_nome, item_nome, subitem_nome: subitem_nome || null, tipo_medida,
+                    meta_valor: tipo_medida === 'valor' ? formValues.val : 0,
+                    meta_quantidade: tipo_medida === 'quantidade' ? formValues.val : 0
+                };
+
+                const { error } = await supabaseClient.from('tv_metas_padrao').insert([payload]);
+                document.getElementById('init-loader').style.display = 'none';
+                
+                if (error) {
+                    if (error.code === '23505') Swal.fire('Atenção', 'Já existe uma meta padrão configurada para este produto. Edite a existente.', 'warning');
+                    else Swal.fire('Erro', error.message, 'error');
+                } else {
+                    carregarMetasPadrao();
+                }
+            }
+        }
+
+        async function excluirMetaPadrao(id) {
+            const res = await Swal.fire({ title: 'Excluir Meta Padrão?', text: "As metas dos consultores que já foram carregadas não serão apagadas, apenas o template.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_metas_padrao').delete().eq('id', id);
+                document.getElementById('init-loader').style.display = 'none';
+                carregarMetasPadrao();
+            }
+        }
+
+        async function editarMetaPadrao(id) {
+            const meta = metasPadraoCache.find(m => m.id === id);
+            if (!meta) return;
+
+            const valorAtual = meta.tipo_medida === 'valor' ? meta.meta_valor : meta.meta_quantidade;
+
+            const { value: novoValor } = await Swal.fire({
+                title: 'Editar Meta Padrão',
+                text: `${meta.classe_nome} > ${meta.item_nome} ${meta.subitem_nome ? `(${meta.subitem_nome})` : ''}`,
+                input: 'number',
+                inputValue: valorAtual,
+                inputAttributes: { step: '0.01' },
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+            });
+
+            if (novoValor !== undefined && novoValor !== '') {
+                document.getElementById('init-loader').style.display = 'flex';
+                const payload = meta.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) };
+                await supabaseClient.from('tv_metas_padrao').update(payload).eq('id', id);
+                document.getElementById('init-loader').style.display = 'none';
+                carregarMetasPadrao();
+            }
+        }
+
+
+        // --- GESTÃO: METAS CONSULTOR ---
+        async function carregarMetasConsultor() {
+            const mesAno = document.getElementById('filtro-mes').value;
+            const usrId = document.getElementById('filtro-consultor').value;
+            const tbody = document.getElementById('tabela-consultor');
+            tbody.innerHTML = '';
+
+            if (!mesAno || !usrId) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Selecione o Consultor para ver as metas do mês.</td></tr>';
+                return;
+            }
+
+            document.getElementById('init-loader').style.display = 'flex';
+            const { data } = await supabaseClient.from('tv_metas_consultor')
+                .select('*').eq('utilizador_id', usrId).eq('mes_ano', mesAno)
+                .order('classe_nome').order('item_nome');
+            document.getElementById('init-loader').style.display = 'none';
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Consultor não tem metas para este mês. Clique no botão acima para Injetar o Padrão.</td></tr>';
+                return;
+            }
+
+            data.forEach(m => {
+                const badge = m.subitem_nome ? `<span class="badge-subitem">Subitem: ${m.subitem_nome}</span>` : '';
+                const formatado = m.tipo_medida === 'valor' ? formatadorBRL.format(m.meta_valor) : formatadorQtd.format(m.meta_quantidade) + ' un.';
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <button class="btn-acao" onclick="editarMetaConsultor('${m.id}', ${m.tipo_medida === 'valor' ? m.meta_valor : m.meta_quantidade})" title="Editar Valor">✏️</button>
+                            <button class="btn-acao" onclick="excluirMetaConsultor('${m.id}')" title="Excluir">❌</button>
+                        </td>
+                        <td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td>
+                        <td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td>
+                        <td style="color: #ffbb33; font-weight: bold;">${formatado}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function carregarPadraoParaConsultor() {
+            const mesAno = document.getElementById('filtro-mes').value;
+            const usrId = document.getElementById('filtro-consultor').value;
+
+            if (!mesAno || !usrId) {
+                Swal.fire('Atenção', 'Selecione um Consultor e um Mês primeiro.', 'warning'); return;
+            }
+
+            // Descobre o escritorio do consultor selecionado
+            const { data: cData } = await supabaseClient.from('tv_utilizadores').select('escritorio_id').eq('id', usrId).single();
+            if (!cData) return;
+
+            document.getElementById('init-loader').style.display = 'flex';
+
+            // Pega as metas padrão do grupo
+            const { data: padroes } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id);
+            
+            if (!padroes || padroes.length === 0) {
+                document.getElementById('init-loader').style.display = 'none';
+                Swal.fire('Atenção', 'O Master ainda não definiu as Metas Padrão do Grupo.', 'info');
+                return;
+            }
+
+            let inseridas = 0;
+            // Tenta inserir uma por uma. Ignora se já existir (devido ao Unique Index).
+            for (const p of padroes) {
+                const payload = {
+                    utilizador_id: usrId,
+                    escritorio_id: cData.escritorio_id,
+                    grupo_id: sessaoAtual.grupo_id,
+                    mes_ano: mesAno,
+                    classe_nome: p.classe_nome,
+                    item_nome: p.item_nome,
+                    subitem_nome: p.subitem_nome,
+                    tipo_medida: p.tipo_medida,
+                    meta_valor: p.meta_valor,
+                    meta_quantidade: p.meta_quantidade
+                };
+                const { error } = await supabaseClient.from('tv_metas_consultor').insert([payload]);
+                if (!error) inseridas++;
+            }
+
+            document.getElementById('init-loader').style.display = 'none';
+            Swal.fire('Sucesso!', `${inseridas} novas metas padrão foram injetadas. As que já existiam foram mantidas.`, 'success');
+            carregarMetasConsultor();
+        }
+
+        async function editarMetaConsultor(id, valorAtual) {
+            const { value: novoValor } = await Swal.fire({
+                title: 'Personalizar Meta',
+                text: 'Este valor substituirá o Padrão apenas para este consultor neste mês.',
+                input: 'number',
+                inputValue: valorAtual,
+                inputAttributes: { step: '0.01' },
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+            });
+
+            if (novoValor !== undefined && novoValor !== '') {
+                document.getElementById('init-loader').style.display = 'flex';
+                // Precisamos saber se é valor ou quantidade para dar update na coluna certa
+                const { data: mData } = await supabaseClient.from('tv_metas_consultor').select('tipo_medida').eq('id', id).single();
+                const payload = mData.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) };
+                
+                await supabaseClient.from('tv_metas_consultor').update(payload).eq('id', id);
+                document.getElementById('init-loader').style.display = 'none';
+                carregarMetasConsultor();
+            }
+        }
+
+        async function excluirMetaConsultor(id) {
+            const res = await Swal.fire({ title: 'Excluir Meta Individual?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', background: '#111', color: '#fff' });
+            if (res.isConfirmed) {
+                document.getElementById('init-loader').style.display = 'flex';
+                await supabaseClient.from('tv_metas_consultor').delete().eq('id', id);
+                document.getElementById('init-loader').style.display = 'none';
+                carregarMetasConsultor();
+            }
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>
