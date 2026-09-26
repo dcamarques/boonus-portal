@@ -9,7 +9,7 @@
     <style>
         :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --card-bg: #1a1a1a; --text-color: #e0e0e0; --muted: #888; --border: #333; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--dark-bg); color: var(--text-color); font-family: sans-serif; margin: 0; display: none; height: 100vh; overflow: hidden; flex-direction: column; }
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; display: none; height: 100vh; overflow: hidden; flex-direction: column; }
         
         .app-header { padding: 20px; background: var(--panel-bg); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
         .user-greeting { font-size: 1.2rem; font-weight: bold; color: #fff; margin: 0; }
@@ -61,11 +61,12 @@
         <div class="section-title">Minha Produção (Hoje)</div>
         <div class="card">
             <div class="card-label">Captação / Investimentos</div>
-            <div class="card-value">R$ 0,00</div>
+            <!-- IDs adicionados para podermos injetar os valores -->
+            <div class="card-value" id="resumo-valor">R$ 0,00</div>
         </div>
         <div class="card" style="border-left-color: #00aaff;">
             <div class="card-label">Produtos / Contas</div>
-            <div class="card-value">0 un.</div>
+            <div class="card-value" id="resumo-qtd">0 un.</div>
         </div>
         <div style="text-align: center; color: var(--muted); margin-top: 40px; font-size: 0.9rem;">
             Selecione ➕ abaixo para lançar produção.
@@ -80,7 +81,7 @@
         <div class="nav-item" onclick="fazerLogoff()"><span class="nav-icon">🚪</span><span>Sair</span></div>
     </nav>
 
-    <!-- FORMULÁRIO DE LANÇAMENTO (Cascata) -->
+    <!-- FORMULÁRIO DE LANÇAMENTO -->
     <div class="bottom-sheet-overlay" id="sheet-overlay" onclick="fecharLancamento()"></div>
     <div class="bottom-sheet" id="sheet-lancamento">
         <div class="sheet-header">
@@ -146,9 +147,8 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
         let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
-        let catalogoCache = []; // Variável para guardar o catálogo e evitar consultas repetidas
+        let catalogoCache = []; 
 
-        // 1. INICIALIZAÇÃO E SESSÃO
         async function validarSessao() {
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error || !session) { window.location.href = 'login.html'; return; }
@@ -171,16 +171,41 @@
             document.body.style.display = 'flex'; 
             document.getElementById('init-loader').style.display = 'none';
             document.getElementById('form-data').valueAsDate = new Date();
+
+            // Puxa os dados para popular os cartões da tela inicial
+            carregarResumo();
         }
 
-        // 2. CONTROLO DO MODAL E BUSCA DO CATÁLOGO
+        // --- FUNÇÃO QUE CARREGA OS NÚMEROS NA TELA ---
+        async function carregarResumo() {
+            const hoje = new Date().toISOString().split('T')[0];
+
+            const { data, error } = await supabaseClient
+                .from('tv_producao')
+                .select('valor, quantidade, tipo_medida')
+                .eq('utilizador_id', sessaoAtual.usuario_id)
+                .eq('data_producao', hoje)
+                .eq('ativo', true);
+
+            let totalValor = 0;
+            let totalQtd = 0;
+
+            if (data && !error) {
+                data.forEach(p => {
+                    if (p.tipo_medida === 'valor') totalValor += parseFloat(p.valor || 0);
+                    if (p.tipo_medida === 'quantidade') totalQtd += parseFloat(p.quantidade || 0);
+                });
+            }
+
+            const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+            document.getElementById('resumo-valor').innerText = formatadorBRL.format(totalValor);
+            document.getElementById('resumo-qtd').innerText = totalQtd + ' un.';
+        }
+
         async function abrirLancamento() {
             document.getElementById('sheet-overlay').style.display = 'block';
             setTimeout(() => { document.getElementById('sheet-overlay').style.opacity = '1'; document.getElementById('sheet-lancamento').style.bottom = '0'; }, 10);
-            
-            if (catalogoCache.length === 0) {
-                await carregarCatalogoDoBanco();
-            }
+            if (catalogoCache.length === 0) await carregarCatalogoDoBanco();
         }
 
         function fecharLancamento() {
@@ -194,135 +219,98 @@
             document.getElementById('form-status').disabled = true;
         }
 
-        // 3. A LÓGICA DA CASCATA
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
-            
-            const { data, error } = await supabaseClient
-                .from('tv_catalogo_classes')
-                .select(`
-                    id, nome, opcoes_status,
-                    tv_catalogo_itens (
-                        id, nome, tipo_medida,
-                        tv_catalogo_subitens (id, nome)
-                    )
-                `)
-                .eq('grupo_id', sessaoAtual.grupo_id);
+            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
+            if (!data || data.length === 0) { selectClasse.innerHTML = '<option disabled selected>Catálogo Vazio (Avise o Gestor)</option>'; return; }
 
-            if (!data || data.length === 0) {
-                selectClasse.innerHTML = '<option disabled selected>Catálogo Vazio (Avise o Gestor)</option>';
-                return;
-            }
-
-            // Ordenação Alfabética Total
             data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-            data.forEach(cls => {
-                if (cls.tv_catalogo_itens) {
-                    cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-                    cls.tv_catalogo_itens.forEach(item => {
-                        if (item.tv_catalogo_subitens) {
-                            item.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-                        }
-                    });
-                }
-            });
+            data.forEach(cls => { if (cls.tv_catalogo_itens) { cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); cls.tv_catalogo_itens.forEach(item => { if (item.tv_catalogo_subitens) item.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); }); } });
 
             catalogoCache = data;
-
             selectClasse.innerHTML = '<option value="" disabled selected>Selecione a Classe...</option>';
-            catalogoCache.forEach((cls, index) => {
-                selectClasse.innerHTML += `<option value="${index}">${cls.nome}</option>`;
-            });
+            catalogoCache.forEach((cls, index) => { selectClasse.innerHTML += `<option value="${index}">${cls.nome}</option>`; });
         }
 
         function onClasseChange() {
-            const classIndex = document.getElementById('form-classe').value;
-            const classe = catalogoCache[classIndex];
+            const classe = catalogoCache[document.getElementById('form-classe').value];
             
-            // Popula Itens
             const selectItem = document.getElementById('form-item');
             selectItem.disabled = false;
             selectItem.innerHTML = '<option value="" disabled selected>Selecione o Item...</option>';
-            if (classe.tv_catalogo_itens) {
-                classe.tv_catalogo_itens.forEach((item, idx) => {
-                    selectItem.innerHTML += `<option value="${idx}">${item.nome}</option>`;
-                });
-            }
+            if (classe.tv_catalogo_itens) classe.tv_catalogo_itens.forEach((item, idx) => selectItem.innerHTML += `<option value="${idx}">${item.nome}</option>`);
 
-            // Popula Status da Classe
             const selectStatus = document.getElementById('form-status');
             selectStatus.disabled = false;
             selectStatus.innerHTML = '<option value="" disabled selected>Selecione o Status...</option>';
-            if (classe.opcoes_status) {
-                classe.opcoes_status.forEach(status => {
-                    selectStatus.innerHTML += `<option value="${status}">${status}</option>`;
-                });
-            }
+            if (classe.opcoes_status) classe.opcoes_status.forEach(status => selectStatus.innerHTML += `<option value="${status}">${status}</option>`);
 
-            // Esconde subitem e pipeline ao trocar de classe
-            document.getElementById('box-subitem').style.display = 'none';
-            document.getElementById('form-subitem').required = false;
-            document.getElementById('box-pipeline').style.display = 'none';
-            document.getElementById('form-pipeline').required = false;
+            document.getElementById('box-subitem').style.display = 'none'; document.getElementById('form-subitem').required = false;
+            document.getElementById('box-pipeline').style.display = 'none'; document.getElementById('form-pipeline').required = false;
             document.getElementById('label-valor').innerText = 'Valor / Qtd';
         }
 
         function onItemChange() {
-            const classIndex = document.getElementById('form-classe').value;
-            const itemIndex = document.getElementById('form-item').value;
-            const item = catalogoCache[classIndex].tv_catalogo_itens[itemIndex];
-
-            // 1. Ajusta o Rótulo (Valor ou Quantidade)
-            const labelValor = document.getElementById('label-valor');
+            const item = catalogoCache[document.getElementById('form-classe').value].tv_catalogo_itens[document.getElementById('form-item').value];
             const inputValor = document.getElementById('form-valor');
-            if (item.tipo_medida === 'quantidade') {
-                labelValor.innerText = 'Quantidade (Unidades)';
-                inputValor.placeholder = 'Ex: 1, 2, 5';
-            } else {
-                labelValor.innerText = 'Valor (R$)';
-                inputValor.placeholder = 'Ex: 1500.00';
-            }
+            if (item.tipo_medida === 'quantidade') { document.getElementById('label-valor').innerText = 'Quantidade (Unidades)'; inputValor.placeholder = 'Ex: 1, 2, 5'; } 
+            else { document.getElementById('label-valor').innerText = 'Valor (R$)'; inputValor.placeholder = 'Ex: 1500.00'; }
 
-            // 2. Verifica se existem Subitens
-            const boxSubitem = document.getElementById('box-subitem');
             const selectSubitem = document.getElementById('form-subitem');
-            
             if (item.tv_catalogo_subitens && item.tv_catalogo_subitens.length > 0) {
-                boxSubitem.style.display = 'block';
-                selectSubitem.required = true;
+                document.getElementById('box-subitem').style.display = 'block'; selectSubitem.required = true;
                 selectSubitem.innerHTML = '<option value="" disabled selected>Selecione o Subitem...</option>';
-                item.tv_catalogo_subitens.forEach(sub => {
-                    selectSubitem.innerHTML += `<option value="${sub.id}">${sub.nome}</option>`;
-                });
+                item.tv_catalogo_subitens.forEach(sub => selectSubitem.innerHTML += `<option value="${sub.nome}">${sub.nome}</option>`);
             } else {
-                boxSubitem.style.display = 'none';
-                selectSubitem.required = false;
-                selectSubitem.innerHTML = '<option value="">Nenhum</option>';
+                document.getElementById('box-subitem').style.display = 'none'; selectSubitem.required = false; selectSubitem.innerHTML = '<option value="">Nenhum</option>';
             }
         }
 
         function onStatusChange() {
             const statusBox = document.getElementById('form-status').value;
             const pipelineBox = document.getElementById('box-pipeline');
-            if (statusBox.toLowerCase().includes('pipeline')) { 
-                pipelineBox.style.display = 'block'; 
-                document.getElementById('form-pipeline').required = true; 
-            } else { 
-                pipelineBox.style.display = 'none'; 
-                document.getElementById('form-pipeline').required = false; 
-            }
+            if (statusBox.toLowerCase().includes('pipeline')) { pipelineBox.style.display = 'block'; document.getElementById('form-pipeline').required = true; } 
+            else { pipelineBox.style.display = 'none'; document.getElementById('form-pipeline').required = false; }
         }
 
-        // 4. SUBMISSÃO DO FORMULÁRIO (MOCK PARA O PRÓXIMO PASSO)
-        document.getElementById('form-producao').addEventListener('submit', (e) => {
+        // --- O GRAVADOR DEFINITIVO NO BANCO DE DADOS ---
+        document.getElementById('form-producao').addEventListener('submit', async (e) => {
             e.preventDefault(); 
-            Swal.fire({ 
-                icon: 'success', 
-                title: 'Tudo Conectado!', 
-                text: 'Os dropdowns funcionaram perfeitamente e os dados estão prontos para serem gravados na tabela de produção.', 
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88' 
-            }); 
-            fecharLancamento();
+            document.getElementById('init-loader').style.display = 'flex'; // Exibe bolinha carregando
+
+            // Pega as opções selecionadas pelo usuário
+            const classe = catalogoCache[document.getElementById('form-classe').value];
+            const item = classe.tv_catalogo_itens[document.getElementById('form-item').value];
+            const numDigitado = parseFloat(document.getElementById('form-valor').value) || 0;
+
+            // Monta o "Pacote" de dados exato para a tabela SQL
+            const payload = {
+                utilizador_id: sessaoAtual.usuario_id,
+                escritorio_id: sessaoAtual.escritorio_id,
+                grupo_id: sessaoAtual.grupo_id,
+                data_producao: document.getElementById('form-data').value,
+                classe_nome: classe.nome,
+                item_nome: item.nome,
+                subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
+                status: document.getElementById('form-status').value,
+                pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
+                tipo_medida: item.tipo_medida,
+                valor: item.tipo_medida === 'valor' ? numDigitado : 0,
+                quantidade: item.tipo_medida === 'quantidade' ? numDigitado : 0
+            };
+
+            // Dispara para o banco de dados
+            const { error } = await supabaseClient.from('tv_producao').insert([payload]);
+
+            document.getElementById('init-loader').style.display = 'none';
+
+            if (error) {
+                Swal.fire('Erro!', 'Falha ao gravar: ' + error.message, 'error');
+            } else {
+                Swal.fire({ icon: 'success', title: 'Produção Registrada!', showConfirmButton: false, timer: 1500, background: '#111', color: '#fff' });
+                fecharLancamento();
+                carregarResumo(); // Atualiza a tela automaticamente!
+            }
         });
 
         async function fazerLogoff() { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.auth.signOut(); window.location.href = 'login.html'; }
