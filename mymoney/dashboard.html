@@ -279,7 +279,7 @@
                         <option value="despesa">📋 Categorias: Despesas</option>
                         <option value="receita">📋 Categorias: Receitas</option>
                         <option value="fluxo">📊 Evolução: Receitas x Despesas</option>
-                        <option value="resultado">⚖️ Evolução: Resultado do Mês</option>
+                        <option value="resultado">⚖️️ Evolução: Resultado do Mês</option>
                         <option value="resultado_acumulado">📈 Evolução: Resultado Acumulado</option>
                         <option value="investimentos">💎 Evolução: Investimentos</option>
                     </select>
@@ -352,7 +352,6 @@
         const SUPABASE_KEY = 'sb_publishable_k4w2E4ur7xJR6qd575inBA_sJoXqHoN';
         const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // VARIÁVEIS GLOBAIS RESTAURADAS - O SEGREDO DO GRÁFICO FUNCIONAR
         let currentUser = null; let currentFamilyId = null; let currentUserProfile = ''; 
         let currentDate = new Date(); let currentView = 'individual'; let balanceMode = 'acumulado'; 
         let carteiras = []; let categorias = []; let currentMonthTransactions = []; let contasFixas = [];
@@ -419,12 +418,32 @@
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
+            // CÁLCULO DE CONTABILIDADE POR PARTIDAS DOBRADAS (CORRIGIDO PARA CARTÕES)
             transacoesParaCalculo.forEach(t => { 
-                const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; 
-                if (t.tipo === 'receita') { if (tipoOrigem === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_origem_id].total += v; } if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } } else if (t.tipo === 'despesa') { if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } } else if (t.tipo === 'transferencia') { if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } if (tipoOrigem === 'investimento') { saldoInvestimento -= v; globalBreakdownInvestimento[t.carteira_origem_id].total -= v; } if (tipoDestino === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_destino_id].total += v; } if (tipoDestino === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_destino_id].total += v; } } else if (t.tipo === 'rendimento') { if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } } 
+                const v = parseFloat(t.valor); 
+                const tipoOrigem = carteiraTipos[t.carteira_origem_id]; 
+                const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; 
+                
+                if (t.tipo === 'receita') { 
+                    if (tipoOrigem === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_origem_id].total += v; } 
+                    if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
+                } else if (t.tipo === 'despesa') { 
+                    if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
+                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; }
+                } else if (t.tipo === 'transferencia') { 
+                    // SAÍDAS
+                    if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
+                    if (tipoOrigem === 'investimento') { saldoInvestimento -= v; globalBreakdownInvestimento[t.carteira_origem_id].total -= v; } 
+                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; } // Ex: Saque do cartão
+                    
+                    // ENTRADAS
+                    if (tipoDestino === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_destino_id].total += v; } 
+                    if (tipoDestino === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_destino_id].total += v; } 
+                    if (tipoDestino === 'cartao_credito') { faturaCartaoMes -= v; globalBreakdownCartao[t.carteira_destino_id].total -= v; } // Pagamento da Fatura!
+                } else if (t.tipo === 'rendimento') { 
+                    if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
+                } 
             });
-            
-            resMes.data.forEach(t => { const v = parseFloat(t.valor); if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; } });
             
             const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); 
             elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-light-blue' : 'text-danger'); elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); 
@@ -529,7 +548,7 @@
         async function saveTransaction(e) { e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; const valorDaParcela = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.')); const descBase = document.getElementById('trans-desc').value; const origemId = document.getElementById('trans-origem').value; const catId = document.getElementById('trans-cat').value; const destId = document.getElementById('trans-destino').value; const dataBaseHtml = document.getElementById('trans-date').value; let parcelas = parseInt(document.getElementById('trans-parcelas').value) || 1; if(transId) parcelas = 1; const payloads = []; const [ano, mes, dia] = dataBaseHtml.split('-'); let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); for(let i = 0; i < parcelas; i++) { let currentDesc = parcelas > 1 ? `${descBase} (${i+1}/${parcelas})` : descBase; let currentDateObj = new Date(dataBaseObj); currentDateObj.setMonth(currentDateObj.getMonth() + i); let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0'); let yyyy = currentDateObj.getFullYear(); let dd = String(currentDateObj.getDate()).padStart(2, '0'); let dtTransacao = `${yyyy}-${mm}-${dd}`; let competencia = `${yyyy}-${mm}`; let payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorDaParcela, descricao: currentDesc, data_transacao: dtTransacao, competencia: competencia, carteira_origem_id: origemId }; if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = catId; payload.carteira_destino_id = null; } else if (tipo === 'transferencia') { payload.carteira_destino_id = destId; payload.categoria_id = null; } else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; } payloads.push(payload); } let error; if (transId) { const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId); error = res.error; } else { const res = await client.from('MM_transacoes').insert(payloads); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { closeModal(); loadTransactions(); } }
 
         // ==========================================
-        // DEMAIS FUNÇÕES DO DRE E GRÁFICOS (BLINDADOS)
+        // DEMAIS FUNÇÕES DO DRE E GRÁFICOS
         // ==========================================
         function openRelatoriosModal() { document.getElementById('modal-relatorios').classList.add('active'); document.getElementById('relatorio-tipo-select').value = 'despesa'; document.getElementById('relatorio-month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; setRelatorioAba('despesa'); }
         function closeRelatoriosModal() { document.getElementById('modal-relatorios').classList.remove('active'); }
@@ -589,7 +608,6 @@
             
             if(chartInstance) { chartInstance.destroy(); } 
             
-            // Re-injetando Canvas (agora COM o ID global declarado)
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
             
@@ -598,7 +616,16 @@
                 if(!canvas) return;
                 const ctx = canvas.getContext('2d');
                 
-                chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+                chartInstance = new Chart(ctx, { 
+                    type: 'bar', 
+                    data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, 
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
+                        scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
+                    } 
+                }); 
                 if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
             }, 100);
         }
@@ -620,8 +647,16 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
                 
-                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
-                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
+                if (aba === 'fluxo') { 
+                    datasetInfo = [ 
+                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, 
+                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } 
+                    ]; 
+                } else { 
+                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); 
+                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); 
+                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; 
+                } 
             } 
             else if (aba === 'resultado_acumulado') { 
                 document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
@@ -659,7 +694,16 @@
                 const ctx = canvas.getContext('2d');
                 
                 let mostrarLegenda = (aba === 'fluxo'); 
-                chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
+                chartInstance = new Chart(ctx, { 
+                    type: chartType, 
+                    data: { labels: labels, datasets: datasetInfo }, 
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
+                        scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
+                    } 
+                }); 
             }, 100);
         }
 
