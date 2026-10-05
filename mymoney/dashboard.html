@@ -164,9 +164,7 @@
         </div>
 
         <div class="balance-filter-row">
-            <!-- BOTÃO CONTAS FIXAS -->
             <button class="btn-outline" style="border-color: var(--primary); color: var(--primary); font-weight: 600;" onclick="openContasFixasModal()">📌 Contas Fixas</button>
-
             <div class="balance-toggle">
                 <button class="balance-btn active" id="btn-bal-acumulado" onclick="setBalanceMode('acumulado')">Saldo Acumulado</button>
                 <button class="balance-btn" id="btn-bal-mes" onclick="setBalanceMode('mes')">Fluxo do Mês</button>
@@ -189,7 +187,7 @@
             </div>
         </div>
 
-        <!-- LISTA DE TRANSAÇÕES COM BUSCA TURBINADA -->
+        <!-- LISTA DE TRANSAÇÕES -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
             <h2 class="section-header">Movimentações do Mês</h2>
             <button class="action-btn" onclick="toggleSearch()" style="background: transparent; color: var(--text-secondary); border-color: var(--border-color); padding: 0.4rem 0.6rem; border-radius: 50%;">🔍</button>
@@ -213,21 +211,17 @@
                 <h2>📌 Contas Fixas</h2>
                 <button class="btn-close" onclick="closeContasFixasModal()">&times;</button>
             </div>
-            
             <div class="view-toggle" style="margin: 0 auto 1.5rem auto; background: var(--surface-color); border: 1px solid var(--border-color); width: 100%; max-width: 300px;">
                 <button class="view-btn active" id="btn-fixa-despesa" onclick="setFixaAba('despesa')" style="flex:1;">Despesas</button>
                 <button class="view-btn" id="btn-fixa-receita" onclick="setFixaAba('receita')" style="flex:1;">Receitas</button>
             </div>
-
             <div class="fixa-summary-box">
                 <h4 id="fixa-summary-title" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-secondary);">Resumo Mensal</h4>
                 <div class="fixa-sum-row"><span>Total Fixo:</span><span class="fixa-sum-val" id="fixa-tot">R$ 0,00</span></div>
                 <div class="fixa-sum-row" style="color: var(--success);"><span id="lbl-fixa-lan">Pagas / Lançadas:</span><span class="fixa-sum-val" id="fixa-lan">R$ 0,00</span></div>
                 <div class="fixa-sum-row" id="row-fixa-pen" style="color: var(--danger); border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;"><span id="lbl-fixa-pen">A Pagar (Pendente):</span><span class="fixa-sum-val" id="fixa-pen">R$ 0,00</span></div>
             </div>
-
             <button class="btn-outline" style="width: 100%; justify-content: center; margin-bottom: 1rem; border-color: var(--primary); color: var(--primary);" onclick="openFormContaFixa()">+ Novo Molde de Conta Fixa</button>
-            
             <div class="invite-list" id="contas-fixas-list" style="margin-top: 0; border-top: none;"></div>
         </div>
     </div>
@@ -272,14 +266,13 @@
                 <h2>📊 Central de Relatórios</h2>
                 <button class="btn-close" onclick="closeRelatoriosModal()">&times;</button>
             </div>
-            
             <div class="controls-row" style="margin-bottom: 1.5rem; flex-direction: column; gap: 15px; background: transparent; border: none; padding: 0;">
                 <div class="form-group" style="margin-bottom: 0; width: 100%; max-width: 350px; margin: 0 auto;">
                     <select id="relatorio-tipo-select" onchange="setRelatorioAba(this.value)" style="text-align: center; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); padding: 0.6rem;">
                         <option value="despesa">📋 Categorias: Despesas</option>
                         <option value="receita">📋 Categorias: Receitas</option>
                         <option value="fluxo">📊 Evolução: Receitas x Despesas</option>
-                        <option value="resultado">⚖️️ Evolução: Resultado do Mês</option>
+                        <option value="resultado">⚖️ Evolução: Resultado do Mês</option>
                         <option value="resultado_acumulado">📈 Evolução: Resultado Acumulado</option>
                         <option value="investimentos">💎 Evolução: Investimentos</option>
                     </select>
@@ -290,7 +283,6 @@
                     <button onclick="changeMonthRelatorio(1)">&#10095;</button>
                 </div>
             </div>
-
             <div class="relatorios-grid">
                 <div id="relatorio-categorias"></div>
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
@@ -303,24 +295,12 @@
         </div>
     </div>
 
-    <!-- MODAL DE NOTIFICAÇÕES (SININHO) -->
-    <div class="modal-overlay" id="modal-notificacoes">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Notificações</h2>
-                <button class="btn-close" onclick="closeNotificacoesModal()">&times;</button>
-            </div>
-            <div class="invite-list" id="notif-list" style="margin-top: 0; border-top: none;"></div>
-        </div>
-    </div>
-
-    <!-- MODAL DE TRANSAÇÕES -->
+    <!-- MODAIS RESTANTES DO SISTEMA -->
+    <div class="modal-overlay" id="modal-notificacoes"><div class="modal-content"><div class="modal-header"><h2>Notificações</h2><button class="btn-close" onclick="closeNotificacoesModal()">&times;</button></div><div class="invite-list" id="notif-list" style="margin-top: 0; border-top: none;"></div></div></div>
+    
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Novo Lançamento</h2>
-                <button class="btn-close" onclick="closeModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h2 id="modal-title">Novo Lançamento</h2><button class="btn-close" onclick="closeModal()">&times;</button></div>
             <input type="hidden" id="trans-id" value="">
             <div class="type-selector">
                 <button class="type-btn active" data-type="despesa" onclick="setTransType('despesa')">Despesa</button>
@@ -342,7 +322,6 @@
         </div>
     </div>
 
-    <!-- MODAIS CADASTROS BÁSICOS -->
     <div class="modal-overlay" id="modal-cartoes"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Contas e Cartões</h2><button class="btn-close" onclick="closeCartoesModal()">&times;</button></div><form id="form-cartao" onsubmit="saveCartao(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cartao-id" value=""><h3 id="cartao-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Conta/Cartão</h3><div class="form-group"><label>Nome</label><input type="text" id="cartao-nome" required placeholder="Ex: Cartão Nubank"></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cartao-tipo" required><option value="corrente">Conta Corrente / Dinheiro</option><option value="cartao_credito">Cartão de Crédito</option><option value="investimento">Investimentos (Corretora/Banco)</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cartao-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCartaoForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Suas Contas e Cartões Existentes</label><div id="cartoes-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
     <div class="modal-overlay" id="modal-categorias"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Categorias</h2><button class="btn-close" onclick="closeCatModal()">&times;</button></div><form id="form-category" onsubmit="saveCategory(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cat-id" value=""><h3 id="cat-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Categoria</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Nome</label><input type="text" id="cat-nome" required placeholder="Ex: Educação"></div><div class="form-group"><label>Cor Identificadora</label><input type="color" id="cat-cor" required value="#2563eb"></div></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cat-tipo" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cat-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCatForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Categorias Existentes</label><div id="category-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
     <div class="modal-overlay" id="modal-familia"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Família</h2><button class="btn-close" onclick="closeFamilyModal()">&times;</button></div><div class="invite-list" id="active-members-container" style="border-top: none; margin-top: 0; padding-top: 0;"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Membros Ativos no Orçamento</label><div id="active-members-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div><p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 1.5rem;">Convide alguém para acessar o seu orçamento.</p><form id="form-invite" onsubmit="sendInvite(event)"><div class="form-group"><label>E-mail do Convidado</label><input type="email" id="invite-email" required placeholder="exemplo@gmail.com"></div><button type="submit" class="btn-save" id="btn-invite-submit" style="margin-top: 0;">Enviar Convite</button></form><div class="invite-list" id="invite-list-container"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Convites Pendentes</label><div id="invite-list"></div></div></div></div>
@@ -418,32 +397,12 @@
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
-            // CÁLCULO DE CONTABILIDADE POR PARTIDAS DOBRADAS (CORRIGIDO PARA CARTÕES)
             transacoesParaCalculo.forEach(t => { 
-                const v = parseFloat(t.valor); 
-                const tipoOrigem = carteiraTipos[t.carteira_origem_id]; 
-                const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; 
-                
-                if (t.tipo === 'receita') { 
-                    if (tipoOrigem === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_origem_id].total += v; } 
-                    if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
-                } else if (t.tipo === 'despesa') { 
-                    if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
-                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; }
-                } else if (t.tipo === 'transferencia') { 
-                    // SAÍDAS
-                    if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
-                    if (tipoOrigem === 'investimento') { saldoInvestimento -= v; globalBreakdownInvestimento[t.carteira_origem_id].total -= v; } 
-                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; } // Ex: Saque do cartão
-                    
-                    // ENTRADAS
-                    if (tipoDestino === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_destino_id].total += v; } 
-                    if (tipoDestino === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_destino_id].total += v; } 
-                    if (tipoDestino === 'cartao_credito') { faturaCartaoMes -= v; globalBreakdownCartao[t.carteira_destino_id].total -= v; } // Pagamento da Fatura!
-                } else if (t.tipo === 'rendimento') { 
-                    if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
-                } 
+                const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; 
+                if (t.tipo === 'receita') { if (tipoOrigem === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_origem_id].total += v; } if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } } else if (t.tipo === 'despesa') { if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } } else if (t.tipo === 'transferencia') { if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } if (tipoOrigem === 'investimento') { saldoInvestimento -= v; globalBreakdownInvestimento[t.carteira_origem_id].total -= v; } if (tipoDestino === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_destino_id].total += v; } if (tipoDestino === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_destino_id].total += v; } } else if (t.tipo === 'rendimento') { if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } } 
             });
+            
+            resMes.data.forEach(t => { const v = parseFloat(t.valor); if (t.tipo === 'despesa' && carteiraTipos[t.carteira_origem_id] === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; } });
             
             const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); 
             elSaldoCorrente.className = 'summary-value ' + (saldoCorrente >= 0 ? 'text-light-blue' : 'text-danger'); elSaldoInvest.className = 'summary-value ' + (saldoInvestimento >= 0 ? 'text-success' : 'text-danger'); 
@@ -452,6 +411,64 @@
             renderTransactionsList();
             if (document.getElementById('modal-contas-fixas').classList.contains('active')) { renderContasFixasList(); }
         }
+
+        // ==========================================
+        // O NOVO MOTOR DE DETALHAMENTO DE CONTAS
+        // ==========================================
+        function showBreakdown(tipo) { 
+            let title = ''; let dataObj = {}; let icon = ''; let colorClass = ''; 
+            
+            if (tipo === 'corrente') { title = '💳 Saldo por Conta'; dataObj = globalBreakdownCorrente; icon = '🏦'; colorClass = 'text-light-blue'; } 
+            else if (tipo === 'cartao') { title = '🧾 Fatura por Cartão (Mês)'; dataObj = globalBreakdownCartao; icon = '💳'; colorClass = 'text-danger'; } 
+            else if (tipo === 'investimento') { title = '📈 Saldo por Investimento'; dataObj = globalBreakdownInvestimento; icon = '💎'; colorClass = 'text-success'; } 
+            
+            document.getElementById('breakdown-title').innerText = title; 
+            const listEl = document.getElementById('breakdown-list'); 
+            let html = ''; let hasItems = false; 
+            
+            Object.values(dataObj).forEach(item => { 
+                if (item.total !== 0 || tipo !== 'cartao') { 
+                    hasItems = true; 
+                    let valClass = colorClass; 
+                    if (tipo === 'corrente') valClass = item.total >= 0 ? 'text-light-blue' : 'text-danger'; 
+                    if (tipo === 'investimento') valClass = item.total >= 0 ? 'text-success' : 'text-danger'; 
+                    html += `<div class="invite-item" style="font-size: 1rem; border-bottom: none; padding-bottom: 0; padding-top: 10px;"><span>${icon} ${item.nome}</span><span class="${valClass}" style="font-weight: 600;">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`; 
+                } 
+            }); 
+
+            // CÁLCULO DE PROJEÇÃO DE SALDO REAL (APENAS PARA CONTAS CORRENTES)
+            if (tipo === 'corrente') {
+                let pendentes = 0;
+                let saldoTotal = 0;
+                Object.values(dataObj).forEach(item => saldoTotal += item.total);
+
+                contasFixas.filter(cf => cf.tipo === 'despesa').forEach(cf => {
+                    const isPosted = currentMonthTransactions.some(t => t.descricao.trim().toLowerCase() === cf.descricao.trim().toLowerCase() && t.tipo === cf.tipo);
+                    if (!isPosted) { pendentes += parseFloat(cf.valor_previsto); }
+                });
+
+                let saldoLiquido = saldoTotal - pendentes;
+
+                html += `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px;">
+                            <span>Despesas Fixas a Lançar</span>
+                            <span style="color: var(--danger); font-weight: 600;">- R$ ${pendentes.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 1rem; color: ${saldoLiquido >= 0 ? 'var(--light-blue)' : 'var(--danger)'};">
+                            <span>Saldo Líquido Previsto</span>
+                            <span style="font-weight: 700;">R$ ${saldoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                        </div>
+                    </div>
+                `;
+                hasItems = true; // Força a tela a exibir o saldo e a projeção mesmo se a conta bancária ainda estiver zerada
+            }
+
+            listEl.innerHTML = html || '<span style="color: gray; font-size: 0.9rem;">Nenhum valor a exibir neste período.</span>'; 
+            document.getElementById('modal-breakdown').classList.add('active'); 
+        }
+
+        function closeBreakdownModal() { document.getElementById('modal-breakdown').classList.remove('active'); }
 
         function renderTransactionsList() {
             const listEl = document.getElementById('transaction-list');
@@ -534,12 +551,6 @@
             listEl.innerHTML = htmlCompleto || '<span style="color:gray; font-size: 0.9rem;">Nenhum molde registrado nesta aba.</span>';
         }
 
-        // ==========================================
-        // FLUXO NORMAL DE LANÇAMENTOS E MODAIS GERAIS
-        // ==========================================
-        function showBreakdown(tipo) { let title = ''; let dataObj = {}; let icon = ''; let colorClass = ''; if (tipo === 'corrente') { title = '💳 Saldo por Conta'; dataObj = globalBreakdownCorrente; icon = '🏦'; colorClass = 'text-light-blue'; } else if (tipo === 'cartao') { title = '🧾 Fatura por Cartão (Mês)'; dataObj = globalBreakdownCartao; icon = '💳'; colorClass = 'text-danger'; } else if (tipo === 'investimento') { title = '📈 Saldo por Investimento'; dataObj = globalBreakdownInvestimento; icon = '💎'; colorClass = 'text-success'; } document.getElementById('breakdown-title').innerText = title; const listEl = document.getElementById('breakdown-list'); let html = ''; let hasItems = false; Object.values(dataObj).forEach(item => { if (item.total !== 0 || tipo !== 'cartao') { hasItems = true; let valClass = colorClass; if (tipo === 'corrente') valClass = item.total >= 0 ? 'text-light-blue' : 'text-danger'; if (tipo === 'investimento') valClass = item.total >= 0 ? 'text-success' : 'text-danger'; html += `<div class="invite-item" style="font-size: 1rem;"><span>${icon} ${item.nome}</span><span class="${valClass}" style="font-weight: 600;">R$ ${item.total.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span></div>`; } }); listEl.innerHTML = html || '<span style="color: gray; font-size: 0.9rem;">Nenhum valor a exibir neste período.</span>'; document.getElementById('modal-breakdown').classList.add('active'); }
-        function closeBreakdownModal() { document.getElementById('modal-breakdown').classList.remove('active'); }
-
         function openModal() { document.getElementById('modal-title').innerText = "Novo Lançamento"; document.getElementById('trans-id').value = ""; document.getElementById('modal').classList.add('active'); document.getElementById('trans-date').valueAsDate = new Date(); setTransType('despesa'); }
         function closeModal() { document.getElementById('modal').classList.remove('active'); document.getElementById('form-transaction').reset(); document.getElementById('trans-id').value = ""; }
         function editTransaction(id) { const t = currentMonthTransactions.find(x => x.id === id); if (!t) return; document.getElementById('modal-title').innerText = "Editar Lançamento"; document.getElementById('trans-id').value = t.id; document.getElementById('trans-value').value = t.valor; document.getElementById('trans-desc').value = t.descricao; document.getElementById('trans-date').value = t.data_transacao; document.getElementById('trans-origem').value = t.carteira_origem_id; setTransType(t.tipo); if (t.tipo === 'despesa' || t.tipo === 'receita') { document.getElementById('trans-cat').value = t.categoria_id; } else if (t.tipo === 'transferencia') { document.getElementById('trans-destino').value = t.carteira_destino_id; } document.getElementById('modal').classList.add('active'); }
@@ -547,9 +558,6 @@
         function setTransType(type) { document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active')); document.querySelector(`.type-btn[data-type="${type}"]`).classList.add('active'); document.getElementById('trans-type').value = type; const grpDestino = document.getElementById('grp-destino'); const grpCat = document.getElementById('grp-categoria'); const lblOrigem = document.getElementById('lbl-origem'); const grpParcelas = document.getElementById('grp-parcelas'); document.getElementById('trans-destino').required = false; document.getElementById('trans-cat').required = false; if(type === 'despesa' || type === 'receita') { grpParcelas.classList.remove('hidden-field'); } else { grpParcelas.classList.add('hidden-field'); document.getElementById('trans-parcelas').value = "1"; } if (type === 'despesa' || type === 'receita') { grpDestino.classList.add('hidden-field'); grpCat.classList.remove('hidden-field'); lblOrigem.innerText = type === 'despesa' ? 'Meio de Pagamento (De onde sai)' : 'Conta de Recebimento (Onde entra)'; document.getElementById('trans-cat').required = true; } else if (type === 'transferencia') { grpDestino.classList.remove('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Conta de Origem (Sai de)'; document.getElementById('trans-destino').required = true; } else if (type === 'rendimento') { grpDestino.classList.add('hidden-field'); grpCat.classList.add('hidden-field'); lblOrigem.innerText = 'Qual investimento rendeu/desvalorizou?'; } }
         async function saveTransaction(e) { e.preventDefault(); const btn = document.getElementById('btn-submit'); btn.innerText = 'Salvando...'; btn.disabled = true; const transId = document.getElementById('trans-id').value; const tipo = document.getElementById('trans-type').value; const valorDaParcela = parseFloat(document.getElementById('trans-value').value.toString().replace(',','.')); const descBase = document.getElementById('trans-desc').value; const origemId = document.getElementById('trans-origem').value; const catId = document.getElementById('trans-cat').value; const destId = document.getElementById('trans-destino').value; const dataBaseHtml = document.getElementById('trans-date').value; let parcelas = parseInt(document.getElementById('trans-parcelas').value) || 1; if(transId) parcelas = 1; const payloads = []; const [ano, mes, dia] = dataBaseHtml.split('-'); let dataBaseObj = new Date(ano, mes - 1, dia, 12, 0, 0); for(let i = 0; i < parcelas; i++) { let currentDesc = parcelas > 1 ? `${descBase} (${i+1}/${parcelas})` : descBase; let currentDateObj = new Date(dataBaseObj); currentDateObj.setMonth(currentDateObj.getMonth() + i); let mm = String(currentDateObj.getMonth() + 1).padStart(2, '0'); let yyyy = currentDateObj.getFullYear(); let dd = String(currentDateObj.getDate()).padStart(2, '0'); let dtTransacao = `${yyyy}-${mm}-${dd}`; let competencia = `${yyyy}-${mm}`; let payload = { familia_id: currentFamilyId, lancado_por: currentUser.id, tipo: tipo, valor: valorDaParcela, descricao: currentDesc, data_transacao: dtTransacao, competencia: competencia, carteira_origem_id: origemId }; if (tipo === 'despesa' || tipo === 'receita') { payload.categoria_id = catId; payload.carteira_destino_id = null; } else if (tipo === 'transferencia') { payload.carteira_destino_id = destId; payload.categoria_id = null; } else if (tipo === 'rendimento') { payload.carteira_destino_id = null; payload.categoria_id = null; } payloads.push(payload); } let error; if (transId) { const res = await client.from('MM_transacoes').update(payloads[0]).eq('id', transId); error = res.error; } else { const res = await client.from('MM_transacoes').insert(payloads); error = res.error; } btn.innerText = 'Salvar'; btn.disabled = false; if (error) { alert("Erro ao salvar: " + error.message); } else { closeModal(); loadTransactions(); } }
 
-        // ==========================================
-        // DEMAIS FUNÇÕES DO DRE E GRÁFICOS
-        // ==========================================
         function openRelatoriosModal() { document.getElementById('modal-relatorios').classList.add('active'); document.getElementById('relatorio-tipo-select').value = 'despesa'; document.getElementById('relatorio-month-display').innerText = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`; setRelatorioAba('despesa'); }
         function closeRelatoriosModal() { document.getElementById('modal-relatorios').classList.remove('active'); }
         function setRelatorioAba(aba) { if(aba === 'despesa' || aba === 'receita') { selectedRelatorioCatId = null; document.getElementById('relatorio-grafico-wrapper').style.display = 'none'; } refreshRelatorioAtual(); }
@@ -590,9 +598,7 @@
 
         async function renderCategoryEvolution(catId, catName, catCor) { 
             selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; 
-            
-            const wrapper = document.getElementById('relatorio-grafico-wrapper');
-            wrapper.style.display = 'block'; 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper'); wrapper.style.display = 'block'; 
             document.getElementById('grafico-titulo').innerHTML = `<span style="color:${catCor}">■</span> Evolução (7 Meses): ${catName}`; 
             
             let monthsToFetch = []; let labels = []; 
@@ -613,26 +619,14 @@
             
             setTimeout(() => {
                 const canvas = document.getElementById('chartEvolucao');
-                if(!canvas) return;
-                const ctx = canvas.getContext('2d');
-                
-                chartInstance = new Chart(ctx, { 
-                    type: 'bar', 
-                    data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                if(!canvas) return; const ctx = canvas.getContext('2d');
+                chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
                 if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
             }, 100);
         }
 
         async function renderMacroEvolution(aba) { 
-            const wrapper = document.getElementById('relatorio-grafico-wrapper');
-            wrapper.style.display = 'block'; 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper'); wrapper.style.display = 'block'; 
             
             let monthsToFetch = []; let labels = []; 
             for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } 
@@ -647,16 +641,8 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
                 
-                if (aba === 'fluxo') { 
-                    datasetInfo = [ 
-                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, 
-                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } 
-                    ]; 
-                } else { 
-                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); 
-                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); 
-                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; 
-                } 
+                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
+                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
             } 
             else if (aba === 'resultado_acumulado') { 
                 document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
@@ -684,26 +670,14 @@
             } 
             
             if(chartInstance) { chartInstance.destroy(); } 
-            
             const containerBox = document.getElementById('grafico-container-dinamico');
             containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
             
             setTimeout(() => {
                 const canvas = document.getElementById('chartEvolucao');
-                if(!canvas) return;
-                const ctx = canvas.getContext('2d');
-                
+                if(!canvas) return; const ctx = canvas.getContext('2d');
                 let mostrarLegenda = (aba === 'fluxo'); 
-                chartInstance = new Chart(ctx, { 
-                    type: chartType, 
-                    data: { labels: labels, datasets: datasetInfo }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
             }, 100);
         }
 
