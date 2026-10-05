@@ -164,9 +164,7 @@
         </div>
 
         <div class="balance-filter-row">
-            <!-- BOTÃO CONTAS FIXAS -->
             <button class="btn-outline" style="border-color: var(--primary); color: var(--primary); font-weight: 600;" onclick="openContasFixasModal()">📌 Contas Fixas</button>
-
             <div class="balance-toggle">
                 <button class="balance-btn active" id="btn-bal-acumulado" onclick="setBalanceMode('acumulado')">Saldo Acumulado</button>
                 <button class="balance-btn" id="btn-bal-mes" onclick="setBalanceMode('mes')">Fluxo do Mês</button>
@@ -213,21 +211,17 @@
                 <h2>📌 Contas Fixas</h2>
                 <button class="btn-close" onclick="closeContasFixasModal()">&times;</button>
             </div>
-            
             <div class="view-toggle" style="margin: 0 auto 1.5rem auto; background: var(--surface-color); border: 1px solid var(--border-color); width: 100%; max-width: 300px;">
                 <button class="view-btn active" id="btn-fixa-despesa" onclick="setFixaAba('despesa')" style="flex:1;">Despesas</button>
                 <button class="view-btn" id="btn-fixa-receita" onclick="setFixaAba('receita')" style="flex:1;">Receitas</button>
             </div>
-
             <div class="fixa-summary-box">
                 <h4 id="fixa-summary-title" style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-secondary);">Resumo Mensal</h4>
                 <div class="fixa-sum-row"><span>Total Fixo:</span><span class="fixa-sum-val" id="fixa-tot">R$ 0,00</span></div>
                 <div class="fixa-sum-row" style="color: var(--success);"><span id="lbl-fixa-lan">Pagas / Lançadas:</span><span class="fixa-sum-val" id="fixa-lan">R$ 0,00</span></div>
                 <div class="fixa-sum-row" id="row-fixa-pen" style="color: var(--danger); border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;"><span id="lbl-fixa-pen">A Pagar (Pendente):</span><span class="fixa-sum-val" id="fixa-pen">R$ 0,00</span></div>
             </div>
-
             <button class="btn-outline" style="width: 100%; justify-content: center; margin-bottom: 1rem; border-color: var(--primary); color: var(--primary);" onclick="openFormContaFixa()">+ Novo Molde de Conta Fixa</button>
-            
             <div class="invite-list" id="contas-fixas-list" style="margin-top: 0; border-top: none;"></div>
         </div>
     </div>
@@ -272,7 +266,6 @@
                 <h2>📊 Central de Relatórios</h2>
                 <button class="btn-close" onclick="closeRelatoriosModal()">&times;</button>
             </div>
-            
             <div class="controls-row" style="margin-bottom: 1.5rem; flex-direction: column; gap: 15px; background: transparent; border: none; padding: 0;">
                 <div class="form-group" style="margin-bottom: 0; width: 100%; max-width: 350px; margin: 0 auto;">
                     <select id="relatorio-tipo-select" onchange="setRelatorioAba(this.value)" style="text-align: center; font-weight: bold; color: var(--primary); border: 2px solid var(--primary); padding: 0.6rem;">
@@ -290,7 +283,6 @@
                     <button onclick="changeMonthRelatorio(1)">&#10095;</button>
                 </div>
             </div>
-
             <div class="relatorios-grid">
                 <div id="relatorio-categorias"></div>
                 <div id="relatorio-grafico-wrapper" style="display:none; width: 100%;">
@@ -303,24 +295,12 @@
         </div>
     </div>
 
-    <!-- MODAL DE NOTIFICAÇÕES (SININHO) -->
-    <div class="modal-overlay" id="modal-notificacoes">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Notificações</h2>
-                <button class="btn-close" onclick="closeNotificacoesModal()">&times;</button>
-            </div>
-            <div class="invite-list" id="notif-list" style="margin-top: 0; border-top: none;"></div>
-        </div>
-    </div>
-
-    <!-- MODAL DE TRANSAÇÕES -->
+    <!-- MODAIS RESTANTES DO SISTEMA -->
+    <div class="modal-overlay" id="modal-notificacoes"><div class="modal-content"><div class="modal-header"><h2>Notificações</h2><button class="btn-close" onclick="closeNotificacoesModal()">&times;</button></div><div class="invite-list" id="notif-list" style="margin-top: 0; border-top: none;"></div></div></div>
+    
     <div class="modal-overlay" id="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modal-title">Novo Lançamento</h2>
-                <button class="btn-close" onclick="closeModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h2 id="modal-title">Novo Lançamento</h2><button class="btn-close" onclick="closeModal()">&times;</button></div>
             <input type="hidden" id="trans-id" value="">
             <div class="type-selector">
                 <button class="type-btn active" data-type="despesa" onclick="setTransType('despesa')">Despesa</button>
@@ -342,7 +322,6 @@
         </div>
     </div>
 
-    <!-- MODAIS CADASTROS BÁSICOS -->
     <div class="modal-overlay" id="modal-cartoes"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Contas e Cartões</h2><button class="btn-close" onclick="closeCartoesModal()">&times;</button></div><form id="form-cartao" onsubmit="saveCartao(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cartao-id" value=""><h3 id="cartao-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Conta/Cartão</h3><div class="form-group"><label>Nome</label><input type="text" id="cartao-nome" required placeholder="Ex: Cartão Nubank"></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cartao-tipo" required><option value="corrente">Conta Corrente / Dinheiro</option><option value="cartao_credito">Cartão de Crédito</option><option value="investimento">Investimentos (Corretora/Banco)</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cartao-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCartaoForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Suas Contas e Cartões Existentes</label><div id="cartoes-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
     <div class="modal-overlay" id="modal-categorias"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Categorias</h2><button class="btn-close" onclick="closeCatModal()">&times;</button></div><form id="form-category" onsubmit="saveCategory(event)" style="background: var(--bg-color); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid var(--border-color);"><input type="hidden" id="cat-id" value=""><h3 id="cat-form-title" style="font-size: 0.95rem; margin-bottom: 1rem;">Nova Categoria</h3><div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"><div class="form-group"><label>Nome</label><input type="text" id="cat-nome" required placeholder="Ex: Educação"></div><div class="form-group"><label>Cor Identificadora</label><input type="color" id="cat-cor" required value="#2563eb"></div></div><div class="form-group" style="margin-bottom: 0;"><label>Tipo</label><select id="cat-tipo" required><option value="despesa">Despesa</option><option value="receita">Receita</option></select></div><div style="display: flex; gap: 10px;"><button type="submit" class="btn-save" id="btn-cat-submit" style="padding: 0.6rem; font-size: 0.9rem;">Salvar</button><button type="button" class="btn-outline" onclick="resetCatForm()" style="width: 100%; margin-top: 1rem; justify-content: center;">Cancelar Edição</button></div></form><div class="invite-list"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Categorias Existentes</label><div id="category-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div></div></div>
     <div class="modal-overlay" id="modal-familia"><div class="modal-content"><div class="modal-header"><h2>Gerenciar Família</h2><button class="btn-close" onclick="closeFamilyModal()">&times;</button></div><div class="invite-list" id="active-members-container" style="border-top: none; margin-top: 0; padding-top: 0;"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Membros Ativos no Orçamento</label><div id="active-members-list" style="display: flex; flex-direction: column; gap: 5px;"></div></div><p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1rem; margin-top: 1.5rem;">Convide alguém para acessar o seu orçamento.</p><form id="form-invite" onsubmit="sendInvite(event)"><div class="form-group"><label>E-mail do Convidado</label><input type="email" id="invite-email" required placeholder="exemplo@gmail.com"></div><button type="submit" class="btn-save" id="btn-invite-submit" style="margin-top: 0;">Enviar Convite</button></form><div class="invite-list" id="invite-list-container"><label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 0.5rem;">Convites Pendentes</label><div id="invite-list"></div></div></div></div>
@@ -418,6 +397,7 @@
             globalBreakdownCorrente = {}; globalBreakdownInvestimento = {}; globalBreakdownCartao = {};
             carteiras.forEach(c => { carteiraTipos[c.id] = c.tipo; if(c.tipo === 'corrente') globalBreakdownCorrente[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'investimento') globalBreakdownInvestimento[c.id] = { nome: c.nome, total: 0 }; if(c.tipo === 'cartao_credito') globalBreakdownCartao[c.id] = { nome: c.nome, total: 0 }; });
 
+            // ENGENAGEM A: SOMA DO DINHEIRO (OBEDECE AO FILTRO ACUMULADO OU MÊS)
             transacoesParaCalculo.forEach(t => { 
                 const v = parseFloat(t.valor); const tipoOrigem = carteiraTipos[t.carteira_origem_id]; const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null; 
                 
@@ -426,18 +406,30 @@
                     if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
                 } else if (t.tipo === 'despesa') { 
                     if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
-                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; }
                 } else if (t.tipo === 'transferencia') { 
                     if (tipoOrigem === 'corrente') { saldoCorrente -= v; globalBreakdownCorrente[t.carteira_origem_id].total -= v; } 
                     if (tipoOrigem === 'investimento') { saldoInvestimento -= v; globalBreakdownInvestimento[t.carteira_origem_id].total -= v; } 
-                    if (tipoOrigem === 'cartao_credito') { faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; } 
                     
                     if (tipoDestino === 'corrente') { saldoCorrente += v; globalBreakdownCorrente[t.carteira_destino_id].total += v; } 
                     if (tipoDestino === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_destino_id].total += v; } 
-                    if (tipoDestino === 'cartao_credito') { faturaCartaoMes -= v; globalBreakdownCartao[t.carteira_destino_id].total -= v; } 
                 } else if (t.tipo === 'rendimento') { 
                     if (tipoOrigem === 'investimento') { saldoInvestimento += v; globalBreakdownInvestimento[t.carteira_origem_id].total += v; } 
                 } 
+            });
+            
+            // ENGRENAGEM B: SOMA DOS CARTÕES DE CRÉDITO (OBEDECE APENAS AO MÊS SELECIONADO)
+            resMes.data.forEach(t => { 
+                const v = parseFloat(t.valor); 
+                const tipoOrigem = carteiraTipos[t.carteira_origem_id]; 
+                const tipoDestino = t.carteira_destino_id ? carteiraTipos[t.carteira_destino_id] : null;
+
+                if (t.tipo === 'despesa' && tipoOrigem === 'cartao_credito') { 
+                    faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v; 
+                } else if (t.tipo === 'transferencia' && tipoOrigem === 'cartao_credito') {
+                    faturaCartaoMes += v; globalBreakdownCartao[t.carteira_origem_id].total += v;
+                } else if (t.tipo === 'transferencia' && tipoDestino === 'cartao_credito') {
+                    faturaCartaoMes -= v; globalBreakdownCartao[t.carteira_destino_id].total -= v;
+                }
             });
             
             const elSaldoCorrente = document.getElementById('saldo-corrente'); const elSaldoInvest = document.getElementById('saldo-investimento'); 
@@ -559,7 +551,6 @@
             document.getElementById('trans-date').value = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         }
 
-        // MOTOR DE LISTAGEM DE CONTAS FIXAS (AGORA EXIBE A CONTA/CARTÃO)
         function renderContasFixasList() {
             const listEl = document.getElementById('contas-fixas-list');
             let tTotal = 0; let tLan = 0; let tPen = 0;
@@ -573,7 +564,6 @@
                 if (isPosted) { tLan += v; btnHtml = `<div style="font-size: 1.5rem; text-align: center; width: 40px;">✅</div>`; } 
                 else { tPen += v; btnHtml = `<button class="action-btn" onclick="prepLaunchFixed('${cf.id}')" style="font-size: 1.2rem; background: var(--primary); border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">🚀</button>`; }
                 
-                // Busca o nome da carteira vinculada a esta conta fixa
                 let carteiraOrigem = carteiras.find(c => c.id === cf.carteira_id);
                 let nomeCarteira = carteiraOrigem ? carteiraOrigem.nome : 'Conta não definida';
                 let iconeCarteira = carteiraOrigem ? (carteiraOrigem.tipo === 'cartao_credito' ? '💳' : (carteiraOrigem.tipo === 'investimento' ? '📈' : '🏦')) : '🏦';
@@ -648,9 +638,7 @@
 
         async function renderCategoryEvolution(catId, catName, catCor) { 
             selectedRelatorioCatId = catId; selectedRelatorioCatName = catName; selectedRelatorioCatCor = catCor; 
-            
-            const wrapper = document.getElementById('relatorio-grafico-wrapper');
-            wrapper.style.display = 'block'; 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper'); wrapper.style.display = 'block'; 
             document.getElementById('grafico-titulo').innerHTML = `<span style="color:${catCor}">■</span> Evolução (7 Meses): ${catName}`; 
             
             let monthsToFetch = []; let labels = []; 
@@ -665,32 +653,17 @@
             let dataValues = monthsToFetch.map(m => monthTotals[m]); 
             
             if(chartInstance) { chartInstance.destroy(); } 
-            
-            const containerBox = document.getElementById('grafico-container-dinamico');
-            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            const containerBox = document.getElementById('grafico-container-dinamico'); containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
             
             setTimeout(() => {
-                const canvas = document.getElementById('chartEvolucao');
-                if(!canvas) return;
-                const ctx = canvas.getContext('2d');
-                
-                chartInstance = new Chart(ctx, { 
-                    type: 'bar', 
-                    data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                const canvas = document.getElementById('chartEvolucao'); if(!canvas) return; const ctx = canvas.getContext('2d');
+                chartInstance = new Chart(ctx, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Valor', data: dataValues, backgroundColor: catCor, borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { beginAtZero: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
                 if(window.innerWidth < 600) { wrapper.scrollIntoView({ behavior: 'smooth', block: 'end' }); }
             }, 100);
         }
 
         async function renderMacroEvolution(aba) { 
-            const wrapper = document.getElementById('relatorio-grafico-wrapper');
-            wrapper.style.display = 'block'; 
+            const wrapper = document.getElementById('relatorio-grafico-wrapper'); wrapper.style.display = 'block'; 
             
             let monthsToFetch = []; let labels = []; 
             for(let i = -3; i <= 3; i++) { let d = new Date(currentDate.getFullYear(), currentDate.getMonth() + i, 1); let y = d.getFullYear(); let m = String(d.getMonth() + 1).padStart(2, '0'); monthsToFetch.push(`${y}-${m}`); labels.push(`${monthNames[d.getMonth()].substring(0,3)}/${String(y).substring(2,4)}`); } 
@@ -705,16 +678,8 @@
                 let despObj = {}; let recObj = {}; monthsToFetch.forEach(m => { despObj[m] = 0; recObj[m] = 0; }); 
                 if (data) { data.forEach(t => { if (t.tipo === 'despesa') despObj[t.competencia] += parseFloat(t.valor); if (t.tipo === 'receita') recObj[t.competencia] += parseFloat(t.valor); }); } 
                 
-                if (aba === 'fluxo') { 
-                    datasetInfo = [ 
-                        { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, 
-                        { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } 
-                    ]; 
-                } else { 
-                    let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); 
-                    let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); 
-                    datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; 
-                } 
+                if (aba === 'fluxo') { datasetInfo = [ { label: 'Receitas', data: monthsToFetch.map(m => recObj[m]), backgroundColor: '#10b981', borderRadius: 4 }, { label: 'Despesas', data: monthsToFetch.map(m => despObj[m]), backgroundColor: '#ef4444', borderRadius: 4 } ]; } 
+                else { let resData = monthsToFetch.map(m => recObj[m] - despObj[m]); let bgColors = resData.map(v => v >= 0 ? '#10b981' : '#ef4444'); datasetInfo = [{ label: 'Resultado Líquido', data: resData, backgroundColor: bgColors, borderRadius: 6 }]; } 
             } 
             else if (aba === 'resultado_acumulado') { 
                 document.getElementById('grafico-titulo').innerHTML = `📈 Resultado Acumulado (Histórico)`; chartType = 'line'; 
@@ -742,26 +707,12 @@
             } 
             
             if(chartInstance) { chartInstance.destroy(); } 
-            
-            const containerBox = document.getElementById('grafico-container-dinamico');
-            containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
+            const containerBox = document.getElementById('grafico-container-dinamico'); containerBox.innerHTML = '<canvas id="chartEvolucao"></canvas>';
             
             setTimeout(() => {
-                const canvas = document.getElementById('chartEvolucao');
-                if(!canvas) return;
-                const ctx = canvas.getContext('2d');
-                
+                const canvas = document.getElementById('chartEvolucao'); if(!canvas) return; const ctx = canvas.getContext('2d');
                 let mostrarLegenda = (aba === 'fluxo'); 
-                chartInstance = new Chart(ctx, { 
-                    type: chartType, 
-                    data: { labels: labels, datasets: datasetInfo }, 
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, 
-                        scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } 
-                    } 
-                }); 
+                chartInstance = new Chart(ctx, { type: chartType, data: { labels: labels, datasets: datasetInfo }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: mostrarLegenda, labels: { color: '#f8fafc' } }, tooltip: { callbacks: { label: function(context) { return ' R$ ' + context.parsed.y.toLocaleString('pt-BR', {minimumFractionDigits: 2}); } } } }, scales: { y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', callback: function(value) { return 'R$ ' + value; } } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } } } }); 
             }, 100);
         }
 
