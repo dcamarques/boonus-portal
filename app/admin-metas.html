@@ -28,9 +28,9 @@
         .input-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
         .input-group select, .input-group input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0a0a0a; color: #fff; font-size: 1rem; }
         
-        .btn-primary { width: 100%; padding: 12px; background: var(--neon-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; text-transform: uppercase; transition: opacity 0.2s; }
+        .btn-primary { width: 100%; padding: 12px; background: var(--neon-color); color: #000; border: none; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s; }
         .btn-primary:hover { opacity: 0.8; }
-        .btn-secondary { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .btn-secondary { width: 100%; padding: 12px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; font-weight: bold; font-size: 0.9rem; cursor: pointer; margin-top: 10px; }
         
         .table-container { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; margin-top: 15px; }
         .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
@@ -61,11 +61,11 @@
 
     <main class="main-content">
         
-        <!-- SESSÃO 1: METAS PADRÃO (Visível só para Nível 3) -->
+        <!-- SESSÃO 1: METAS PADRÃO -->
         <div class="section-box" id="box-padrao" style="display: none;">
             <h2 class="section-title">1. Template Padrão do Grupo</h2>
             <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 15px;">Defina a régua de metas base que será aplicada aos consultores.</p>
-            <button class="btn-secondary" onclick="abrirModalNovaMetaPadrao()" style="margin-top: 0; margin-bottom: 15px;">➕ Adicionar Regra Padrão</button>
+            <button class="btn-secondary" onclick="abrirModalNovaMetaPadrao()" style="margin-top: 0; margin-bottom: 15px; text-transform: uppercase;">➕ Adicionar Regra Padrão</button>
             
             <div class="table-container">
                 <table class="data-table">
@@ -75,9 +75,9 @@
             </div>
         </div>
 
-        <!-- SESSÃO 2: METAS POR CONSULTOR (Visível para Nível 2 e 3) -->
+        <!-- SESSÃO 2: METAS POR CONSULTOR / EQUIPE -->
         <div class="section-box" id="box-consultores">
-            <h2 class="section-title">2. Metas Individuais (Equipa)</h2>
+            <h2 class="section-title">2. Metas Individuais (Equipe)</h2>
             
             <div style="display: flex; gap: 10px;">
                 <div class="input-group" style="flex: 1;">
@@ -87,12 +87,17 @@
                 <div class="input-group" style="flex: 2;">
                     <label>Selecionar Consultor</label>
                     <select id="filtro-consultor" onchange="carregarMetasConsultor()">
-                        <option value="" disabled selected>Aguardando...</option>
+                        <option value="todos" selected>A TODOS</option>
+                        <!-- Injetado via JS -->
                     </select>
                 </div>
             </div>
 
-            <button class="btn-primary" onclick="carregarPadraoParaConsultor()">🎯 Injetar Metas Padrão no Consultor</button>
+            <!-- BOTÕES DE INJEÇÃO EM MASSA / INDIVIDUAL -->
+            <div style="display: flex; gap: 10px; margin-top: 5px;">
+                <button class="btn-primary" style="flex: 1;" onclick="injetarPadrao()">🎯 INJETAR METAS PADRÃO</button>
+                <button class="btn-secondary" style="flex: 1; margin-top: 0; border-color: #555;" onclick="repetirMesAnterior()">🔄 REPETIR METAS DO MÊS ANTERIOR</button>
+            </div>
 
             <div class="table-container" style="margin-top: 20px;">
                 <table class="data-table">
@@ -112,6 +117,7 @@
         let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
         let catalogoCache = [];
         let metasPadraoCache = [];
+        let consultoresCache = []; // Guarda a equipa para as funções de injeção em massa
 
         const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
@@ -129,7 +135,6 @@
             sessaoAtual = { usuario_id: session.user.id, escritorio_id: userDb.escritorio_id, grupo_id: userDb.grupo_id, nivel: userDb.nivel };
             document.getElementById('nivel-label').innerText = userDb.nivel === 3 ? 'Nível 3 (Master)' : 'Nível 2 (Gestor)';
 
-            // Define mês atual no filtro
             const hoje = new Date();
             const offset = hoje.getTimezoneOffset() * 60000;
             document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
@@ -140,7 +145,7 @@
             }
 
             await carregarCatalogoDoBanco();
-            await carregarFiltroConsultores();
+            await carregarFiltroConsultores(); // Carrega os nomes no select
 
             document.body.style.display = 'flex';
             document.getElementById('init-loader').style.display = 'none';
@@ -156,264 +161,192 @@
         }
 
         async function carregarFiltroConsultores() {
-            let query = supabaseClient.from('tv_utilizadores').select('id, nome_completo').eq('grupo_id', sessaoAtual.grupo_id).eq('nivel', 1).order('nome_completo', { ascending: true });
-            if (sessaoAtual.nivel === 2) query = query.eq('escritorio_id', sessaoAtual.escritorio_id); // Gestor só vê a sua equipa
+            let query = supabaseClient.from('tv_utilizadores')
+                .select('id, nome_completo, escritorio_id')
+                .eq('grupo_id', sessaoAtual.grupo_id)
+                .eq('nivel', 1)
+                .order('nome_completo', { ascending: true });
+                
+            if (sessaoAtual.nivel === 2) query = query.eq('escritorio_id', sessaoAtual.escritorio_id); 
             
-            const { data } = await query;
+            const { data, error } = await query;
+            if (error) console.error("Erro ao carregar equipa: ", error);
+            
+            consultoresCache = data || [];
+            
             const select = document.getElementById('filtro-consultor');
-            select.innerHTML = '<option value="" disabled selected>Selecione um Consultor...</option>';
+            select.innerHTML = '<option value="todos" selected>A TODOS</option>';
             
-            if (data) {
-                data.forEach(u => select.innerHTML += `<option value="${u.id}">${u.nome_completo}</option>`);
-            }
+            consultoresCache.forEach(u => {
+                select.innerHTML += `<option value="${u.id}">${u.nome_completo}</option>`;
+            });
+
+            // Chama a tabela com a visão inicial "A TODOS"
+            carregarMetasConsultor();
         }
 
         // --- GESTÃO: METAS PADRÃO ---
         async function carregarMetasPadrao() {
             const { data } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id).order('classe_nome').order('item_nome');
             metasPadraoCache = data || [];
-            
             const tbody = document.getElementById('tabela-padrao');
             tbody.innerHTML = '';
-            
-            if (metasPadraoCache.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum template definido.</td></tr>';
-                return;
-            }
-
+            if (metasPadraoCache.length === 0) { tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Nenhum template definido.</td></tr>'; return; }
             metasPadraoCache.forEach(m => {
                 const badge = m.subitem_nome ? `<span class="badge-subitem">Subitem: ${m.subitem_nome}</span>` : '';
                 const formatado = m.tipo_medida === 'valor' ? formatadorBRL.format(m.meta_valor) : formatadorQtd.format(m.meta_quantidade) + ' un.';
-                tbody.innerHTML += `
-                    <tr>
-                        <td>
-                            <button class="btn-acao" onclick="editarMetaPadrao('${m.id}')" title="Editar">✏️</button>
-                            <button class="btn-acao" onclick="excluirMetaPadrao('${m.id}')" title="Excluir">❌</button>
-                        </td>
-                        <td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td>
-                        <td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td>
-                        <td style="color: var(--neon-color); font-weight: bold;">${formatado}</td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td><button class="btn-acao" onclick="editarMetaPadrao('${m.id}')" title="Editar">✏️</button><button class="btn-acao" onclick="excluirMetaPadrao('${m.id}')" title="Excluir">❌</button></td><td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td><td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td><td style="color: var(--neon-color); font-weight: bold;">${formatado}</td></tr>`;
             });
         }
 
         async function abrirModalNovaMetaPadrao() {
-            // Constrói options de Classes e Itens baseados no catálogo
             let optionsHTML = '<option value="" disabled selected>Selecione o Produto...</option>';
-            catalogoCache.forEach(cls => {
-                if (cls.tv_catalogo_itens) {
-                    cls.tv_catalogo_itens.forEach(item => {
-                        // Option para o Item principal
-                        const valItem = `${cls.nome}|${item.nome}||${item.tipo_medida}`;
-                        optionsHTML += `<option value="${valItem}">${cls.nome} > ${item.nome}</option>`;
-                        // Options para Subitens
-                        if (item.tv_catalogo_subitens) {
-                            item.tv_catalogo_subitens.forEach(sub => {
-                                const valSub = `${cls.nome}|${item.nome}|${sub.nome}|${item.tipo_medida}`;
-                                optionsHTML += `<option value="${valSub}">${cls.nome} > ${item.nome} > [Subitem: ${sub.nome}]</option>`;
-                            });
-                        }
-                    });
-                }
-            });
-
+            catalogoCache.forEach(cls => { if (cls.tv_catalogo_itens) { cls.tv_catalogo_itens.forEach(item => { const valItem = `${cls.nome}|${item.nome}||${item.tipo_medida}`; optionsHTML += `<option value="${valItem}">${cls.nome} > ${item.nome}</option>`; if (item.tv_catalogo_subitens) { item.tv_catalogo_subitens.forEach(sub => { const valSub = `${cls.nome}|${item.nome}|${sub.nome}|${item.tipo_medida}`; optionsHTML += `<option value="${valSub}">${cls.nome} > ${item.nome} > [Subitem: ${sub.nome}]</option>`; }); } }); } });
             const { value: formValues } = await Swal.fire({
                 title: 'Nova Meta Padrão',
-                html: `
-                    <div style="text-align:left; margin-bottom:15px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Produto do Catálogo</label>
-                        <select id="swal-produto" class="swal2-input" style="width: 85%; font-size:0.85rem;">${optionsHTML}</select>
-                    </div>
-                    <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Valor Numérico da Meta (Use ponto para centavos)</label>
-                        <input type="number" id="swal-meta-val" class="swal2-input" placeholder="Ex: 300000.00 ou 50" step="0.01" style="width: 85%;">
-                    </div>
-                `,
+                html: `<div style="text-align:left; margin-bottom:15px;"><label style="font-size:0.8rem; color:#aaa;">Produto do Catálogo</label><select id="swal-produto" class="swal2-input" style="width: 85%; font-size:0.85rem;">${optionsHTML}</select></div><div style="text-align:left;"><label style="font-size:0.8rem; color:#aaa;">Valor Numérico da Meta</label><input type="number" id="swal-meta-val" class="swal2-input" placeholder="Ex: 300000.00 ou 50" step="0.01" style="width: 85%;"></div>`,
                 focusConfirm: false, background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                preConfirm: () => {
-                    const prod = document.getElementById('swal-produto').value;
-                    const val = parseFloat(document.getElementById('swal-meta-val').value);
-                    if (!prod || isNaN(val)) { Swal.showValidationMessage('Preencha os dois campos corretamente.'); return null; }
-                    return { prod, val };
-                }
+                preConfirm: () => { const prod = document.getElementById('swal-produto').value; const val = parseFloat(document.getElementById('swal-meta-val').value); if (!prod || isNaN(val)) { Swal.showValidationMessage('Preencha os dois campos corretamente.'); return null; } return { prod, val }; }
             });
-
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
                 const [classe_nome, item_nome, subitem_nome, tipo_medida] = formValues.prod.split('|');
-                
-                const payload = {
-                    grupo_id: sessaoAtual.grupo_id,
-                    classe_nome, item_nome, subitem_nome: subitem_nome || null, tipo_medida,
-                    meta_valor: tipo_medida === 'valor' ? formValues.val : 0,
-                    meta_quantidade: tipo_medida === 'quantidade' ? formValues.val : 0
-                };
-
+                const payload = { grupo_id: sessaoAtual.grupo_id, classe_nome, item_nome, subitem_nome: subitem_nome || null, tipo_medida, meta_valor: tipo_medida === 'valor' ? formValues.val : 0, meta_quantidade: tipo_medida === 'quantidade' ? formValues.val : 0 };
                 const { error } = await supabaseClient.from('tv_metas_padrao').insert([payload]);
                 document.getElementById('init-loader').style.display = 'none';
-                
-                if (error) {
-                    if (error.code === '23505') Swal.fire('Atenção', 'Já existe uma meta padrão configurada para este produto. Edite a existente.', 'warning');
-                    else Swal.fire('Erro', error.message, 'error');
-                } else {
-                    carregarMetasPadrao();
-                }
+                if (error) { if (error.code === '23505') Swal.fire('Atenção', 'Já existe uma meta padrão configurada para este produto. Edite a existente.', 'warning'); else Swal.fire('Erro', error.message, 'error'); } else { carregarMetasPadrao(); }
             }
         }
 
         async function excluirMetaPadrao(id) {
             const res = await Swal.fire({ title: 'Excluir Meta Padrão?', text: "As metas dos consultores que já foram carregadas não serão apagadas, apenas o template.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', background: '#111', color: '#fff' });
-            if (res.isConfirmed) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_metas_padrao').delete().eq('id', id);
-                document.getElementById('init-loader').style.display = 'none';
-                carregarMetasPadrao();
-            }
+            if (res.isConfirmed) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_metas_padrao').delete().eq('id', id); document.getElementById('init-loader').style.display = 'none'; carregarMetasPadrao(); }
         }
 
         async function editarMetaPadrao(id) {
             const meta = metasPadraoCache.find(m => m.id === id);
             if (!meta) return;
-
             const valorAtual = meta.tipo_medida === 'valor' ? meta.meta_valor : meta.meta_quantidade;
-
-            const { value: novoValor } = await Swal.fire({
-                title: 'Editar Meta Padrão',
-                text: `${meta.classe_nome} > ${meta.item_nome} ${meta.subitem_nome ? `(${meta.subitem_nome})` : ''}`,
-                input: 'number',
-                inputValue: valorAtual,
-                inputAttributes: { step: '0.01' },
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-            });
-
-            if (novoValor !== undefined && novoValor !== '') {
-                document.getElementById('init-loader').style.display = 'flex';
-                const payload = meta.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) };
-                await supabaseClient.from('tv_metas_padrao').update(payload).eq('id', id);
-                document.getElementById('init-loader').style.display = 'none';
-                carregarMetasPadrao();
-            }
+            const { value: novoValor } = await Swal.fire({ title: 'Editar Meta Padrão', text: `${meta.classe_nome} > ${meta.item_nome} ${meta.subitem_nome ? `(${meta.subitem_nome})` : ''}`, input: 'number', inputValue: valorAtual, inputAttributes: { step: '0.01' }, background: '#111', color: '#fff', confirmButtonColor: '#00ff88' });
+            if (novoValor !== undefined && novoValor !== '') { document.getElementById('init-loader').style.display = 'flex'; const payload = meta.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) }; await supabaseClient.from('tv_metas_padrao').update(payload).eq('id', id); document.getElementById('init-loader').style.display = 'none'; carregarMetasPadrao(); }
         }
 
 
-        // --- GESTÃO: METAS CONSULTOR ---
+        // --- GESTÃO: METAS DA EQUIPE (VISÃO DA TABELA) ---
         async function carregarMetasConsultor() {
             const mesAno = document.getElementById('filtro-mes').value;
             const usrId = document.getElementById('filtro-consultor').value;
             const tbody = document.getElementById('tabela-consultor');
             tbody.innerHTML = '';
 
-            if (!mesAno || !usrId) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#666;">Selecione o Consultor para ver as metas do mês.</td></tr>';
+            if (!mesAno) return;
+
+            if (usrId === 'todos') {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 30px; color:#aaa; font-size: 0.9rem;">Selecione um consultor específico na lista acima para visualizar ou editar as suas metas individuais com o lápis ✏️.<br><br><span style="color: var(--neon-color);">Os botões verdes acima injetarão as metas em TODOS os consultores da equipe de uma só vez.</span></td></tr>';
                 return;
             }
 
             document.getElementById('init-loader').style.display = 'flex';
-            const { data } = await supabaseClient.from('tv_metas_consultor')
-                .select('*').eq('utilizador_id', usrId).eq('mes_ano', mesAno)
-                .order('classe_nome').order('item_nome');
+            const { data } = await supabaseClient.from('tv_metas_consultor').select('*').eq('utilizador_id', usrId).eq('mes_ano', mesAno).order('classe_nome').order('item_nome');
             document.getElementById('init-loader').style.display = 'none';
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Consultor não tem metas para este mês. Clique no botão acima para Injetar o Padrão.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#888;">Consultor não tem metas para este mês. Utilize os botões acima para injetar.</td></tr>';
                 return;
             }
 
             data.forEach(m => {
                 const badge = m.subitem_nome ? `<span class="badge-subitem">Subitem: ${m.subitem_nome}</span>` : '';
                 const formatado = m.tipo_medida === 'valor' ? formatadorBRL.format(m.meta_valor) : formatadorQtd.format(m.meta_quantidade) + ' un.';
-                tbody.innerHTML += `
-                    <tr>
-                        <td>
-                            <button class="btn-acao" onclick="editarMetaConsultor('${m.id}', ${m.tipo_medida === 'valor' ? m.meta_valor : m.meta_quantidade})" title="Editar Valor">✏️</button>
-                            <button class="btn-acao" onclick="excluirMetaConsultor('${m.id}')" title="Excluir">❌</button>
-                        </td>
-                        <td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td>
-                        <td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td>
-                        <td style="color: #ffbb33; font-weight: bold;">${formatado}</td>
-                    </tr>
-                `;
+                tbody.innerHTML += `<tr><td><button class="btn-acao" onclick="editarMetaConsultor('${m.id}', ${m.tipo_medida === 'valor' ? m.meta_valor : m.meta_quantidade})" title="Editar Valor">✏️</button><button class="btn-acao" onclick="excluirMetaConsultor('${m.id}')" title="Excluir">❌</button></td><td style="font-weight: bold; color: #fff;">${m.classe_nome} > ${m.item_nome} ${badge}</td><td style="text-transform: uppercase; font-size: 0.7rem;">${m.tipo_medida}</td><td style="color: #ffbb33; font-weight: bold;">${formatado}</td></tr>`;
             });
         }
 
-        async function carregarPadraoParaConsultor() {
+        // --- SISTEMA DE INJEÇÃO MÁGICA ---
+        
+        // 1. Injetar Metas Padrão
+        async function injetarPadrao() {
             const mesAno = document.getElementById('filtro-mes').value;
             const usrId = document.getElementById('filtro-consultor').value;
-
-            if (!mesAno || !usrId) {
-                Swal.fire('Atenção', 'Selecione um Consultor e um Mês primeiro.', 'warning'); return;
-            }
-
-            // Descobre o escritorio do consultor selecionado
-            const { data: cData } = await supabaseClient.from('tv_utilizadores').select('escritorio_id').eq('id', usrId).single();
-            if (!cData) return;
+            
+            // Determina os alvos: Um utilizador específico ou toda a cache de consultores carregada
+            const targets = usrId === 'todos' ? consultoresCache : consultoresCache.filter(c => c.id === usrId);
+            if (targets.length === 0) { Swal.fire('Atenção', 'Nenhum consultor encontrado na equipe.', 'warning'); return; }
 
             document.getElementById('init-loader').style.display = 'flex';
 
-            // Pega as metas padrão do grupo
             const { data: padroes } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id);
-            
             if (!padroes || padroes.length === 0) {
                 document.getElementById('init-loader').style.display = 'none';
-                Swal.fire('Atenção', 'O Master ainda não definiu as Metas Padrão do Grupo.', 'info');
+                Swal.fire('Atenção', 'O Master ainda não definiu as Metas Padrão do Grupo.', 'info'); return;
+            }
+
+            let inseridas = 0;
+            // Varre a equipa
+            for (const alvo of targets) {
+                for (const p of padroes) {
+                    const payload = { utilizador_id: alvo.id, escritorio_id: alvo.escritorio_id, grupo_id: sessaoAtual.grupo_id, mes_ano: mesAno, classe_nome: p.classe_nome, item_nome: p.item_nome, subitem_nome: p.subitem_nome, tipo_medida: p.tipo_medida, meta_valor: p.meta_valor, meta_quantidade: p.meta_quantidade };
+                    const { error } = await supabaseClient.from('tv_metas_consultor').insert([payload]);
+                    if (!error) inseridas++; 
+                    // O erro de "Unique Constraint" (já existe uma meta igual no mes) é ignorado de propósito pelo if(!error) para não quebrar a máquina.
+                }
+            }
+
+            document.getElementById('init-loader').style.display = 'none';
+            Swal.fire('Sucesso!', `Foram injetadas ${inseridas} metas padrão com sucesso.`, 'success');
+            carregarMetasConsultor();
+        }
+
+        // 2. Repetir Mês Anterior
+        async function repetirMesAnterior() {
+            const mesAno = document.getElementById('filtro-mes').value; // ex: 2026-10
+            const usrId = document.getElementById('filtro-consultor').value;
+            const targets = usrId === 'todos' ? consultoresCache : consultoresCache.filter(c => c.id === usrId);
+            
+            if (targets.length === 0) { Swal.fire('Atenção', 'Nenhum consultor encontrado na equipe.', 'warning'); return; }
+
+            // Descobrir a competência exata do mês anterior pelo JS (Lida com mudança de ano perfeitamente)
+            let [anoStr, mesStr] = mesAno.split('-');
+            let datePrev = new Date(parseInt(anoStr), parseInt(mesStr) - 2, 1);
+            let prevAno = datePrev.getFullYear();
+            let prevMes = String(datePrev.getMonth() + 1).padStart(2, '0');
+            const mesAnoAnterior = `${prevAno}-${prevMes}`; // ex: 2026-09
+
+            document.getElementById('init-loader').style.display = 'flex';
+
+            // Busca na base todas as metas que a equipa alvo tinha no mês passado
+            const idsAlvos = targets.map(t => t.id);
+            const { data: metasAnteriores } = await supabaseClient.from('tv_metas_consultor')
+                .select('*')
+                .in('utilizador_id', idsAlvos)
+                .eq('mes_ano', mesAnoAnterior);
+
+            if (!metasAnteriores || metasAnteriores.length === 0) {
+                document.getElementById('init-loader').style.display = 'none';
+                Swal.fire('Sem histórico', `Não foram encontradas metas em ${mesAnoAnterior} para copiar.`, 'info');
                 return;
             }
 
             let inseridas = 0;
-            // Tenta inserir uma por uma. Ignora se já existir (devido ao Unique Index).
-            for (const p of padroes) {
-                const payload = {
-                    utilizador_id: usrId,
-                    escritorio_id: cData.escritorio_id,
-                    grupo_id: sessaoAtual.grupo_id,
-                    mes_ano: mesAno,
-                    classe_nome: p.classe_nome,
-                    item_nome: p.item_nome,
-                    subitem_nome: p.subitem_nome,
-                    tipo_medida: p.tipo_medida,
-                    meta_valor: p.meta_valor,
-                    meta_quantidade: p.meta_quantidade
-                };
+            for (const m of metasAnteriores) {
+                const payload = { utilizador_id: m.utilizador_id, escritorio_id: m.escritorio_id, grupo_id: m.grupo_id, mes_ano: mesAno, classe_nome: m.classe_nome, item_nome: m.item_nome, subitem_nome: m.subitem_nome, tipo_medida: m.tipo_medida, meta_valor: m.meta_valor, meta_quantidade: m.meta_quantidade };
                 const { error } = await supabaseClient.from('tv_metas_consultor').insert([payload]);
                 if (!error) inseridas++;
             }
 
             document.getElementById('init-loader').style.display = 'none';
-            Swal.fire('Sucesso!', `${inseridas} novas metas padrão foram injetadas. As que já existiam foram mantidas.`, 'success');
+            Swal.fire('Sucesso!', `Foram copiadas ${inseridas} metas referentes ao mês de ${mesAnoAnterior}.`, 'success');
             carregarMetasConsultor();
         }
 
         async function editarMetaConsultor(id, valorAtual) {
-            const { value: novoValor } = await Swal.fire({
-                title: 'Personalizar Meta',
-                text: 'Este valor substituirá o Padrão apenas para este consultor neste mês.',
-                input: 'number',
-                inputValue: valorAtual,
-                inputAttributes: { step: '0.01' },
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-            });
-
-            if (novoValor !== undefined && novoValor !== '') {
-                document.getElementById('init-loader').style.display = 'flex';
-                // Precisamos saber se é valor ou quantidade para dar update na coluna certa
-                const { data: mData } = await supabaseClient.from('tv_metas_consultor').select('tipo_medida').eq('id', id).single();
-                const payload = mData.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) };
-                
-                await supabaseClient.from('tv_metas_consultor').update(payload).eq('id', id);
-                document.getElementById('init-loader').style.display = 'none';
-                carregarMetasConsultor();
-            }
+            const { value: novoValor } = await Swal.fire({ title: 'Personalizar Meta', text: 'Substitui o Padrão apenas para este consultor.', input: 'number', inputValue: valorAtual, inputAttributes: { step: '0.01' }, background: '#111', color: '#fff', confirmButtonColor: '#00ff88' });
+            if (novoValor !== undefined && novoValor !== '') { document.getElementById('init-loader').style.display = 'flex'; const { data: mData } = await supabaseClient.from('tv_metas_consultor').select('tipo_medida').eq('id', id).single(); const payload = mData.tipo_medida === 'valor' ? { meta_valor: parseFloat(novoValor) } : { meta_quantidade: parseFloat(novoValor) }; await supabaseClient.from('tv_metas_consultor').update(payload).eq('id', id); document.getElementById('init-loader').style.display = 'none'; carregarMetasConsultor(); }
         }
 
         async function excluirMetaConsultor(id) {
             const res = await Swal.fire({ title: 'Excluir Meta Individual?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', background: '#111', color: '#fff' });
-            if (res.isConfirmed) {
-                document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_metas_consultor').delete().eq('id', id);
-                document.getElementById('init-loader').style.display = 'none';
-                carregarMetasConsultor();
-            }
+            if (res.isConfirmed) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_metas_consultor').delete().eq('id', id); document.getElementById('init-loader').style.display = 'none'; carregarMetasConsultor(); }
         }
 
         iniciar();
