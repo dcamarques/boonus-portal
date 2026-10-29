@@ -109,7 +109,7 @@
             <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
                 <img id="news-img" class="news-image" src="" style="display:none;">
                 <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">InfoMoney / Valor</div>
-                <div id="news-title">Sincronizando as últimas do mercado...</div>
+                <div id="news-title">Aguardando dados...</div>
             </div>
 
             <div id="block-opps" class="display-block">
@@ -161,13 +161,13 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.5 (Final Fix)</div>
+            <div class="version-tag">v: 1.6 (No-Block)</div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // DECLARAÇÃO GLOBAL ÚNICA DE VARIÁVEIS
+        // DECLARAÇÃO GLOBAL DE VARIÁVEIS
         // ==========================================
         let cycleTimeout = null;
         let pauseTimeout = null;
@@ -175,7 +175,7 @@
         let bIdx = 0;
         let pIdx = 0;
         const blocks = ['block-news', 'block-opps', 'block-publi', 'block-macro', 'block-agenda', 'block-coins'];
-        let newsList = []; // Declarada apenas UMA VEZ aqui
+        let newsList = [];
         let newsIdx = 0;
         let wakeLock = null;
 
@@ -209,6 +209,10 @@
                 document.getElementById('tk-time').innerText = "N/A";
             }
         }
+
+        // ARRANQUE IMEDIATO DOS RELÓGIOS (Impede o congelamento visual na tela preta)
+        updateClocks();
+        setInterval(updateClocks, 1000);
 
         function safeParseFloat(str) {
             if (!str) return 0;
@@ -251,7 +255,7 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                if (typeof window.supabase === 'undefined') throw new Error("Supabase não carregou.");
+                if (typeof window.supabase === 'undefined') throw new Error("Supabase bloqueado ou offline.");
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 const fetchPromise = supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
@@ -272,7 +276,7 @@
                     urlContador: response.data.url_contador || ''
                 };
             } catch (err) {
-                console.warn(`Usando configuração offline.`);
+                console.warn(`Operando em modo seguro (Fallback). Motivo: ${err.message}`);
             }
 
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
@@ -382,7 +386,7 @@
         async function fetchBrapi() {
             try {
                 const res = await fetch('https://brapi.dev/api/quote/list?sortBy=change&sortOrder=desc');
-                if (!res.ok) throw new Error("Brapi limit");
+                if (!res.ok) throw new Error("Brapi limite excedido");
                 const data = await res.json();
                 if (data && data.stocks) {
                     const actions = data.stocks.filter(s => /^[A-Z]{4}[3456]$/.test(s.stock));
@@ -484,4 +488,93 @@
                     }
                     
                     nxt.style.display = 'flex';
-                    setTimeout(() => nxt.style
+                    setTimeout(() => nxt.style.opacity = 1, 50);
+                    
+                    const nextTime = blocks[bIdx] === 'block-news' ? 15000 : 25000;
+                    cycleTimeout = setTimeout(cycle, nextTime);
+                }, 800);
+            } catch(e) { 
+                console.error("Erro na rotação:", e);
+                cycleTimeout = setTimeout(cycle, 10000); 
+            }
+        }
+
+        function toggleRotation(e) {
+            const pauseIndicator = document.getElementById('pause-indicator');
+            if (isPaused) {
+                isPaused = false; pauseIndicator.style.display = 'none';
+                clearTimeout(pauseTimeout); clearTimeout(cycleTimeout);
+                cycleTimeout = setTimeout(cycle, 5000);
+            } else {
+                isPaused = true; clearTimeout(cycleTimeout); clearTimeout(pauseTimeout);
+                pauseIndicator.style.display = 'block';
+                pauseTimeout = setTimeout(() => { isPaused = false; pauseIndicator.style.display = 'none'; cycle(); }, 120000); 
+            }
+        }
+
+        // ==========================================
+        // BOOTSTRAP INICIAL BLINDADO
+        // ==========================================
+        async function initApp() {
+            try {
+                // Eventos de Interação
+                document.getElementById('interactive-area').addEventListener('click', function(e) {
+                    if (e.target.closest('.sidebar-qr') === null) toggleRotation(e);
+                });
+                document.getElementById('publi-vid').addEventListener('error', function(e) {
+                    clearTimeout(cycleTimeout); cycle(); 
+                });
+                
+                requestWakeLock();
+                document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
+                document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
+
+                // Carrega configurações
+                await loadTenantConfig();
+
+                // Carrega Dados Financeiros
+                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
+                
+                // Configura Atualizações de Fundo
+                setInterval(fetchOpportunities, 300000); 
+                setInterval(fetchMacro, 300000);         
+                setInterval(fetchBrapi, 300000);         
+                setInterval(fetchAwesome, 60000);        
+                setInterval(fetchAgenda, 300000);         
+                setInterval(fetchNews, 1800000);          
+
+                // Atualizador Interno de Notícias
+                setInterval(() => {
+                    if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
+                        const item = newsList[newsIdx];
+                        document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
+                        document.getElementById('news-title').innerText = item.title;
+                        const img = document.getElementById('news-img');
+                        
+                        if(item.thumbnail && !item.thumbnail.includes('transparent')){
+                            img.src = item.thumbnail;
+                            img.style.display = 'block';
+                        } else { img.style.display = 'none'; }
+                        
+                        newsIdx = (newsIdx + 1) % newsList.length;
+                    }
+                }, 10000);
+
+                // Arranca a Rotação Principal após 5 segundos
+                cycleTimeout = setTimeout(cycle, 5000);
+
+            } catch (error) {
+                document.getElementById('news-title').innerHTML = `<span style="color: #ff4444">Erro Crítico.</span><br><span style="font-size:1rem">${error.message}</span>`;
+            }
+        }
+
+        // Executa a inicialização de forma imediata e resiliente
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initApp);
+        } else {
+            initApp();
+        }
+
+    </script>
+</body>
+</html>
