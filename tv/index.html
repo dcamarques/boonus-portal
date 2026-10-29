@@ -106,7 +106,6 @@
         <div class="content-area" id="interactive-area" title="Toque para pausar a rotação">
             <div id="pause-indicator">⏸️ PAUSADO</div>
             
-            <!-- START NO PRIMEIRO BLOCO (NOTÍCIAS) -->
             <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
                 <img id="news-img" class="news-image" src="" style="display:none;">
                 <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">InfoMoney / Valor</div>
@@ -162,41 +161,102 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.3 (Anti-Freeze)</div>
+            <div class="version-tag">v: 1.4 (Bulletproof Fix)</div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // INTEGRAÇÃO SUPABASE - BANCO DE DADOS
+        // DECLARAÇÃO GLOBAL DE VARIÁVEIS (EVITA CONGELAMENTO)
         // ==========================================
-        
+        let cycleTimeout = null;
+        let pauseTimeout = null;
+        let isPaused = false;
+        let bIdx = 0;
+        let pIdx = 0;
+        const blocks = ['block-news', 'block-opps', 'block-publi', 'block-macro', 'block-agenda', 'block-coins'];
+        let newsList = [];
+        let newsIdx = 0;
+        let wakeLock = null;
+
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         
         let TENANT_CONFIG = {
-            neonColor: '#00ff88',
-            logoSrc: 'logo.png',
-            qrData: 'mailto:contato@boonus.app.br',
-            publiImages: [], 
+            neonColor: '#00ff88', logoSrc: '', qrData: 'mailto:contato@boonus.app.br', publiImages: [], 
             urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=0&single=true&output=csv',
             urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=82167012&single=true&output=csv',
             urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRAOhT8trYO2BkjzBBZQsBdfuJSo5xA-3OljtFd9JkucbnDtC7J9komg3Glc0HlxUExTVqjapGeM3dY/pub?gid=327977986&single=true&output=csv',
             urlContador: ''
         };
 
+        // ==========================================
+        // FUNÇÕES UTILITÁRIAS E RELÓGIOS
+        // ==========================================
+        function updateClocks() {
+            try {
+                const now = new Date();
+                const opts = {hour:'2-digit', minute:'2-digit', second:'2-digit'};
+                document.getElementById('br-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'America/Sao_Paulo'});
+                document.getElementById('ny-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'America/New_York'});
+                document.getElementById('ld-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'Europe/London'});
+                document.getElementById('tk-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'Asia/Tokyo'});
+            } catch(e) {
+                // Fallback seguro caso o navegador seja antigo e não suporte timeZone
+                const now = new Date();
+                document.getElementById('br-time').innerText = now.toLocaleTimeString('pt-BR');
+                document.getElementById('ny-time').innerText = "N/A";
+                document.getElementById('ld-time').innerText = "N/A";
+                document.getElementById('tk-time').innerText = "N/A";
+            }
+        }
+
+        function safeParseFloat(str) {
+            if (!str) return 0;
+            str = str.replace(/[^\d.,-]/g, ''); 
+            const lastComma = str.lastIndexOf(',');
+            const lastDot = str.lastIndexOf('.');
+            if (lastComma > lastDot) return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+            else if (lastDot > lastComma) return parseFloat(str.replace(/,/g, ''));
+            else return parseFloat(str);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
+            return lines.map(line => {
+                const cols = []; let current = ''; let inQuotes = false;
+                for (let char of line) {
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === ',' && !inQuotes) { cols.push(current); current = ''; } 
+                    else { current += char; }
+                }
+                cols.push(current);
+                return cols.map(val => val ? val.replace(/^"|"$/g, '').trim() : '');
+            });
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(e => {}); } 
+            else { if (document.exitFullscreen) document.exitFullscreen(); }
+        }
+
+        async function requestWakeLock() {
+            try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
+        }
+
+        // ==========================================
+        // SUPABASE E DEFINIÇÕES
+        // ==========================================
         async function loadTenantConfig() {
             const urlParams = new URLSearchParams(window.location.search);
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                if (typeof window.supabase === 'undefined') throw new Error("A biblioteca do Supabase não foi carregada.");
-                
+                if (typeof window.supabase === 'undefined') throw new Error("Supabase não carregou.");
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
-                // Timeout de segurança de 5 segundos para o Supabase não travar a TV
                 const fetchPromise = supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout Supabase')), 5000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
                 
                 const response = await Promise.race([fetchPromise, timeoutPromise]);
                 if (response.error) throw response.error;
@@ -206,4 +266,302 @@
                     neonColor: response.data.neon_color || '#00ff88',
                     logoSrc: response.data.logo_src || '',
                     qrData: response.data.qr_data || 'mailto:contato@boonus.app.br',
-                    publiImages: response.data.publi
+                    publiImages: response.data.publi_images || [],
+                    urlOpps: response.data.url_opps || TENANT_CONFIG.urlOpps,
+                    urlRadar: response.data.url_radar || TENANT_CONFIG.urlRadar,
+                    urlMacro: response.data.url_macro || TENANT_CONFIG.urlMacro,
+                    urlContador: response.data.url_contador || ''
+                };
+            } catch (err) {
+                console.warn(`Usando configuração offline.`);
+            }
+
+            document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
+            
+            if (TENANT_CONFIG.logoSrc) {
+                const logoEl = document.getElementById('header-logo');
+                logoEl.src = TENANT_CONFIG.logoSrc;
+                logoEl.style.display = 'block';
+            }
+            if (TENANT_CONFIG.qrData) {
+                const qrImg = document.getElementById('qr-sidebar-img');
+                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(TENANT_CONFIG.qrData)}`;
+                qrImg.style.display = 'block';
+            }
+            
+            if (TENANT_CONFIG.urlContador) {
+                try {
+                    const tipoDispositivo = window.innerWidth <= 768 ? 'Mobile (Smartphone)' : 'TV / Desktop';
+                    fetch(TENANT_CONFIG.urlContador, {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: "Acesso TV" })
+                    }).catch(() => {}); 
+                } catch(e) {}
+            }
+        }
+
+        // ==========================================
+        // WORKERS DE DADOS
+        // ==========================================
+        async function fetchOpportunities() {
+            if (!TENANT_CONFIG.urlOpps) return;
+            try {
+                const response = await fetch(TENANT_CONFIG.urlOpps + '&t=' + new Date().getTime());
+                if (!response.ok) return;
+                const data = parseCSV(await response.text()).slice(1);
+                const container = document.getElementById('opps-container');
+                let html = '<div class="card-column">';
+                data.forEach((cols, idx) => {
+                    if (idx >= 6) return;
+                    if (idx === 3) html += '</div><div class="card-column">';
+                    if (cols.length >= 3) {
+                        const [classe, ativo, taxa, destaque, logoUrl] = cols;
+                        const imgHtml = (logoUrl && logoUrl.length > 10) ? `<img src="${logoUrl}" class="asset-logo" onerror="this.style.display='none'">` : '';
+                        html += `<div class="info-card"><h3>${classe}</h3><div class="card-with-logo">${imgHtml}<div style="flex:1"><div class="info-val">${ativo}</div><div class="info-sub" style="color:var(--neon-color); font-size: 1.4rem;">${taxa}</div><div class="info-sub" style="font-size:0.85rem; opacity:0.9;">${destaque || ''}</div></div></div></div>`;
+                    }
+                });
+                container.innerHTML = html + '</div>';
+            } catch (e) { }
+        }
+
+        async function fetchAgenda() {
+            if (!TENANT_CONFIG.urlRadar) return;
+            try {
+                const response = await fetch(TENANT_CONFIG.urlRadar + '&t=' + new Date().getTime());
+                if (!response.ok) return;
+                const data = parseCSV(await response.text()).slice(1);
+                const container = document.getElementById('agenda-container');
+                if (data.length === 0) { container.innerHTML = `<div class="info-card" style="grid-column: span 2; border-left-color: #444; text-align: center;"><div class="info-val" style="color:#888;">Sem agenda relevante no momento</div></div>`; return; }
+                let html = '<div class="card-column">';
+                data.forEach((cols, idx) => {
+                    if (idx >= 6) return;
+                    if (idx === 3) html += '</div><div class="card-column">';
+                    if (cols.length >= 2) {
+                        const [dataHora, indicador, impacto, projecao] = cols;
+                        const isAlto = impacto && impacto.toUpperCase().includes('ALTO');
+                        const impColor = isAlto ? 'var(--neon-color)' : '#888';
+                        const impStars = isAlto ? '★★★ ALTO' : '★★☆ MÉDIO';
+                        html += `<div class="info-card" style="border-left-color: ${impColor}"><h3>${dataHora}</h3><div class="info-val" style="font-size: 1.2rem;">${indicador}</div><div class="info-sub" style="color: ${impColor}">${impStars}</div>${projecao ? `<div class="info-sub" style="font-size:0.8rem; opacity:0.8; color:#bbb;">${projecao}</div>` : ''}</div>`;
+                    }
+                });
+                container.innerHTML = html + '</div>';
+            } catch (e) { }
+        }
+
+        async function fetchMacro() {
+            if (!TENANT_CONFIG.urlMacro) return;
+            try {
+                const response = await fetch(TENANT_CONFIG.urlMacro + '&t=' + new Date().getTime());
+                if (!response.ok) return;
+                const data = parseCSV(await response.text());
+                data.forEach(cols => {
+                    if (cols.length >= 2) {
+                        const indice = cols[0].toUpperCase().trim();
+                        const price = safeParseFloat(cols[1]);
+                        let variation = cols.length >= 3 ? safeParseFloat(cols[2]) : 0;
+                        let valId = ''; let varId = ''; let isPercentOnly = false;
+                        if (indice.includes('IBOV')) { valId = 'ibov-val'; varId = 'ibov-var'; }
+                        else if (indice.includes('S&P') || indice.includes('INX')) { valId = 'sp500-val'; varId = 'sp500-var'; }
+                        else if (indice.includes('NASDAQ') || indice.includes('IXIC')) { valId = 'nasdaq-val'; varId = 'nasdaq-var'; }
+                        else if (indice.includes('SELIC')) { valId = 'selic-val'; isPercentOnly = true; }
+                        else if (indice.includes('IPCA')) { valId = 'ipca-val'; isPercentOnly = true; }
+                        else if (indice.includes('CDI')) { valId = 'cdi-val'; isPercentOnly = true; }
+                        
+                        if (valId && !isNaN(price) && price > 0) {
+                            if (isPercentOnly) { document.getElementById(valId).innerText = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%'; } 
+                            else {
+                                document.getElementById(valId).innerText = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                                const varEl = document.getElementById(varId);
+                                if(varEl) { const isUp = variation >= 0; varEl.innerText = (isUp ? '▲ ' : '▼ ') + Math.abs(variation).toFixed(2) + '%'; varEl.style.color = isUp ? 'var(--positive-color)' : 'var(--negative-color)'; }
+                            }
+                        }
+                    }
+                });
+            } catch (e) { }
+        }
+
+        async function fetchBrapi() {
+            try {
+                const res = await fetch('https://brapi.dev/api/quote/list?sortBy=change&sortOrder=desc');
+                if (!res.ok) throw new Error("Brapi limit");
+                const data = await res.json();
+                if (data && data.stocks) {
+                    const actions = data.stocks.filter(s => /^[A-Z]{4}[3456]$/.test(s.stock));
+                    let tickerHtml = '';
+                    actions.slice(0,10).forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="up">▲ ${s.change.toFixed(2)}%</span></span>`);
+                    actions.slice(-10).reverse().forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="down">▼ ${s.change.toFixed(2)}%</span></span>`);
+                    document.getElementById('stock-ticker').innerHTML = tickerHtml + tickerHtml;
+                }
+            } catch(e) {
+                document.getElementById('stock-ticker').innerHTML = `<span class="stock-item">Boonus Invest <span class="up">▲ Conectando o mercado a você</span></span><span class="stock-item">Acompanhe as oportunidades com seu assessor</span>`;
+            }
+        }
+
+        async function fetchAwesome() {
+            try {
+                const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL');
+                if (!r.ok) return;
+                const dB = await r.json();
+                const updateC = (id, cur) => {
+                    document.getElementById(`${id}-val`).innerText = 'R$ ' + parseFloat(cur.bid).toFixed(2);
+                    const pct = parseFloat(cur.pctChange);
+                    const varEl = document.getElementById(`${id}-var`);
+                    varEl.innerText = (pct >= 0 ? '▲ ' : '▼ ') + pct.toFixed(2) + '%';
+                    varEl.style.color = pct >= 0 ? 'var(--positive-color)' : 'var(--negative-color)';
+                };
+                if(dB.USDBRL) updateC('usd', dB.USDBRL); 
+                if(dB.EURBRL) updateC('eur', dB.EURBRL); 
+                if(dB.JPYBRL) updateC('jpy', dB.JPYBRL); 
+                if(dB.GBPBRL) updateC('gbp', dB.GBPBRL);
+            } catch(e) {}
+        }
+
+        async function fetchNews() {
+            const feeds = [{n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"}, {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}];
+            let tempNewsList = []; 
+            for(let f of feeds){
+                try {
+                    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(f.u)}`);
+                    if (!r.ok) continue;
+                    const xmlText = await r.text();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(xmlText, "text/xml");
+                    const items = xml.querySelectorAll("item");
+                    
+                    items.forEach(item => {
+                        const title = item.querySelector("title")?.textContent || "";
+                        let thumb = "";
+                        const enclosure = item.querySelector("enclosure");
+                        if (enclosure) thumb = enclosure.getAttribute("url");
+                        if (!thumb) { const media = item.getElementsByTagNameNS("*", "content")[0]; if (media) thumb = media.getAttribute("url"); }
+                        if (!thumb) { const desc = item.querySelector("description")?.textContent || ""; const imgMatch = desc.match(/src="([^"]+)"/); if (imgMatch) thumb = imgMatch[1]; }
+                        if (title) tempNewsList.push({ title, thumbnail: thumb, sourceName: f.n });
+                    });
+                } catch(e) {}
+            }
+            if(tempNewsList.length > 0) newsList = tempNewsList.sort(() => Math.random() - 0.5);
+        }
+
+        // ==========================================
+        // MOTOR DE ROTAÇÃO DA TV
+        // ==========================================
+        function cycle() {
+            try {
+                const cur = document.getElementById(blocks[bIdx]);
+                cur.style.opacity = 0;
+                
+                setTimeout(() => {
+                    cur.style.display = 'none';
+                    if(blocks[bIdx] === 'block-publi') {
+                        const vid = document.getElementById('publi-vid');
+                        vid.pause(); vid.removeAttribute('src'); vid.load();
+                    }
+                    
+                    bIdx = (bIdx + 1) % blocks.length;
+                    const nxt = document.getElementById(blocks[bIdx]);
+                    
+                    if(blocks[bIdx] === 'block-publi') {
+                        const imgPubli = document.getElementById('publi-img');
+                        const vidPubli = document.getElementById('publi-vid');
+                        
+                        if(TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0) {
+                            const currentMedia = TENANT_CONFIG.publiImages[pIdx];
+                            if(currentMedia.toLowerCase().endsWith('.mp4')) {
+                                imgPubli.style.display = 'none';
+                                vidPubli.style.display = 'block';
+                                vidPubli.src = currentMedia;
+                                vidPubli.load(); 
+                                let playPromise = vidPubli.play();
+                                if (playPromise !== undefined) playPromise.catch(error => {});
+                            } else {
+                                vidPubli.style.display = 'none';
+                                imgPubli.style.display = 'block';
+                                imgPubli.src = currentMedia + '?v=' + Date.now(); 
+                            }
+                            pIdx = (pIdx + 1) % TENANT_CONFIG.publiImages.length;
+                        } else {
+                            cycle(); return;
+                        }
+                    }
+                    
+                    nxt.style.display = 'flex';
+                    setTimeout(() => nxt.style.opacity = 1, 50);
+                    
+                    const nextTime = blocks[bIdx] === 'block-news' ? 15000 : 25000;
+                    cycleTimeout = setTimeout(cycle, nextTime);
+                }, 800);
+            } catch(e) { 
+                console.error(e);
+                cycleTimeout = setTimeout(cycle, 10000); 
+            }
+        }
+
+        function toggleRotation(e) {
+            const pauseIndicator = document.getElementById('pause-indicator');
+            if (isPaused) {
+                isPaused = false; pauseIndicator.style.display = 'none';
+                clearTimeout(pauseTimeout); clearTimeout(cycleTimeout);
+                cycleTimeout = setTimeout(cycle, 5000);
+            } else {
+                isPaused = true; clearTimeout(cycleTimeout); clearTimeout(pauseTimeout);
+                pauseIndicator.style.display = 'block';
+                pauseTimeout = setTimeout(() => { isPaused = false; pauseIndicator.style.display = 'none'; cycle(); }, 120000); 
+            }
+        }
+
+        // ==========================================
+        // BOOTSTRAP INICIAL
+        // ==========================================
+        async function initApp() {
+            try {
+                // 1. Inicia relógios (Garante que a UI não fica congelada)
+                updateClocks();
+                setInterval(updateClocks, 1000);
+
+                // 2. Eventos de Interação
+                document.getElementById('interactive-area').addEventListener('click', function(e) {
+                    if (e.target.closest('.sidebar-qr') === null) toggleRotation(e);
+                });
+                document.getElementById('publi-vid').addEventListener('error', function(e) {
+                    clearTimeout(cycleTimeout); cycle(); 
+                });
+                
+                requestWakeLock();
+                document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
+                document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
+
+                // 3. Carrega configurações do Banco de Dados
+                await loadTenantConfig();
+
+                // 4. Carrega Dados Financeiros Paralelamente
+                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
+                
+                // 5. Configura Atualizações de Fundo
+                setInterval(fetchOpportunities, 300000); 
+                setInterval(fetchMacro, 300000);         
+                setInterval(fetchBrapi, 300000);         
+                setInterval(fetchAwesome, 60000);        
+                setInterval(fetchAgenda, 300000);         
+                setInterval(fetchNews, 1800000);          
+
+                // 6. Atualizador Interno de Notícias (Troca a notícia na tela)
+                setInterval(() => {
+                    if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
+                        const item = newsList[newsIdx];
+                        document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
+                        document.getElementById('news-title').innerText = item.title;
+                        const img = document.getElementById('news-img');
+                        
+                        if(item.thumbnail && !item.thumbnail.includes('transparent')){
+                            img.src = item.thumbnail;
+                            img.style.display = 'block';
+                        } else { img.style.display = 'none'; }
+                        
+                        newsIdx = (newsIdx + 1) % newsList.length;
+                    }
+                }, 10000);
+
+                // 7. Arranca a Rotação Principal após 5 segundos para o utilizador ler a primeira notícia
+                cycleTimeout = setTimeout(cycle, 5000);
+
+            } catch (error
