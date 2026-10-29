@@ -161,13 +161,13 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.4 (Bulletproof Fix)</div>
+            <div class="version-tag">v: 1.5 (Final Fix)</div>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // DECLARAÇÃO GLOBAL DE VARIÁVEIS (EVITA CONGELAMENTO)
+        // DECLARAÇÃO GLOBAL ÚNICA DE VARIÁVEIS
         // ==========================================
         let cycleTimeout = null;
         let pauseTimeout = null;
@@ -175,7 +175,7 @@
         let bIdx = 0;
         let pIdx = 0;
         const blocks = ['block-news', 'block-opps', 'block-publi', 'block-macro', 'block-agenda', 'block-coins'];
-        let newsList = [];
+        let newsList = []; // Declarada apenas UMA VEZ aqui
         let newsIdx = 0;
         let wakeLock = null;
 
@@ -202,7 +202,6 @@
                 document.getElementById('ld-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'Europe/London'});
                 document.getElementById('tk-time').innerText = now.toLocaleTimeString('pt-BR', {...opts, timeZone: 'Asia/Tokyo'});
             } catch(e) {
-                // Fallback seguro caso o navegador seja antigo e não suporte timeZone
                 const now = new Date();
                 document.getElementById('br-time').innerText = now.toLocaleTimeString('pt-BR');
                 document.getElementById('ny-time').innerText = "N/A";
@@ -485,83 +484,4 @@
                     }
                     
                     nxt.style.display = 'flex';
-                    setTimeout(() => nxt.style.opacity = 1, 50);
-                    
-                    const nextTime = blocks[bIdx] === 'block-news' ? 15000 : 25000;
-                    cycleTimeout = setTimeout(cycle, nextTime);
-                }, 800);
-            } catch(e) { 
-                console.error(e);
-                cycleTimeout = setTimeout(cycle, 10000); 
-            }
-        }
-
-        function toggleRotation(e) {
-            const pauseIndicator = document.getElementById('pause-indicator');
-            if (isPaused) {
-                isPaused = false; pauseIndicator.style.display = 'none';
-                clearTimeout(pauseTimeout); clearTimeout(cycleTimeout);
-                cycleTimeout = setTimeout(cycle, 5000);
-            } else {
-                isPaused = true; clearTimeout(cycleTimeout); clearTimeout(pauseTimeout);
-                pauseIndicator.style.display = 'block';
-                pauseTimeout = setTimeout(() => { isPaused = false; pauseIndicator.style.display = 'none'; cycle(); }, 120000); 
-            }
-        }
-
-        // ==========================================
-        // BOOTSTRAP INICIAL
-        // ==========================================
-        async function initApp() {
-            try {
-                // 1. Inicia relógios (Garante que a UI não fica congelada)
-                updateClocks();
-                setInterval(updateClocks, 1000);
-
-                // 2. Eventos de Interação
-                document.getElementById('interactive-area').addEventListener('click', function(e) {
-                    if (e.target.closest('.sidebar-qr') === null) toggleRotation(e);
-                });
-                document.getElementById('publi-vid').addEventListener('error', function(e) {
-                    clearTimeout(cycleTimeout); cycle(); 
-                });
-                
-                requestWakeLock();
-                document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
-                document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
-
-                // 3. Carrega configurações do Banco de Dados
-                await loadTenantConfig();
-
-                // 4. Carrega Dados Financeiros Paralelamente
-                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
-                
-                // 5. Configura Atualizações de Fundo
-                setInterval(fetchOpportunities, 300000); 
-                setInterval(fetchMacro, 300000);         
-                setInterval(fetchBrapi, 300000);         
-                setInterval(fetchAwesome, 60000);        
-                setInterval(fetchAgenda, 300000);         
-                setInterval(fetchNews, 1800000);          
-
-                // 6. Atualizador Interno de Notícias (Troca a notícia na tela)
-                setInterval(() => {
-                    if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
-                        const item = newsList[newsIdx];
-                        document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
-                        document.getElementById('news-title').innerText = item.title;
-                        const img = document.getElementById('news-img');
-                        
-                        if(item.thumbnail && !item.thumbnail.includes('transparent')){
-                            img.src = item.thumbnail;
-                            img.style.display = 'block';
-                        } else { img.style.display = 'none'; }
-                        
-                        newsIdx = (newsIdx + 1) % newsList.length;
-                    }
-                }, 10000);
-
-                // 7. Arranca a Rotação Principal após 5 segundos para o utilizador ler a primeira notícia
-                cycleTimeout = setTimeout(cycle, 5000);
-
-            } catch (error
+                    setTimeout(() => nxt.style
