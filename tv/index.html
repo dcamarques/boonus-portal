@@ -11,7 +11,6 @@
     <meta property="og:url" content="https://tv.boonus.app.br/">
     <meta property="og:type" content="website">
 
-    <!-- Biblioteca Oficial do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
     <style>
@@ -107,9 +106,10 @@
         <div class="content-area" id="interactive-area" title="Toque para pausar a rotação">
             <div id="pause-indicator">⏸️ PAUSADO</div>
             
+            <!-- START NO PRIMEIRO BLOCO (NOTÍCIAS) -->
             <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
                 <img id="news-img" class="news-image" src="" style="display:none;">
-                <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">Fonte</div>
+                <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">InfoMoney / Valor</div>
                 <div id="news-title">Sincronizando as últimas do mercado...</div>
             </div>
 
@@ -162,7 +162,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.2 (Notícias Nativas)</div>
+            <div class="version-tag">v: 1.3 (Anti-Freeze)</div>
         </div>
     </div>
 
@@ -174,7 +174,6 @@
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         
-        // Objeto de Segurança e Fallback Genérico (Impede a tela preta)
         let TENANT_CONFIG = {
             neonColor: '#00ff88',
             logoSrc: 'logo.png',
@@ -194,177 +193,17 @@
                 if (typeof window.supabase === 'undefined') throw new Error("A biblioteca do Supabase não foi carregada.");
                 
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-                const { data, error } = await supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
-
-                if (error) throw error;
-                if (!data) throw new Error("Cliente não encontrado.");
+                
+                // Timeout de segurança de 5 segundos para o Supabase não travar a TV
+                const fetchPromise = supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout Supabase')), 5000));
+                
+                const response = await Promise.race([fetchPromise, timeoutPromise]);
+                if (response.error) throw response.error;
+                if (!response.data) throw new Error("Cliente não encontrado.");
                 
                 TENANT_CONFIG = {
-                    neonColor: data.neon_color || '#00ff88',
-                    logoSrc: data.logo_src || '',
-                    qrData: data.qr_data || 'mailto:contato@boonus.app.br',
-                    publiImages: data.publi_images || [],
-                    urlOpps: data.url_opps || '',
-                    urlRadar: data.url_radar || '',
-                    urlMacro: data.url_macro || '',
-                    urlContador: data.url_contador || ''
-                };
-                
-            } catch (err) {
-                console.warn(`Fallback ativado:`, err.message);
-            }
-
-            document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
-            
-            if (TENANT_CONFIG.logoSrc) {
-                const logoEl = document.getElementById('header-logo');
-                logoEl.src = TENANT_CONFIG.logoSrc;
-                logoEl.style.display = 'block';
-            }
-
-            if (TENANT_CONFIG.qrData) {
-                const qrImg = document.getElementById('qr-sidebar-img');
-                qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(TENANT_CONFIG.qrData)}`;
-                qrImg.style.display = 'block';
-            }
-            
-            registrarAcesso();
-        }
-
-        // ==========================================
-        // FUNÇÕES UTILITÁRIAS
-        // ==========================================
-
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(e => console.log("Erro FullScreen", e));
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-            }
-        }
-
-        async function registrarAcesso() {
-            if (!TENANT_CONFIG.urlContador) return;
-            try {
-                const tipoDispositivo = window.innerWidth <= 768 ? 'Mobile (Smartphone)' : 'TV / Desktop';
-                let regiaoDetectada = "Desconhecida";
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 3000);
-                const geoRes = await fetch('https://freeipapi.com/api/json', { signal: controller.signal });
-                clearTimeout(timeoutId);
-                
-                if (geoRes.ok) {
-                    const geoData = await geoRes.json();
-                    if (geoData.cityName && geoData.regionName) regiaoDetectada = `${geoData.cityName} - ${geoData.regionName}`;
-                }
-                
-                fetch(TENANT_CONFIG.urlContador, {
-                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: regiaoDetectada })
-                }).catch(() => {}); 
-            } catch(e) {}
-        }
-
-        function safeParseFloat(str) {
-            if (!str) return 0;
-            str = str.replace(/[^\d.,-]/g, ''); 
-            const lastComma = str.lastIndexOf(',');
-            const lastDot = str.lastIndexOf('.');
-            if (lastComma > lastDot) return parseFloat(str.replace(/\./g, '').replace(',', '.'));
-            else if (lastDot > lastComma) return parseFloat(str.replace(/,/g, ''));
-            else return parseFloat(str);
-        }
-
-        function updateClocks() {
-            try {
-                const now = new Date();
-                const f = (tz) => now.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit', second:'2-digit', timeZone: tz});
-                document.getElementById('br-time').innerText = f('America/Sao_Paulo');
-                document.getElementById('ny-time').innerText = f('America/New_York');
-                document.getElementById('ld-time').innerText = f('Europe/London');
-                document.getElementById('tk-time').innerText = f('Asia/Tokyo');
-            } catch(e) {}
-        }
-        setInterval(updateClocks, 1000); 
-
-        function parseCSV(text) {
-            const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
-            return lines.map(line => {
-                const cols = []; let current = ''; let inQuotes = false;
-                for (let char of line) {
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) { cols.push(current); current = ''; } 
-                    else { current += char; }
-                }
-                cols.push(current);
-                return cols.map(val => val ? val.replace(/^"|"$/g, '').trim() : '');
-            });
-        }
-
-        // ==========================================
-        // WORKERS DE DADOS (COM STATE RETENTION)
-        // ==========================================
-
-        async function fetchOpportunities() {
-            if (!TENANT_CONFIG.urlOpps) return;
-            try {
-                const response = await fetch(TENANT_CONFIG.urlOpps + '&t=' + new Date().getTime());
-                if (!response.ok) throw new Error("Falha na rede");
-                const data = parseCSV(await response.text()).slice(1);
-                
-                const container = document.getElementById('opps-container');
-                let html = '<div class="card-column">';
-                
-                data.forEach((cols, idx) => {
-                    if (idx >= 6) return;
-                    if (idx === 3) html += '</div><div class="card-column">';
-                    if (cols.length >= 3) {
-                        const [classe, ativo, taxa, destaque, logoUrl] = cols;
-                        const imgHtml = (logoUrl && logoUrl.length > 10) ? `<img src="${logoUrl}" class="asset-logo" onerror="this.style.display='none'">` : '';
-                        html += `
-                            <div class="info-card">
-                                <h3>${classe}</h3>
-                                <div class="card-with-logo">
-                                    ${imgHtml}
-                                    <div style="flex:1">
-                                        <div class="info-val">${ativo}</div>
-                                        <div class="info-sub" style="color:var(--neon-color); font-size: 1.4rem;">${taxa}</div>
-                                        <div class="info-sub" style="font-size:0.85rem; opacity:0.9;">${destaque || ''}</div>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }
-                });
-                container.innerHTML = html + '</div>';
-            } catch (e) { console.warn("Retenção de estado: Mantendo oportunidades antigas."); }
-        }
-
-        async function fetchAgenda() {
-            if (!TENANT_CONFIG.urlRadar) return;
-            try {
-                const response = await fetch(TENANT_CONFIG.urlRadar + '&t=' + new Date().getTime());
-                if (!response.ok) throw new Error("Falha na rede");
-                const data = parseCSV(await response.text()).slice(1);
-                
-                const container = document.getElementById('agenda-container');
-                if (data.length === 0) {
-                    container.innerHTML = `<div class="info-card" style="grid-column: span 2; border-left-color: #444; text-align: center;"><div class="info-val" style="color:#888;">Sem agenda relevante no momento</div></div>`;
-                    return;
-                }
-
-                let html = '<div class="card-column">';
-                data.forEach((cols, idx) => {
-                    if (idx >= 6) return;
-                    if (idx === 3) html += '</div><div class="card-column">';
-                    if (cols.length >= 2) {
-                        const [dataHora, indicador, impacto, projecao] = cols;
-                        const isAlto = impacto && impacto.toUpperCase().includes('ALTO');
-                        const impColor = isAlto ? 'var(--neon-color)' : '#888';
-                        const impStars = isAlto ? '★★★ ALTO' : '★★☆ MÉDIO';
-
-                        html += `
-                            <div class="info-card" style="border-left-color: ${impColor}">
-                                <h3>${dataHora}</h3>
-                                <div class="info-val" style="font-size: 1.2rem;">${indicador}</div>
-                                <div class="info-sub" style="color: ${impColor}">${impStars}</div>
-                                ${projecao ? `<div class="info-sub" style="font-size:0.8rem; opacity:0.8; color:#
+                    neonColor: response.data.neon_color || '#00ff88',
+                    logoSrc: response.data.logo_src || '',
+                    qrData: response.data.qr_data || 'mailto:contato@boonus.app.br',
+                    publiImages: response.data.publi
