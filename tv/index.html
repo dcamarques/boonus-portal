@@ -162,7 +162,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.1 (Supabase Integrado)</div>
+            <div class="version-tag">v: 1.2 (Notícias Nativas)</div>
         </div>
     </div>
 
@@ -191,24 +191,14 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                // Verificação de Segurança de Segunda Ordem
-                if (typeof window.supabase === 'undefined') {
-                    throw new Error("A biblioteca do Supabase não foi carregada pelo navegador.");
-                }
-
-                // Cria o cliente APENAS de forma segura dentro do try/catch
+                if (typeof window.supabase === 'undefined') throw new Error("A biblioteca do Supabase não foi carregada.");
+                
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-                const { data, error } = await supabaseClient
-                    .from('tv_escritorios')
-                    .select('*')
-                    .eq('slug', tenantParam)
-                    .single();
+                const { data, error } = await supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
 
                 if (error) throw error;
                 if (!data) throw new Error("Cliente não encontrado.");
                 
-                // Subscreve os dados reais do banco
                 TENANT_CONFIG = {
                     neonColor: data.neon_color || '#00ff88',
                     logoSrc: data.logo_src || '',
@@ -219,13 +209,11 @@
                     urlMacro: data.url_macro || '',
                     urlContador: data.url_contador || ''
                 };
-                console.log("Configurações do escritório carregadas via Supabase.");
                 
             } catch (err) {
-                console.warn(`Aviso de Contingência: Falha ao carregar banco de dados. Ativando Layout Padrão. Detalhe do erro:`, err.message);
+                console.warn(`Fallback ativado:`, err.message);
             }
 
-            // Aplica os dados (Seja do banco ou do fallback de segurança)
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
             
             if (TENANT_CONFIG.logoSrc) {
@@ -244,7 +232,7 @@
         }
 
         // ==========================================
-        // FUNÇÕES UTILITÁRIAS E COMPONENTES GERAIS
+        // FUNÇÕES UTILITÁRIAS
         // ==========================================
 
         function toggleFullScreen() {
@@ -260,7 +248,6 @@
             try {
                 const tipoDispositivo = window.innerWidth <= 768 ? 'Mobile (Smartphone)' : 'TV / Desktop';
                 let regiaoDetectada = "Desconhecida";
-                
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 3000);
                 const geoRes = await fetch('https://freeipapi.com/api/json', { signal: controller.signal });
@@ -268,15 +255,11 @@
                 
                 if (geoRes.ok) {
                     const geoData = await geoRes.json();
-                    if (geoData.cityName && geoData.regionName) {
-                        regiaoDetectada = `${geoData.cityName} - ${geoData.regionName}`;
-                    }
+                    if (geoData.cityName && geoData.regionName) regiaoDetectada = `${geoData.cityName} - ${geoData.regionName}`;
                 }
                 
                 fetch(TENANT_CONFIG.urlContador, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: regiaoDetectada })
                 }).catch(() => {}); 
             } catch(e) {}
@@ -287,13 +270,9 @@
             str = str.replace(/[^\d.,-]/g, ''); 
             const lastComma = str.lastIndexOf(',');
             const lastDot = str.lastIndexOf('.');
-            if (lastComma > lastDot) {
-                return parseFloat(str.replace(/\./g, '').replace(',', '.'));
-            } else if (lastDot > lastComma) {
-                return parseFloat(str.replace(/,/g, ''));
-            } else {
-                return parseFloat(str);
-            }
+            if (lastComma > lastDot) return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+            else if (lastDot > lastComma) return parseFloat(str.replace(/,/g, ''));
+            else return parseFloat(str);
         }
 
         function updateClocks() {
@@ -311,17 +290,11 @@
         function parseCSV(text) {
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== "");
             return lines.map(line => {
-                const cols = [];
-                let current = '';
-                let inQuotes = false;
+                const cols = []; let current = ''; let inQuotes = false;
                 for (let char of line) {
                     if (char === '"') inQuotes = !inQuotes;
-                    else if (char === ',' && !inQuotes) {
-                        cols.push(current);
-                        current = '';
-                    } else {
-                        current += char;
-                    }
+                    else if (char === ',' && !inQuotes) { cols.push(current); current = ''; } 
+                    else { current += char; }
                 }
                 cols.push(current);
                 return cols.map(val => val ? val.replace(/^"|"$/g, '').trim() : '');
@@ -337,8 +310,7 @@
             try {
                 const response = await fetch(TENANT_CONFIG.urlOpps + '&t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Falha na rede");
-                const csvText = await response.text();
-                const data = parseCSV(csvText).slice(1);
+                const data = parseCSV(await response.text()).slice(1);
                 
                 const container = document.getElementById('opps-container');
                 let html = '<div class="card-column">';
@@ -349,7 +321,6 @@
                     if (cols.length >= 3) {
                         const [classe, ativo, taxa, destaque, logoUrl] = cols;
                         const imgHtml = (logoUrl && logoUrl.length > 10) ? `<img src="${logoUrl}" class="asset-logo" onerror="this.style.display='none'">` : '';
-
                         html += `
                             <div class="info-card">
                                 <h3>${classe}</h3>
@@ -365,9 +336,7 @@
                     }
                 });
                 container.innerHTML = html + '</div>';
-            } catch (e) {
-                console.warn("Retenção de estado: Mantendo oportunidades antigas.");
-            }
+            } catch (e) { console.warn("Retenção de estado: Mantendo oportunidades antigas."); }
         }
 
         async function fetchAgenda() {
@@ -375,8 +344,7 @@
             try {
                 const response = await fetch(TENANT_CONFIG.urlRadar + '&t=' + new Date().getTime());
                 if (!response.ok) throw new Error("Falha na rede");
-                const csvText = await response.text();
-                const data = parseCSV(csvText).slice(1);
+                const data = parseCSV(await response.text()).slice(1);
                 
                 const container = document.getElementById('agenda-container');
                 if (data.length === 0) {
@@ -399,272 +367,4 @@
                                 <h3>${dataHora}</h3>
                                 <div class="info-val" style="font-size: 1.2rem;">${indicador}</div>
                                 <div class="info-sub" style="color: ${impColor}">${impStars}</div>
-                                ${projecao ? `<div class="info-sub" style="font-size:0.8rem; opacity:0.8; color:#bbb;">${projecao}</div>` : ''}
-                            </div>`;
-                    }
-                });
-                container.innerHTML = html + '</div>';
-            } catch (e) {
-                console.warn("Retenção de estado: Mantendo agenda antiga.");
-            }
-        }
-
-        async function fetchMacro() {
-            if (!TENANT_CONFIG.urlMacro) return;
-            try {
-                const response = await fetch(TENANT_CONFIG.urlMacro + '&t=' + new Date().getTime());
-                if (!response.ok) throw new Error("Falha na rede");
-                const csvText = await response.text();
-                const data = parseCSV(csvText);
-                
-                data.forEach(cols => {
-                    if (cols.length >= 2) {
-                        const indice = cols[0].toUpperCase().trim();
-                        const price = safeParseFloat(cols[1]);
-                        let variation = 0;
-                        if(cols.length >= 3) variation = safeParseFloat(cols[2]);
-                        
-                        let valId = ''; let varId = ''; let isPercentOnly = false;
-                        
-                        if (indice.includes('IBOV')) { valId = 'ibov-val'; varId = 'ibov-var'; }
-                        else if (indice.includes('S&P') || indice.includes('INX')) { valId = 'sp500-val'; varId = 'sp500-var'; }
-                        else if (indice.includes('NASDAQ') || indice.includes('IXIC')) { valId = 'nasdaq-val'; varId = 'nasdaq-var'; }
-                        else if (indice.includes('SELIC')) { valId = 'selic-val'; isPercentOnly = true; }
-                        else if (indice.includes('IPCA')) { valId = 'ipca-val'; isPercentOnly = true; }
-                        else if (indice.includes('CDI')) { valId = 'cdi-val'; isPercentOnly = true; }
-                        
-                        if (valId && !isNaN(price) && price > 0) {
-                            if (isPercentOnly) {
-                                document.getElementById(valId).innerText = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
-                            } else {
-                                document.getElementById(valId).innerText = price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                                const varEl = document.getElementById(varId);
-                                if(varEl) {
-                                    const isUp = variation >= 0;
-                                    varEl.innerText = (isUp ? '▲ ' : '▼ ') + Math.abs(variation).toFixed(2) + '%';
-                                    varEl.style.color = isUp ? 'var(--positive-color)' : 'var(--negative-color)';
-                                }
-                            }
-                        }
-                    }
-                });
-            } catch (e) {
-                console.warn("Retenção de estado: Mantendo dados macro antigos.");
-            }
-        }
-
-        async function fetchBrapi() {
-            try {
-                const res = await fetch('https://brapi.dev/api/quote/list?sortBy=change&sortOrder=desc');
-                if (!res.ok) throw new Error("Brapi limit reach");
-                const data = await res.json();
-                
-                if (data && data.stocks) {
-                    const actions = data.stocks.filter(s => /^[A-Z]{4}[3456]$/.test(s.stock));
-                    let tickerHtml = '';
-                    actions.slice(0,10).forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="up">▲ ${s.change.toFixed(2)}%</span></span>`);
-                    actions.slice(-10).reverse().forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="down">▼ ${s.change.toFixed(2)}%</span></span>`);
-                    document.getElementById('stock-ticker').innerHTML = tickerHtml + tickerHtml;
-                }
-            } catch(e) {}
-        }
-
-        async function fetchAwesome() {
-            try {
-                const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL');
-                if (!r.ok) throw new Error("AwesomeAPI fail");
-                const dB = await r.json();
-                const updateC = (id, cur) => {
-                    document.getElementById(`${id}-val`).innerText = 'R$ ' + parseFloat(cur.bid).toFixed(2);
-                    const pct = parseFloat(cur.pctChange);
-                    const varEl = document.getElementById(`${id}-var`);
-                    varEl.innerText = (pct >= 0 ? '▲ ' : '▼ ') + pct.toFixed(2) + '%';
-                    varEl.style.color = pct >= 0 ? 'var(--positive-color)' : 'var(--negative-color)';
-                };
-                if(dB.USDBRL) updateC('usd', dB.USDBRL); 
-                if(dB.EURBRL) updateC('eur', dB.EURBRL); 
-                if(dB.JPYBRL) updateC('jpy', dB.JPYBRL); 
-                if(dB.GBPBRL) updateC('gbp', dB.GBPBRL);
-            } catch(e) {}
-        }
-
-        let newsList = [];
-        async function fetchNews() {
-            const feeds = [
-                {n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"},
-                {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}
-            ];
-            
-            let tempNewsList = []; 
-            for(let f of feeds){
-                try {
-                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`);
-                    if (!r.ok) continue;
-                    const d = await r.json();
-                    if(d.items) d.items.forEach(i => tempNewsList.push({...i, sourceName: f.n}));
-                } catch(e) {}
-            }
-            
-            if(tempNewsList.length > 0) {
-                newsList = tempNewsList.sort(() => Math.random() - 0.5);
-            }
-        }
-
-        // ==========================================
-        // ROTINA PRINCIPAL (BOOTSTRAP)
-        // ==========================================
-
-        async function initApp() {
-            // Dispara os relógios imediatamente
-            updateClocks();
-            
-            // Carrega os dados de forma segura (Se falhar, assume os valores padrão)
-            await loadTenantConfig();
-
-            // Dispara chamadas de dados financeiros
-            fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
-            
-            // Define o ritmo de atualizações
-            setInterval(fetchOpportunities, 300000); 
-            setInterval(fetchMacro, 300000);         
-            setInterval(fetchBrapi, 300000);         
-            setInterval(fetchAwesome, 60000);        
-            setInterval(fetchAgenda, 300000);         
-            setInterval(fetchNews, 1800000);          
-
-            let newsIdx = 0;
-            setInterval(() => {
-                if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
-                    const item = newsList[newsIdx];
-                    document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
-                    document.getElementById('news-title').innerText = item.title;
-                    const img = document.getElementById('news-img');
-                    const thumb = item.thumbnail || item.enclosure?.link || (item.content?.match(/src="([^"]+)"/)?.[1]);
-                    if(thumb && !thumb.includes('transparent')){
-                        img.src = thumb;
-                        img.style.display = 'block';
-                    } else { img.style.display = 'none'; }
-                    newsIdx = (newsIdx + 1) % newsList.length;
-                }
-            }, 15000);
-
-            const blocks = ['block-news', 'block-opps', 'block-publi', 'block-macro', 'block-agenda', 'block-coins'];
-            let bIdx = 0; let pIdx = 0;
-            let cycleTimeout;
-            let pauseTimeout;
-            let isPaused = false; 
-
-            document.getElementById('publi-vid').addEventListener('error', function(e) {
-                console.warn("Vídeo não encontrado ou corrompido. Pulando tela.");
-                clearTimeout(cycleTimeout);
-                cycle(); 
-            });
-
-            function cycle() {
-                try {
-                    const cur = document.getElementById(blocks[bIdx]);
-                    cur.style.opacity = 0;
-                    
-                    setTimeout(() => {
-                        cur.style.display = 'none';
-                        if(blocks[bIdx] === 'block-publi') {
-                            const vid = document.getElementById('publi-vid');
-                            vid.pause();
-                            vid.removeAttribute('src'); 
-                            vid.load();
-                        }
-                        
-                        bIdx = (bIdx + 1) % blocks.length;
-                        const nxt = document.getElementById(blocks[bIdx]);
-                        
-                        if(blocks[bIdx] === 'block-publi') {
-                            const imgPubli = document.getElementById('publi-img');
-                            const vidPubli = document.getElementById('publi-vid');
-                            
-                            if(TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0) {
-                                const currentMedia = TENANT_CONFIG.publiImages[pIdx];
-                                
-                                if(currentMedia.toLowerCase().endsWith('.mp4')) {
-                                    imgPubli.style.display = 'none';
-                                    vidPubli.style.display = 'block';
-                                    vidPubli.src = currentMedia;
-                                    vidPubli.load(); 
-                                    
-                                    let playPromise = vidPubli.play();
-                                    if (playPromise !== undefined) {
-                                        playPromise.catch(error => {});
-                                    }
-                                } else {
-                                    vidPubli.style.display = 'none';
-                                    imgPubli.style.display = 'block';
-                                    imgPubli.src = currentMedia + '?v=' + Date.now(); 
-                                }
-                                pIdx = (pIdx + 1) % TENANT_CONFIG.publiImages.length;
-                            } else {
-                                cycle();
-                                return;
-                            }
-                        }
-                        
-                        nxt.style.display = 'flex';
-                        setTimeout(() => nxt.style.opacity = 1, 50);
-                        
-                        const nextTime = blocks[bIdx] === 'block-news' ? 60000 : 25000;
-                        cycleTimeout = setTimeout(cycle, nextTime);
-                    }, 800);
-                } catch(e) { cycleTimeout = setTimeout(cycle, 10000); }
-            }
-            
-            cycleTimeout = setTimeout(cycle, 60000);
-
-            const contentArea = document.getElementById('interactive-area');
-            const pauseIndicator = document.getElementById('pause-indicator');
-
-            function toggleRotation(e) {
-                if (isPaused) {
-                    isPaused = false;
-                    pauseIndicator.style.display = 'none';
-                    clearTimeout(pauseTimeout);
-                    clearTimeout(cycleTimeout);
-                    cycleTimeout = setTimeout(cycle, 5000);
-                } else {
-                    isPaused = true;
-                    clearTimeout(cycleTimeout);
-                    clearTimeout(pauseTimeout);
-                    pauseIndicator.style.display = 'block';
-                    
-                    pauseTimeout = setTimeout(() => {
-                        isPaused = false;
-                        pauseIndicator.style.display = 'none';
-                        cycle(); 
-                    }, 120000); 
-                }
-            }
-
-            contentArea.addEventListener('click', function(e) {
-                if (e.target.closest('.sidebar-qr') === null) {
-                    toggleRotation(e);
-                }
-            });
-
-            let wakeLock = null;
-            async function requestWakeLock() {
-                try {
-                    if ('wakeLock' in navigator) {
-                        wakeLock = await navigator.wakeLock.request('screen');
-                    }
-                } catch (err) {}
-            }
-            requestWakeLock();
-            document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
-            document.addEventListener('visibilitychange', function() { 
-                if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); 
-            });
-        }
-
-        // Inicia a aplicação
-        window.onload = initApp;
-
-    </script>
-</body>
-</html>
+                                ${projecao ? `<div class="info-sub" style="font-size:0.8rem; opacity:0.8; color:#
