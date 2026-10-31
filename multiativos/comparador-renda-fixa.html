@@ -15,6 +15,8 @@
             --accent: #2563eb;
             --accent-hover: #1d4ed8;
             --success: #10b981;
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
             --danger: #ef4444;
             --input-bg: #0f172a;
         }
@@ -142,7 +144,6 @@
             cursor: pointer;
         }
         
-        /* Setinha customizada pro select */
         .select-wrapper::after {
             content: '▼';
             position: absolute;
@@ -155,7 +156,25 @@
         }
 
         input:focus, select:focus { outline: none; }
-        input[readonly] { color: var(--success); font-weight: 600; }
+        
+        .alert-box {
+            display: none; /* Escondido por padrão */
+            background-color: var(--warning-bg);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: -0.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            line-height: 1.5;
+        }
+
+        .alert-box strong {
+            color: var(--warning);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
 
         .btn {
             display: block;
@@ -274,7 +293,8 @@
                     <div class="form-group">
                         <label for="prazo">Prazo (meses)</label>
                         <div class="input-wrapper">
-                            <input type="text" id="prazo" placeholder="0" oninput="mascaraInteiro(event)">
+                            <!-- Inserida a chamada para verificarPrazo() no oninput -->
+                            <input type="text" id="prazo" placeholder="0" oninput="mascaraInteiro(event); verificarPrazo();">
                         </div>
                     </div>
                 </div>
@@ -296,7 +316,13 @@
                     </div>
                 </div>
 
-                <h2 class="section-title" style="margin-top: 1rem;">Ativo 1: Tributável (Ex: CDB)</h2>
+                <!-- Painel de Alerta de Curva de Juros -->
+                <div id="alerta-prazo" class="alert-box">
+                    <strong>⚠️ Atenção à Curva de Juros</strong>
+                    Para horizontes acima de 3 anos, o uso das taxas do ano corrente pode distorcer a rentabilidade. Recomenda-se ajustar manualmente o <strong>CDI Projetado</strong> e o <strong>IPCA Projetado</strong> acima, utilizando a taxa média da curva DI futura ou as projeções de longo prazo do Relatório Focus mais atual.
+                </div>
+
+                <h2 class="section-title" style="margin-top: 0.5rem;">Ativo 1: Tributável (Ex: CDB)</h2>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Indexador</label>
@@ -361,7 +387,7 @@
 
     <script>
         // ==========================================
-        // MÁSCARAS DE INPUT (Padrão PT-BR)
+        // MÁSCARAS DE INPUT & VALIDAÇÕES DE TELA
         // ==========================================
         function mascaraMoeda(e) {
             let valor = e.target.value.replace(/\D/g, "");
@@ -385,6 +411,19 @@
         function desformatar(valorString) {
             if (!valorString) return 0;
             return parseFloat(valorString.replace(/\./g, "").replace(",", "."));
+        }
+
+        function verificarPrazo() {
+            const campoPrazo = document.getElementById('prazo').value;
+            const alerta = document.getElementById('alerta-prazo');
+            const meses = parseInt(campoPrazo.replace(/\D/g, '')) || 0;
+            
+            // Exibe o alerta se o prazo for maior que 36 meses (3 anos)
+            if (meses > 36) {
+                alerta.style.display = 'block';
+            } else {
+                alerta.style.display = 'none';
+            }
         }
 
         // ==========================================
