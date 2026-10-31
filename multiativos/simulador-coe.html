@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Boonus | Simulador de COE</title>
+    
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #10b981;
+            --success-bg: rgba(16, 185, 129, 0.1);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.1);
+            --danger: #ef4444;
+            --danger-bg: rgba(239, 68, 68, 0.1);
+            --input-bg: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 0.5rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-back:hover { color: var(--text-primary); }
+
+        header { 
+            margin-bottom: 1.5rem; 
+            flex-shrink: 0; 
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            width: 100%;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.8rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .form-group { margin-bottom: 0.85rem; }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background-color: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: border-color 0.2s ease;
+        }
+
+        .input-wrapper:focus-within { border-color: var(--accent); }
+
+        .input-prefix, .input-suffix {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            padding: 0 0.75rem;
+            background-color: rgba(255,255,255,0.02);
+            user-select: none;
+        }
+
+        .input-prefix { border-right: 1px solid var(--card-border); }
+        .input-suffix { border-left: 1px solid var(--card-border); }
+
+        input, select {
+            width: 100%;
+            padding: 0.75rem;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        select { appearance: none; cursor: pointer; }
+        select option { background-color: var(--card-bg); color: var(--text-primary); }
+        
+        .select-wrapper::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        input:focus, select:focus { outline: none; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0.85rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            background-color: var(--accent);
+            color: #ffffff;
+            margin-top: 1rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            grid-column: 1 / -1;
+        }
+
+        .btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
+
+        /* Painel de Resultados Específico do COE */
+        .results-panel {
+            background: linear-gradient(145deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: 100%;
+        }
+
+        .scenario-card {
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--card-border);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .scenario-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+
+        .scenario-pessimista { background-color: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
+        .scenario-pessimista::before { background-color: var(--danger); }
+        
+        .scenario-neutro { background-color: var(--warning-bg); border-color: rgba(245, 158, 11, 0.3); }
+        .scenario-neutro::before { background-color: var(--warning); }
+        
+        .scenario-otimista { background-color: var(--success-bg); border-color: rgba(16, 185, 129, 0.3); }
+        .scenario-otimista::before { background-color: var(--success); }
+
+        .scenario-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .scenario-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .scenario-condition {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .scenario-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .scenario-metrics {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .disclaimer {
+            margin-top: auto;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            text-align: justify;
+            border-top: 1px solid var(--card-border);
+            padding-top: 0.75rem;
+        }
+
+        /* Responsividade e Travas */
+        @media (min-width: 1024px) {
+            body { height: 100vh; overflow: hidden; }
+            .container { height: 100%; padding: 1.5rem; }
+            .card {
+                flex: 1; min-height: 0; overflow-y: auto; 
+                display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.5rem 2rem;
+            }
+            .inputs-panel { display: flex; flex-direction: column; justify-content: space-between; }
+        }
+
+        @media (max-width: 1023px) {
+            body {
+                min-height: 100vh; min-height: 100dvh;
+                padding: 1.5rem 1rem; -webkit-overflow-scrolling: touch;
+            }
+            .card { display: flex; flex-direction: column; gap: 1.5rem; padding: 1.25rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <a href="index.html" class="nav-back">&larr; Voltar ao Menu</a>
+            <h1>Projeção de COE (Payoff)</h1>
+            <p class="subtitle">Simulação de cenários com foco no custo de oportunidade real.</p>
+        </header>
+
+        <main class="card">
+            <!-- Coluna 1: Formulário (Inputs) -->
+            <div class="inputs-panel">
+                
+                <h2 class="section-title" style="margin-top: 0;">Estrutura do Certificado</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="aporte">Aporte Inicial</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">R$</span>
+                            <input type="text" id="aporte" placeholder="0,00" inputmode="numeric" oninput="mascaraMoeda(event)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="prazo">Prazo até o Vencimento</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="prazo" placeholder="0" inputmode="numeric" oninput="mascaraInteiro(event)">
+                            <span class="input-suffix">meses</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Capital Protegido (%)</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="protecao" placeholder="100,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Participação na Alta (Alavancagem)</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="participacao" placeholder="1,5" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">x</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">Cenários do Ativo Subjacente (Ex: S&P500)</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cenário Otimista (Alta)</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="cenarioAlta" placeholder="30,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cenário Pessimista (Queda)</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">-</span>
+                            <input type="text" id="cenarioQueda" placeholder="20,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="btn" onclick="simularLayoutVisuais()">Exibir Matriz de Payoff</button>
+            </div>
+
+            <!-- Coluna 2: Resultados (Layout de Payoff) -->
+            <div class="results-panel" id="painel-resultado">
+                
+                <!-- Card Pessimista -->
+                <div class="scenario-card scenario-pessimista">
+                    <div class="scenario-header">
+                        <span class="scenario-title" style="color: var(--danger);">Cenário Queda</span>
+                        <span class="scenario-condition">Ativo cai 20%</span>
+                    </div>
+                    <div class="scenario-value">R$ 100.000,00</div>
+                    <div class="scenario-metrics">
+                        <span>Retorno: <strong>0%</strong> (Acionou Proteção)</span>
+                        <span>Rentab. Anual: <strong>0,00% a.a.</strong></span>
+                    </div>
+                </div>
+
+                <!-- Card Neutro -->
+                <div class="scenario-card scenario-neutro">
+                    <div class="scenario-header">
+                        <span class="scenario-title" style="color: var(--warning);">Cenário Neutro</span>
+                        <span class="scenario-condition">Ativo fica no 0 a 0</span>
+                    </div>
+                    <div class="scenario-value">R$ 100.000,00</div>
+                    <div class="scenario-metrics">
+                        <span>Retorno: <strong>0%</strong></span>
+                        <span>Rentab. Anual: <strong>0,00% a.a.</strong></span>
+                    </div>
+                </div>
+
+                <!-- Card Otimista -->
+                <div class="scenario-card scenario-otimista">
+                    <div class="scenario-header">
+                        <span class="scenario-title" style="color: var(--success);">Cenário Alta</span>
+                        <span class="scenario-condition">Ativo sobe 30% (x1.5)</span>
+                    </div>
+                    <div class="scenario-value">R$ 145.000,00</div>
+                    <div class="scenario-metrics">
+                        <span>Retorno Bruto: <strong>+45,00%</strong></span>
+                        <span>Rentab. Anual: <strong>+7,71% a.a.</strong></span>
+                    </div>
+                </div>
+
+                <div class="disclaimer">
+                    <strong>Importante:</strong> COEs possuem liquidez no vencimento. O resgate antecipado está sujeito à marcação a mercado (M2M), podendo resultar em perda de parte do capital investido, independentemente do percentual de proteção acordado para o vencimento.
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Máscaras preservadas
+        function mascaraMoeda(e) {
+            let valor = e.target.value.replace(/\D/g, "");
+            if (valor === "") { e.target.value = ""; return; }
+            valor = (parseInt(valor) / 100).toFixed(2);
+            valor = valor.replace(".", ",");
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            e.target.value = valor;
+        }
+
+        function mascaraPercentual(e) {
+            let valor = e.target.value.replace(/\D/g, "");
+            if (valor === "") { e.target.value = ""; return; }
+            valor = (parseInt(valor) / 100).toFixed(2);
+            valor = valor.replace(".", ",");
+            e.target.value = valor;
+        }
+
+        function mascaraInteiro(e) { 
+            e.target.value = e.target.value.replace(/\D/g, ""); 
+        }
+
+        // Função vazia apenas para interagir visualmente com o botão no protótipo
+        function simularLayoutVisuais() {
+            const aporte = document.getElementById('aporte').value;
+            if(!aporte) {
+                alert("Este é o layout preliminar. Digite um valor de aporte e imagine o motor matemático atualizando os 3 cards ao lado.");
+            } else {
+                alert("O layout suportará perfeitamente a renderização simultânea dos três cenários de payoff.");
+            }
+        }
+    </script>
+</body>
+</html>
