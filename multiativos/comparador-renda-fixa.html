@@ -1,0 +1,52 @@
+<div class="comparador-renda-fixa">
+  <input type="number" id="aporte" placeholder="Aporte Inicial (R$)">
+  <input type="number" id="prazo" placeholder="Prazo (meses)">
+  
+  <input type="number" id="taxaCdb" placeholder="Rentabilidade CDB (% a.a.)">
+  <input type="number" id="taxaLci" placeholder="Rentabilidade LCI/LCA (% a.a.)">
+  
+  <button onclick="compararRentabilidade()">Calcular Vencedor</button>
+  
+  <div id="painel-resultado" style="margin-top: 20px; font-weight: bold;"></div>
+</div>
+
+<script>
+// Tabela regressiva de IR por meses (aproximação de dias corridos)
+function obterAliquotaIR(meses) {
+  if (meses <= 6) return 0.225;
+  if (meses <= 12) return 0.20;
+  if (meses <= 24) return 0.175;
+  return 0.15;
+}
+
+function compararRentabilidade() {
+  const aporte = parseFloat(document.getElementById('aporte').value);
+  const meses = parseFloat(document.getElementById('prazo').value);
+  
+  // Taxas anuais em decimais
+  const taxaCdbAno = parseFloat(document.getElementById('taxaCdb').value) / 100;
+  const taxaLciAno = parseFloat(document.getElementById('taxaLci').value) / 100;
+
+  // Equivalência de taxas (Anual para Mensal)
+  const taxaCdbMes = Math.pow(1 + taxaCdbAno, 1/12) - 1;
+  const taxaLciMes = Math.pow(1 + taxaLciAno, 1/12) - 1;
+
+  // Projeção Bruta
+  const montanteBrutoCdb = aporte * Math.pow(1 + taxaCdbMes, meses);
+  const montanteBrutoLci = aporte * Math.pow(1 + taxaLciMes, meses); // Isento
+
+  // Desconto de IR no CDB
+  const lucroCdb = montanteBrutoCdb - aporte;
+  const ir = lucroCdb * obterAliquotaIR(meses);
+  const montanteLiquidoCdb = montanteBrutoCdb - ir;
+
+  // Renderização do resultado
+  const vencedor = montanteLiquidoCdb > montanteBrutoLci ? "CDB" : "LCI/LCA";
+  
+  document.getElementById('painel-resultado').innerHTML = `
+    CDB (Líquido de IR): R$ ${montanteLiquidoCdb.toFixed(2)} <br>
+    LCI/LCA (Líquido): R$ ${montanteBrutoLci.toFixed(2)} <br>
+    <span style="color: green;">Melhor opção: ${vencedor}</span>
+  `;
+}
+</script>
