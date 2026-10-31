@@ -1,52 +1,202 @@
-<div class="comparador-renda-fixa">
-  <input type="number" id="aporte" placeholder="Aporte Inicial (R$)">
-  <input type="number" id="prazo" placeholder="Prazo (meses)">
-  
-  <input type="number" id="taxaCdb" placeholder="Rentabilidade CDB (% a.a.)">
-  <input type="number" id="taxaLci" placeholder="Rentabilidade LCI/LCA (% a.a.)">
-  
-  <button onclick="compararRentabilidade()">Calcular Vencedor</button>
-  
-  <div id="painel-resultado" style="margin-top: 20px; font-weight: bold;"></div>
-</div>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boonus | Comparador de Renda Fixa</title>
+    
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --success: #10b981;
+        }
 
-<script>
-// Tabela regressiva de IR por meses (aproximação de dias corridos)
-function obterAliquotaIR(meses) {
-  if (meses <= 6) return 0.225;
-  if (meses <= 12) return 0.20;
-  if (meses <= 24) return 0.175;
-  return 0.15;
-}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
 
-function compararRentabilidade() {
-  const aporte = parseFloat(document.getElementById('aporte').value);
-  const meses = parseFloat(document.getElementById('prazo').value);
-  
-  // Taxas anuais em decimais
-  const taxaCdbAno = parseFloat(document.getElementById('taxaCdb').value) / 100;
-  const taxaLciAno = parseFloat(document.getElementById('taxaLci').value) / 100;
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2.5rem 1.5rem;
+        }
 
-  // Equivalência de taxas (Anual para Mensal)
-  const taxaCdbMes = Math.pow(1 + taxaCdbAno, 1/12) - 1;
-  const taxaLciMes = Math.pow(1 + taxaLciAno, 1/12) - 1;
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
 
-  // Projeção Bruta
-  const montanteBrutoCdb = aporte * Math.pow(1 + taxaCdbMes, meses);
-  const montanteBrutoLci = aporte * Math.pow(1 + taxaLciMes, meses); // Isento
+        .nav-back {
+            display: inline-flex;
+            align-items: center;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            margin-bottom: 2rem;
+            transition: color 0.2s ease;
+        }
 
-  // Desconto de IR no CDB
-  const lucroCdb = montanteBrutoCdb - aporte;
-  const ir = lucroCdb * obterAliquotaIR(meses);
-  const montanteLiquidoCdb = montanteBrutoCdb - ir;
+        .nav-back:hover {
+            color: var(--text-primary);
+        }
 
-  // Renderização do resultado
-  const vencedor = montanteLiquidoCdb > montanteBrutoLci ? "CDB" : "LCI/LCA";
-  
-  document.getElementById('painel-resultado').innerHTML = `
-    CDB (Líquido de IR): R$ ${montanteLiquidoCdb.toFixed(2)} <br>
-    LCI/LCA (Líquido): R$ ${montanteBrutoLci.toFixed(2)} <br>
-    <span style="color: green;">Melhor opção: ${vencedor}</span>
-  `;
-}
-</script>
+        header {
+            margin-bottom: 2.5rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 600px) {
+            .card { grid-template-columns: 1fr; }
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--card-border);
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0.85rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            border: none;
+            background-color: var(--accent);
+            color: #ffffff;
+            margin-top: 1.5rem;
+            transition: background-color 0.2s ease;
+        }
+
+        .btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .results-panel {
+            background-color: rgba(15, 23, 42, 0.5);
+            border-radius: 8px;
+            padding: 1.5rem;
+            border: 1px dashed var(--card-border);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .result-item {
+            margin-bottom: 1rem;
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .result-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .winner {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--card-border);
+            color: var(--success);
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="index.html" class="nav-back">&larr; Voltar ao Menu de Multi-Ativos</a>
+
+        <header>
+            <h1>Comparador de Renda Fixa</h1>
+            <p class="subtitle">Análise líquida de CDB (Tributável) vs LCI/LCA (Isento).</p>
+        </header>
+
+        <main class="card">
+            <!-- Coluna 1: Entradas -->
+            <div class="inputs-panel">
+                <div class="form-group">
+                    <label for="taxaCdi">CDI Atual (% a.a.) - Automático via BCB</label>
+                    <input type="number" id="taxaCdi" step="0.01" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="aporte">Aporte Inicial (R$)</label>
+                    <input type="number" id="aporte" placeholder="Ex: 100000">
+                </div>
+                <div class="form-group">
+                    <label for="prazo">Prazo (meses)</label>
+                    <input type="number" id="prazo" placeholder="Ex: 24">
+                </div>
+                <div class="form-group">
+                    <label for="taxaCdb">Rentabilidade CDB (% a.a.)</label>
+                    <input type="number" id="taxaCdb" step="0.01" placeholder="Ex: 11.50">
+                </div>
+                <div class="form-group">
+                    <label for="taxaLci">Rentabilidade LCI/LCA (% a.a.)</label>
+                    <input type="number" id="taxaLci" step="0.01" placeholder="Ex: 9.80">
+                </div>
+                
+                <button class="btn" onclick="compararRentabilidade()">Calcular Vencedor</button>
+            </div>
+
+            <!-- Coluna 2: Resultados -->
+            <div class="results-panel" id="painel-resultado">
+                <p style="color: var(--text-secondary); text-align: center;">
+                    Preencha os dados
