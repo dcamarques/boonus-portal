@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Boonus | Comparador de Renda Fixa</title>
+    <title>Boonus | Comparador de Renda Fixa Avançado</title>
     
     <style>
         :root {
@@ -34,7 +34,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             width: 100%;
         }
@@ -49,13 +49,9 @@
             transition: color 0.2s ease;
         }
 
-        .nav-back:hover {
-            color: var(--text-primary);
-        }
+        .nav-back:hover { color: var(--text-primary); }
 
-        header {
-            margin-bottom: 2.5rem;
-        }
+        header { margin-bottom: 2.5rem; }
 
         h1 {
             font-size: 2.2rem;
@@ -74,32 +70,39 @@
             border-radius: 16px;
             padding: 2.5rem;
             display: grid;
-            grid-template-columns: 1.2fr 1fr;
-            gap: 3rem;
+            grid-template-columns: 1fr 1fr;
+            gap: 2.5rem;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
-        @media (max-width: 768px) {
-            .card { 
-                grid-template-columns: 1fr; 
-                padding: 1.5rem;
-                gap: 2rem;
-            }
+        @media (max-width: 850px) {
+            .card { grid-template-columns: 1fr; padding: 1.5rem; gap: 2rem; }
         }
 
-        .form-group {
+        .section-title {
+            font-size: 1.1rem;
+            color: var(--text-primary);
             margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .form-group { margin-bottom: 1.25rem; }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
         label {
             display: block;
             margin-bottom: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 500;
             color: var(--text-secondary);
         }
 
-        /* Input Customizado com prefixo/sufixo */
         .input-wrapper {
             position: relative;
             display: flex;
@@ -111,14 +114,12 @@
             transition: border-color 0.2s ease;
         }
 
-        .input-wrapper:focus-within {
-            border-color: var(--accent);
-        }
+        .input-wrapper:focus-within { border-color: var(--accent); }
 
         .input-prefix, .input-suffix {
             color: var(--text-secondary);
             font-size: 0.95rem;
-            padding: 0 1rem;
+            padding: 0 0.85rem;
             background-color: rgba(255,255,255,0.02);
             user-select: none;
         }
@@ -126,17 +127,34 @@
         .input-prefix { border-right: 1px solid var(--card-border); }
         .input-suffix { border-left: 1px solid var(--card-border); }
 
-        input {
+        input, select {
             width: 100%;
-            padding: 0.85rem 1rem;
+            padding: 0.85rem;
             border: none;
             background: transparent;
             color: var(--text-primary);
-            font-size: 1.05rem;
+            font-size: 1rem;
             font-weight: 500;
         }
 
-        input:focus { outline: none; }
+        select {
+            appearance: none;
+            cursor: pointer;
+        }
+        
+        /* Setinha customizada pro select */
+        .select-wrapper::after {
+            content: '▼';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            pointer-events: none;
+        }
+
+        input:focus, select:focus { outline: none; }
         input[readonly] { color: var(--success); font-weight: 600; }
 
         .btn {
@@ -151,9 +169,10 @@
             border: none;
             background-color: var(--accent);
             color: #ffffff;
-            margin-top: 2rem;
+            margin-top: 1rem;
             transition: all 0.2s ease;
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+            grid-column: 1 / -1;
         }
 
         .btn:hover {
@@ -170,18 +189,13 @@
             display: flex;
             flex-direction: column;
             justify-content: center;
+            height: 100%;
         }
 
         .result-item {
             margin-bottom: 1.5rem;
             padding-bottom: 1.5rem;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        .result-item:last-of-type {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
         }
 
         .result-label {
@@ -207,7 +221,7 @@
         }
 
         .winner-box {
-            margin-top: 2rem;
+            margin-top: 1rem;
             padding: 1.5rem;
             background-color: rgba(16, 185, 129, 0.1);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -223,9 +237,14 @@
             text-transform: uppercase;
         }
 
-        .winner-diff {
-            color: var(--text-primary);
-            font-size: 0.95rem;
+        .disclaimer {
+            margin-top: 1.5rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            text-align: justify;
+            border-top: 1px solid var(--card-border);
+            padding-top: 1rem;
         }
     </style>
 </head>
@@ -235,62 +254,106 @@
         <a href="index.html" class="nav-back">&larr; Voltar ao Menu de Multi-Ativos</a>
 
         <header>
-            <h1>Comparador de Renda Fixa</h1>
-            <p class="subtitle">Simulação de equivalência: CDB (Tributável) vs LCI/LCA (Isento) atrelados ao CDI.</p>
+            <h1>Raio-X de Portfólio: Renda Fixa</h1>
+            <p class="subtitle">Simulação avançada de equivalência com captura de IPCA e CDI projetados.</p>
         </header>
 
         <main class="card">
-            <!-- Coluna 1: Entradas -->
+            <!-- Coluna 1: Formulário -->
             <div class="inputs-panel">
                 
-                <div class="form-group">
-                    <label for="taxaCdi">CDI Atual (Automático via BCB)</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="taxaCdi" readonly>
-                        <span class="input-suffix">%</span>
+                <h2 class="section-title">Parâmetros Gerais</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="aporte">Aporte Inicial</label>
+                        <div class="input-wrapper">
+                            <span class="input-prefix">R$</span>
+                            <input type="text" id="aporte" placeholder="0,00" oninput="mascaraMoeda(event)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="prazo">Prazo (meses)</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="prazo" placeholder="0" oninput="mascaraInteiro(event)">
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="aporte">Aporte Inicial</label>
-                    <div class="input-wrapper">
-                        <span class="input-prefix">R$</span>
-                        <input type="text" id="aporte" placeholder="0,00" oninput="mascaraMoeda(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label title="Atualizado via SGS/BCB">CDI Base Projetado</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="taxaCdi" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">% a.a.</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label title="Mediana Relatório Focus/BCB">IPCA Base Projetado</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="taxaIpca" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">% a.a.</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="prazo">Prazo da Operação</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="prazo" placeholder="0" oninput="mascaraInteiro(event)">
-                        <span class="input-suffix">meses</span>
+                <h2 class="section-title" style="margin-top: 1rem;">Ativo 1: Tributável (Ex: CDB)</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Indexador</label>
+                        <div class="input-wrapper select-wrapper">
+                            <select id="indexador1" onchange="atualizarCampoTaxa('1')">
+                                <option value="perc_cdi">% do CDI</option>
+                                <option value="cdi_mais">CDI +</option>
+                                <option value="ipca_mais">IPCA +</option>
+                                <option value="pre">Prefixado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" id="containerTaxa1">
+                        <label id="labelTaxa1">Percentual</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="taxa1" placeholder="110,00" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">%</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="taxaCdb">Rentabilidade CDB</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="taxaCdb" placeholder="110,00" oninput="mascaraPercentual(event)">
-                        <span class="input-suffix">% do CDI</span>
+                <h2 class="section-title" style="margin-top: 1rem;">Ativo 2: Isento (Ex: LCI/LCA)</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Indexador</label>
+                        <div class="input-wrapper select-wrapper">
+                            <select id="indexador2" onchange="atualizarCampoTaxa('2')">
+                                <option value="perc_cdi">% do CDI</option>
+                                <option value="cdi_mais">CDI +</option>
+                                <option value="ipca_mais">IPCA +</option>
+                                <option value="pre">Prefixado</option>
+                            </select>
+                        </div>
                     </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="taxaLci">Rentabilidade LCI/LCA</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="taxaLci" placeholder="90,00" oninput="mascaraPercentual(event)">
-                        <span class="input-suffix">% do CDI</span>
+                    <div class="form-group" id="containerTaxa2">
+                        <label id="labelTaxa2">Percentual</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="taxa2" placeholder="90,00" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">%</span>
+                        </div>
                     </div>
                 </div>
                 
-                <button class="btn" onclick="compararRentabilidade()">Executar Projeção</button>
+                <button class="btn" onclick="compararRentabilidade()">Executar Projeção Líquida</button>
             </div>
 
             <!-- Coluna 2: Resultados -->
-            <div class="results-panel" id="painel-resultado">
-                <div style="text-align: center; color: var(--text-secondary);">
-                    <svg style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                    <p>Preencha os parâmetros e clique em executar para visualizar a análise líquida do portfólio.</p>
+            <div class="results-panel">
+                <div id="painel-resultado" style="display: flex; flex-direction: column; justify-content: center; height: 100%;">
+                    <div style="text-align: center; color: var(--text-secondary);">
+                        <svg style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        <p>Preencha os parâmetros de mercado e a estrutura dos ativos para visualizar a análise detalhada.</p>
+                    </div>
+                </div>
+
+                <div class="disclaimer">
+                    <strong>Nota sobre Projeções:</strong> O cálculo de indexadores pós-fixados e atrelados à inflação depende de estimativas futuras. As taxas base exibidas nesta ferramenta são extraídas automaticamente de fontes oficiais: o CDI deriva da Meta Selic vigente via API do Sistema Gerenciador de Séries Temporais (SGS/BCB), e o IPCA projetado utiliza a mediana das expectativas de mercado para o ano corrente reportadas no Relatório Focus (via API Olinda/BCB). Rentabilidade passada ou projetada não é garantia de rentabilidade futura.
                 </div>
             </div>
         </main>
@@ -317,36 +380,71 @@
             e.target.value = valor;
         }
 
-        function mascaraInteiro(e) {
-            e.target.value = e.target.value.replace(/\D/g, "");
-        }
+        function mascaraInteiro(e) { e.target.value = e.target.value.replace(/\D/g, ""); }
 
-        // Converte string PT-BR (ex: 1.000,50) para Float JS (1000.50)
         function desformatar(valorString) {
             if (!valorString) return 0;
             return parseFloat(valorString.replace(/\./g, "").replace(",", "."));
         }
 
         // ==========================================
-        // FETCH API BCB & LÓGICA DE NEGÓCIO
+        // LÓGICA DE INTERFACE
         // ==========================================
-        async function buscarTaxaCDI() {
-            try {
-                const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
-                const resposta = await fetch(url);
-                const dados = await resposta.json();
-                
-                const selicAtual = parseFloat(dados[0].valor);
-                const cdiAtual = selicAtual - 0.10; 
-                
-                // Formata o CDI capturado para o padrão visual (ex: 10,40)
-                document.getElementById('taxaCdi').value = cdiAtual.toFixed(2).replace('.', ',');
-            } catch (erro) {
-                console.error("Erro ao buscar a taxa no BCB:", erro);
-                document.getElementById('taxaCdi').value = "10,40"; // Fallback seguro
+        function atualizarCampoTaxa(id) {
+            const indexador = document.getElementById(`indexador${id}`).value;
+            const label = document.getElementById(`labelTaxa${id}`);
+            const input = document.getElementById(`taxa${id}`);
+            
+            if (indexador === 'perc_cdi') {
+                label.innerText = 'Percentual';
+                input.placeholder = id === '1' ? '110,00' : '90,00';
+            } else if (indexador === 'cdi_mais' || indexador === 'ipca_mais') {
+                label.innerText = 'Taxa Pré (Spread)';
+                input.placeholder = '5,00';
+            } else if (indexador === 'pre') {
+                label.innerText = 'Taxa Anual';
+                input.placeholder = '12,50';
             }
         }
 
+        // ==========================================
+        // FETCH APIs OFICIAIS DO BCB (SGS e Focus)
+        // ==========================================
+        async function carregarTaxasBase() {
+            // 1. Busca Selic/CDI Atual via SGS (Série 432)
+            try {
+                const urlSgs = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
+                const respSgs = await fetch(urlSgs);
+                const dadosSgs = await respSgs.json();
+                const selicAtual = parseFloat(dadosSgs[0].valor);
+                const cdiAtual = selicAtual - 0.10;
+                document.getElementById('taxaCdi').value = cdiAtual.toFixed(2).replace('.', ',');
+            } catch (e) {
+                console.error("Erro no SGS:", e);
+                document.getElementById('taxaCdi').value = "10,40";
+            }
+
+            // 2. Busca IPCA Projetado via Olinda (Relatório Focus) para o ano vigente
+            try {
+                const anoAtual = new Date().getFullYear();
+                const urlFocus = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoAnuais?$filter=Indicador eq 'IPCA' and DataReferencia eq '${anoAtual}'&$orderby=Data desc&$top=1&$format=json`;
+                const respFocus = await fetch(urlFocus);
+                const dadosFocus = await respFocus.json();
+                if (dadosFocus.value && dadosFocus.value.length > 0) {
+                    const ipcaFocus = parseFloat(dadosFocus.value[0].Mediana);
+                    document.getElementById('taxaIpca').value = ipcaFocus.toFixed(2).replace('.', ',');
+                } else {
+                    document.getElementById('taxaIpca').value = "4,50";
+                }
+            } catch (e) {
+                console.error("Erro no Focus:", e);
+                document.getElementById('taxaIpca').value = "4,50";
+            }
+        }
+
+        // ==========================================
+        // CÁLCULO FINANCEIRO
+        // ==========================================
         function obterAliquotaIR(meses) {
             if (meses <= 6) return 0.225;
             if (meses <= 12) return 0.20;
@@ -354,85 +452,101 @@
             return 0.15;
         }
 
-        // Formatação final para exibição nos resultados
         const formatarBRL = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const formatarPerc = (valor) => (valor * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
 
+        function calcularTaxaEfetivaAnual(indexador, valorCampo, cdiBase, ipcaBase) {
+            const valDecimal = valorCampo / 100;
+            const cdiDecimal = cdiBase / 100;
+            const ipcaDecimal = ipcaBase / 100;
+
+            if (indexador === 'perc_cdi') return cdiDecimal * valDecimal;
+            if (indexador === 'cdi_mais') return ((1 + cdiDecimal) * (1 + valDecimal)) - 1;
+            if (indexador === 'ipca_mais') return ((1 + ipcaDecimal) * (1 + valDecimal)) - 1;
+            if (indexador === 'pre') return valDecimal;
+            return 0;
+        }
+
         function compararRentabilidade() {
-            // Captura e desformata os valores digitados
-            const cdiAtualAno = desformatar(document.getElementById('taxaCdi').value);
             const aporte = desformatar(document.getElementById('aporte').value);
             const meses = parseInt(document.getElementById('prazo').value);
-            const percCdb = desformatar(document.getElementById('taxaCdb').value);
-            const percLci = desformatar(document.getElementById('taxaLci').value);
+            const cdiBase = desformatar(document.getElementById('taxaCdi').value);
+            const ipcaBase = desformatar(document.getElementById('taxaIpca').value);
 
-            if (!aporte || !meses || !percCdb || !percLci || !cdiAtualAno) {
-                alert("Por favor, preencha todos os campos numéricos para realizar a projeção.");
+            const indexador1 = document.getElementById('indexador1').value;
+            const taxaInput1 = desformatar(document.getElementById('taxa1').value);
+            
+            const indexador2 = document.getElementById('indexador2').value;
+            const taxaInput2 = desformatar(document.getElementById('taxa2').value);
+
+            if (!aporte || !meses || !taxaInput1 || !taxaInput2 || !cdiBase || !ipcaBase) {
+                alert("Preencha todos os parâmetros, valores e prazos para simular.");
                 return;
             }
 
-            // Cálculo das taxas anuais efetivas
-            const taxaCdbAno = (cdiAtualAno * (percCdb / 100)) / 100;
-            const taxaLciAno = (cdiAtualAno * (percLci / 100)) / 100;
+            // 1. Taxa Efetiva Anual (Composta)
+            const taxaAnual1 = calcularTaxaEfetivaAnual(indexador1, taxaInput1, cdiBase, ipcaBase);
+            const taxaAnual2 = calcularTaxaEfetivaAnual(indexador2, taxaInput2, cdiBase, ipcaBase);
 
-            // Equivalência (Anual para Mensal)
-            const taxaCdbMes = Math.pow(1 + taxaCdbAno, 1/12) - 1;
-            const taxaLciMes = Math.pow(1 + taxaLciAno, 1/12) - 1;
+            // 2. Equivalência Mensal
+            const taxaMes1 = Math.pow(1 + taxaAnual1, 1/12) - 1;
+            const taxaMes2 = Math.pow(1 + taxaAnual2, 1/12) - 1;
 
-            // Projeção Bruta
-            const montanteBrutoCdb = aporte * Math.pow(1 + taxaCdbMes, meses);
-            const montanteBrutoLci = aporte * Math.pow(1 + taxaLciMes, meses);
+            // 3. Projeção Bruta
+            const bruto1 = aporte * Math.pow(1 + taxaMes1, meses);
+            const bruto2 = aporte * Math.pow(1 + taxaMes2, meses);
 
-            // Desconto de IR
-            const lucroCdb = montanteBrutoCdb - aporte;
-            const ir = lucroCdb * obterAliquotaIR(meses);
-            const montanteLiquidoCdb = montanteBrutoCdb - ir;
-            const rentabilidadeLiquidaCdb = (montanteLiquidoCdb / aporte) - 1;
-            const rentabilidadeLiquidaLci = (montanteBrutoLci / aporte) - 1;
+            // 4. Desconto de IR (Ativo 1 é Tributável, Ativo 2 é Isento)
+            const lucro1 = bruto1 - aporte;
+            const liquido1 = bruto1 - (lucro1 * obterAliquotaIR(meses));
+            const liquido2 = bruto2; // Isento
 
-            // Análise de Vencedor
+            const rentabLiquida1 = (liquido1 / aporte) - 1;
+            const rentabLiquida2 = (liquido2 / aporte) - 1;
+
+            // 5. Apuração
             let vencedorTitulo = "Empate Técnico";
             let diferencaFinanceira = 0;
             
-            if (montanteLiquidoCdb > montanteBrutoLci) {
-                vencedorTitulo = "🏆 CDB é a melhor opção";
-                diferencaFinanceira = montanteLiquidoCdb - montanteBrutoLci;
-            } else if (montanteBrutoLci > montanteLiquidoCdb) {
-                vencedorTitulo = "🏆 LCI/LCA é a melhor opção";
-                diferencaFinanceira = montanteBrutoLci - montanteLiquidoCdb;
+            if (liquido1 > liquido2) {
+                vencedorTitulo = "🏆 Tributável Vence";
+                diferencaFinanceira = liquido1 - liquido2;
+            } else if (liquido2 > liquido1) {
+                vencedorTitulo = "🏆 Isento Vence";
+                diferencaFinanceira = liquido2 - liquido1;
             }
 
-            // Injeção do HTML de Resultado
+            // 6. Renderização
             document.getElementById('painel-resultado').innerHTML = `
                 <div class="result-item">
-                    <div class="result-label">CDB (Líquido após IR)</div>
-                    <div class="result-value">${formatarBRL(montanteLiquidoCdb)}</div>
+                    <div class="result-label">Ativo Tributável (Líquido IR)</div>
+                    <div class="result-value">${formatarBRL(liquido1)}</div>
                     <div class="result-subtext">
-                        <span>Taxa Efetiva Anual: <strong style="color: var(--text-primary)">${formatarPerc(taxaCdbAno)}</strong></span>
-                        <span>Rentab. Período: <strong style="color: var(--text-primary)">${formatarPerc(rentabilidadeLiquidaCdb)}</strong></span>
+                        <span>Taxa Efetiva: <strong style="color: var(--text-primary)">${formatarPerc(taxaAnual1)} a.a.</strong></span>
+                        <span>Rentab. Período: <strong style="color: var(--text-primary)">${formatarPerc(rentabLiquida1)}</strong></span>
                     </div>
                 </div>
 
                 <div class="result-item">
-                    <div class="result-label">LCI/LCA (Isento)</div>
-                    <div class="result-value">${formatarBRL(montanteBrutoLci)}</div>
+                    <div class="result-label">Ativo Isento (Líquido)</div>
+                    <div class="result-value">${formatarBRL(liquido2)}</div>
                     <div class="result-subtext">
-                        <span>Taxa Efetiva Anual: <strong style="color: var(--text-primary)">${formatarPerc(taxaLciAno)}</strong></span>
-                        <span>Rentab. Período: <strong style="color: var(--text-primary)">${formatarPerc(rentabilidadeLiquidaLci)}</strong></span>
+                        <span>Taxa Efetiva: <strong style="color: var(--text-primary)">${formatarPerc(taxaAnual2)} a.a.</strong></span>
+                        <span>Rentab. Período: <strong style="color: var(--text-primary)">${formatarPerc(rentabLiquida2)}</strong></span>
                     </div>
                 </div>
 
                 <div class="winner-box">
                     <div class="winner-title">${vencedorTitulo}</div>
-                    <div class="winner-diff">
-                        Geração de <strong>${formatarBRL(diferencaFinanceira)}</strong> a mais no vencimento.
+                    <div style="color: var(--text-primary); font-size: 0.95rem;">
+                        Vantagem patrimonial de <strong>${formatarBRL(diferencaFinanceira)}</strong> no vencimento.
                     </div>
                 </div>
             `;
         }
 
-        // Executar fetch ao carregar a tela
-        document.addEventListener('DOMContentLoaded', buscarTaxaCDI);
+        // Executar inicialização
+        document.addEventListener('DOMContentLoaded', carregarTaxasBase);
     </script>
 </body>
 </html>
