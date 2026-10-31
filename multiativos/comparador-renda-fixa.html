@@ -56,7 +56,7 @@
 
         header { 
             margin-bottom: 1.5rem; 
-            flex-shrink: 0; /* Impede que o cabeçalho seja esmagado */
+            flex-shrink: 0; 
         }
 
         h1 {
@@ -132,7 +132,7 @@
             border: none;
             background: transparent;
             color: var(--text-primary);
-            font-size: 16px; /* Evita zoom no iOS */
+            font-size: 16px; /* Trava de zoom no iOS */
             font-weight: 500;
         }
 
@@ -141,7 +141,6 @@
             cursor: pointer;
         }
 
-        /* CORREÇÃO DO SELETOR: Fundo escuro e letra branca para as opções */
         select option {
             background-color: var(--card-bg);
             color: var(--text-primary);
@@ -267,17 +266,17 @@
         /* TRAVA DE TELA: COMPUTADOR E TABLET NA HORIZONTAL */
         @media (min-width: 1024px) {
             body {
-                height: 100vh; /* Fixa no tamanho exato da janela */
-                overflow: hidden; /* Oculta barra de rolagem externa da página */
+                height: 100vh; 
+                overflow: hidden; 
             }
             .container {
-                height: 100%; /* Ocupa 100% da janela */
+                height: 100%; 
                 padding: 1.5rem;
             }
             .card {
-                flex: 1; /* Ocupa o restante do espaço após o cabeçalho */
-                min-height: 0; /* Comando vital pro flexbox permitir o scroll interno */
-                overflow-y: auto; /* Rolagem apenas DENTRO do painel */
+                flex: 1; 
+                min-height: 0; 
+                overflow-y: auto; 
                 display: grid;
                 grid-template-columns: 1.2fr 1fr;
                 gap: 2rem;
@@ -290,7 +289,7 @@
             }
         }
 
-        /* CELULARES (Permite rolar para cima e para baixo naturalmente) */
+        /* CELULARES E TABLETS NA VERTICAL */
         @media (max-width: 1023px) {
             body {
                 min-height: 100vh;
@@ -326,6 +325,7 @@
                         <label for="aporte">Aporte Inicial</label>
                         <div class="input-wrapper">
                             <span class="input-prefix">R$</span>
+                            <!-- inputmode="numeric" força o teclado numérico no celular -->
                             <input type="text" id="aporte" placeholder="0,00" inputmode="numeric" oninput="mascaraMoeda(event)">
                         </div>
                     </div>
@@ -357,7 +357,7 @@
                 <!-- Painel de Alerta -->
                 <div id="alerta-prazo" class="alert-box">
                     <strong>⚠️ Atenção à Curva de Juros</strong>
-                    Para prazos acima de 3 anos, recomenda-se ajustar manualmente o <strong>CDI Projetado</strong> e o <strong>IPCA Projetado</strong> com a taxa média da curva DI futura (Focus/B3) pertinente ao vencimento.
+                    Para prazos acima de 3 anos, recomenda-se ajustar manualmente o <strong>CDI Projetado</strong> e o <strong>IPCA Projetado</strong> com a taxa média da curva DI futura pertinente ao vencimento.
                 </div>
 
                 <h2 class="section-title">Ativo 1: Tributável (Ex: CDB, LIG)</h2>
@@ -424,9 +424,193 @@
     </div>
 
     <script>
+        // ==========================================
+        // MÁSCARAS ESTritas PT-BR
+        // ==========================================
         function mascaraMoeda(e) {
             let valor = e.target.value.replace(/\D/g, "");
             if (valor === "") { e.target.value = ""; return; }
             valor = (parseInt(valor) / 100).toFixed(2);
             valor = valor.replace(".", ",");
-            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g,
+            valor = valor.replace(/(\d)(?=(\d{3})+(?!\d))/g, "$1.");
+            e.target.value = valor;
+        }
+
+        function mascaraPercentual(e) {
+            let valor = e.target.value.replace(/\D/g, "");
+            if (valor === "") { e.target.value = ""; return; }
+            valor = (parseInt(valor) / 100).toFixed(2);
+            valor = valor.replace(".", ",");
+            e.target.value = valor;
+        }
+
+        function mascaraInteiro(e) { 
+            e.target.value = e.target.value.replace(/\D/g, ""); 
+        }
+
+        // Sanitização blindada: remove todos os pontos de milhar e troca vírgula por ponto para o JS
+        function desformatar(valorString) {
+            if (!valorString) return 0;
+            return parseFloat(valorString.replace(/\./g, "").replace(",", "."));
+        }
+
+        function verificarPrazo() {
+            const campoPrazo = document.getElementById('prazo').value;
+            const alerta = document.getElementById('alerta-prazo');
+            const meses = parseInt(campoPrazo.replace(/\D/g, '')) || 0;
+            alerta.style.display = (meses > 36) ? 'block' : 'none';
+        }
+
+        function atualizarCampoTaxa(id) {
+            const indexador = document.getElementById(`indexador${id}`).value;
+            const label = document.getElementById(`labelTaxa${id}`);
+            const input = document.getElementById(`taxa${id}`);
+            
+            if (indexador === 'perc_cdi') {
+                label.innerText = 'Percentual';
+                input.placeholder = id === '1' ? '110,00' : '90,00';
+            } else if (indexador === 'cdi_mais' || indexador === 'ipca_mais') {
+                label.innerText = 'Taxa Pré (Spread)';
+                input.placeholder = '5,00';
+            } else if (indexador === 'pre') {
+                label.innerText = 'Taxa Anual';
+                input.placeholder = '12,50';
+            }
+            // Limpa o campo ao trocar o indexador para evitar cálculos cruzados
+            input.value = '';
+        }
+
+        // ==========================================
+        // INTEGRAÇÃO COM BANCO CENTRAL (API OFICIAL)
+        // ==========================================
+        async function carregarTaxasBase() {
+            try {
+                const urlSgs = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
+                const respSgs = await fetch(urlSgs);
+                const dadosSgs = await respSgs.json();
+                const selicAtual = parseFloat(dadosSgs[0].valor);
+                const cdiAtual = selicAtual - 0.10;
+                document.getElementById('taxaCdi').value = cdiAtual.toFixed(2).replace('.', ',');
+            } catch (e) {
+                document.getElementById('taxaCdi').value = "10,40";
+            }
+
+            try {
+                const anoAtual = new Date().getFullYear();
+                const urlFocus = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoAnuais?$filter=Indicador eq 'IPCA' and DataReferencia eq '${anoAtual}'&$orderby=Data desc&$top=1&$format=json`;
+                const respFocus = await fetch(urlFocus);
+                const dadosFocus = await respFocus.json();
+                if (dadosFocus.value && dadosFocus.value.length > 0) {
+                    const ipcaFocus = parseFloat(dadosFocus.value[0].Mediana);
+                    document.getElementById('taxaIpca').value = ipcaFocus.toFixed(2).replace('.', ',');
+                } else {
+                    document.getElementById('taxaIpca').value = "4,50";
+                }
+            } catch (e) {
+                document.getElementById('taxaIpca').value = "4,50";
+            }
+        }
+
+        // ==========================================
+        // LÓGICA FINANCEIRA E CÁLCULO DE EQUIVALÊNCIA
+        // ==========================================
+        function obterAliquotaIR(meses) {
+            if (meses <= 6) return 0.225;
+            if (meses <= 12) return 0.20;
+            if (meses <= 24) return 0.175;
+            return 0.15;
+        }
+
+        // Formatação rigorosa de saídas
+        const formatarBRL = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatarPerc = (valor) => (valor * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+
+        function calcularTaxaEfetivaAnual(indexador, valorCampo, cdiBase, ipcaBase) {
+            const valDecimal = valorCampo / 100;
+            const cdiDecimal = cdiBase / 100;
+            const ipcaDecimal = ipcaBase / 100;
+
+            if (indexador === 'perc_cdi') return cdiDecimal * valDecimal;
+            if (indexador === 'cdi_mais') return ((1 + cdiDecimal) * (1 + valDecimal)) - 1;
+            if (indexador === 'ipca_mais') return ((1 + ipcaDecimal) * (1 + valDecimal)) - 1;
+            if (indexador === 'pre') return valDecimal;
+            return 0;
+        }
+
+        function compararRentabilidade() {
+            const aporte = desformatar(document.getElementById('aporte').value);
+            const meses = parseInt(document.getElementById('prazo').value);
+            const cdiBase = desformatar(document.getElementById('taxaCdi').value);
+            const ipcaBase = desformatar(document.getElementById('taxaIpca').value);
+
+            const indexador1 = document.getElementById('indexador1').value;
+            const taxaInput1 = desformatar(document.getElementById('taxa1').value);
+            
+            const indexador2 = document.getElementById('indexador2').value;
+            const taxaInput2 = desformatar(document.getElementById('taxa2').value);
+
+            // Validação estrita
+            if (!aporte || !meses || !taxaInput1 || !taxaInput2 || !cdiBase || !ipcaBase) {
+                alert("Preencha todos os parâmetros e valores para simular de forma precisa.");
+                return;
+            }
+
+            const taxaAnual1 = calcularTaxaEfetivaAnual(indexador1, taxaInput1, cdiBase, ipcaBase);
+            const taxaAnual2 = calcularTaxaEfetivaAnual(indexador2, taxaInput2, cdiBase, ipcaBase);
+
+            const taxaMes1 = Math.pow(1 + taxaAnual1, 1/12) - 1;
+            const taxaMes2 = Math.pow(1 + taxaAnual2, 1/12) - 1;
+
+            const bruto1 = aporte * Math.pow(1 + taxaMes1, meses);
+            const bruto2 = aporte * Math.pow(1 + taxaMes2, meses);
+
+            const lucro1 = bruto1 - aporte;
+            const liquido1 = bruto1 - (lucro1 * obterAliquotaIR(meses));
+            const liquido2 = bruto2; // Isento não desconta IR
+
+            const rentabLiquida1 = (liquido1 / aporte) - 1;
+            const rentabLiquida2 = (liquido2 / aporte) - 1;
+
+            let vencedorTitulo = "Empate Técnico";
+            let diferencaFinanceira = 0;
+            
+            if (liquido1 > liquido2) {
+                vencedorTitulo = "🏆 Tributável Vence";
+                diferencaFinanceira = liquido1 - liquido2;
+            } else if (liquido2 > liquido1) {
+                vencedorTitulo = "🏆 Isento Vence";
+                diferencaFinanceira = liquido2 - liquido1;
+            }
+
+            document.getElementById('painel-resultado').innerHTML = `
+                <div class="result-item">
+                    <div class="result-label">Ativo Tributável (Líquido IR)</div>
+                    <div class="result-value">${formatarBRL(liquido1)}</div>
+                    <div class="result-subtext">
+                        <span>Tx Efetiva: <strong style="color: var(--text-primary)">${formatarPerc(taxaAnual1)} a.a.</strong></span>
+                        <span>Rentab: <strong style="color: var(--text-primary)">${formatarPerc(rentabLiquida1)}</strong></span>
+                    </div>
+                </div>
+
+                <div class="result-item">
+                    <div class="result-label">Ativo Isento (Líquido)</div>
+                    <div class="result-value">${formatarBRL(liquido2)}</div>
+                    <div class="result-subtext">
+                        <span>Tx Efetiva: <strong style="color: var(--text-primary)">${formatarPerc(taxaAnual2)} a.a.</strong></span>
+                        <span>Rentab: <strong style="color: var(--text-primary)">${formatarPerc(rentabLiquida2)}</strong></span>
+                    </div>
+                </div>
+
+                <div class="winner-box">
+                    <div class="winner-title">${vencedorTitulo}</div>
+                    <div style="color: var(--text-primary); font-size: 0.95rem;">
+                        Vantagem de <strong>${formatarBRL(diferencaFinanceira)}</strong> no vencimento.
+                    </div>
+                </div>
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', carregarTaxasBase);
+    </script>
+</body>
+</html>
