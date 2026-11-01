@@ -59,6 +59,7 @@
         .coins-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 95%; max-width: 1500px; align-items: start; }
         .card-column { display: flex; flex-direction: column; gap: 20px; }
         
+        /* ALTURA AUMENTADA PARA 145PX PARA EVITAR VAZAMENTO DOS TEXTOS */
         .info-card { 
             background: var(--card-gradient); 
             padding: 0 20px; 
@@ -66,7 +67,7 @@
             border: 2px solid var(--glass-border-up);
             box-shadow: var(--glow-up);
             position: relative; 
-            height: 120px; 
+            height: 145px; 
             box-sizing: border-box;
             display: flex; 
             align-items: center;
@@ -82,9 +83,10 @@
         .currency-icon { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
 
         .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
-        .card-data h3 { color: #fff; margin: 0 0 2px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
         
-        /* Ajuste do tamanho da fonte dos valores para a grid de 3 colunas (Câmbio) */
+        /* AJUSTE NO TÍTULO (h3) PARA AGRUPAR MELHOR A QUEBRA DE LINHA */
+        .card-data h3 { color: #fff; margin: 0 0 4px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
+        
         .coins-grid .info-val { font-size: 1.8rem; }
         .info-val { font-size: 2.2rem; font-weight: 900; display: block; color: #fff; line-height: 1; }
         
@@ -95,10 +97,8 @@
         .info-card.falling .badge-pill { background-color: var(--negative-color); color: #fff; }
         
         .sparkline-box { width: 100px; height: 50px; flex-shrink: 0; margin-left: auto; display: flex; align-items: center; }
-        /* Ajuste do sparkline para cartões menores */
         .coins-grid .sparkline-box { width: 70px; height: 40px; margin-left: 0; }
         
-        /* BANDEIRAS MAIORES: width de 24px para 30px */
         .country-flag { position: absolute; top: 15px; right: 15px; width: 30px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
         .card-with-logo { display: flex; align-items: center; gap: 15px; width: 100%; }
@@ -225,44 +225,42 @@
                 <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
                     <span class="material-symbols-outlined" style="color:var(--neon-color);">public</span> CÂMBIO GLOBAL (LIVE)
                 </h2>
-                <!-- GRID DE 6 CÂMBIOS -->
                 <div class="coins-grid">
                     <div class="info-card" id="card-usd">
                         <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">attach_money</span></div>
-                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.75rem; color: #888;">(USD)</span></h3><div id="usd-val" class="info-val">---</div><div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.75rem; color: #888; display: inline-block;">(USD)</span></h3><div id="usd-val" class="info-val">---</div><div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="usd-spark"></div>
                     </div>
                     <div class="info-card" id="card-eur">
                         <img src="https://flagcdn.com/w40/eu.png" class="country-flag" alt="EU">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">euro</span></div>
-                        <div class="card-data"><h3>EURO <span style="font-size: 0.75rem; color: #888;">(EUR)</span></h3><div id="eur-val" class="info-val">---</div><div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>EURO <span style="font-size: 0.75rem; color: #888; display: inline-block;">(EUR)</span></h3><div id="eur-val" class="info-val">---</div><div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="eur-spark"></div>
                     </div>
                     <div class="info-card" id="card-gbp">
                         <img src="https://flagcdn.com/w40/gb.png" class="country-flag" alt="GB">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_pound</span></div>
-                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.75rem; color: #888;">(GBP)</span></h3><div id="gbp-val" class="info-val">---</div><div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.75rem; color: #888; display: inline-block;">(GBP)</span></h3><div id="gbp-val" class="info-val">---</div><div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="gbp-spark"></div>
                     </div>
                     
                     <div class="info-card" id="card-jpy">
                         <img src="https://flagcdn.com/w40/jp.png" class="country-flag" alt="JP">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yen</span></div>
-                        <div class="card-data"><h3>IENE <span style="font-size: 0.75rem; color: #888;">(JPY)</span></h3><div id="jpy-val" class="info-val">---</div><div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>IENE <span style="font-size: 0.75rem; color: #888; display: inline-block;">(JPY)</span></h3><div id="jpy-val" class="info-val">---</div><div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="jpy-spark"></div>
                     </div>
-                    <!-- NOVOS CÂMBIOS: CNY E CHF -->
                     <div class="info-card" id="card-cny">
                         <img src="https://flagcdn.com/w40/cn.png" class="country-flag" alt="CN">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yuan</span></div>
-                        <div class="card-data"><h3>YUAN <span style="font-size: 0.75rem; color: #888;">(CNY)</span></h3><div id="cny-val" class="info-val">---</div><div class="info-sub"><span id="cny-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>YUAN <span style="font-size: 0.75rem; color: #888; display: inline-block;">(CNY)</span></h3><div id="cny-val" class="info-val">---</div><div class="info-sub"><span id="cny-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="cny-spark"></div>
                     </div>
                     <div class="info-card" id="card-chf">
                         <img src="https://flagcdn.com/w40/ch.png" class="country-flag" alt="CH">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">account_balance</span></div>
-                        <div class="card-data"><h3>FRANCO <span style="font-size: 0.75rem; color: #888;">(CHF)</span></h3><div id="chf-val" class="info-val">---</div><div class="info-sub"><span id="chf-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>FRANCO <span style="font-size: 0.75rem; color: #888; display: inline-block;">(CHF)</span></h3><div id="chf-val" class="info-val">---</div><div class="info-sub"><span id="chf-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="chf-spark"></div>
                     </div>
                 </div>
@@ -276,7 +274,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.4 (6 Moedas e Bandeiras Ajustadas)</div>
+            <div class="version-tag">v: 2.5 (Fixed Card Heights)</div>
         </div>
     </div>
 
@@ -475,7 +473,7 @@
                         html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid var(--glass-border-up); box-shadow: var(--glow-up); display: flex; align-items: center; gap: 15px;">
                             ${logoUrl ? `<img src="${logoUrl}" style="width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
                             <div style="flex:1; text-align:left;">
-                                <h3 style="color:#fff; margin:0 0 2px 0; font-size:1rem;">${classe}</h3>
+                                <h3 style="color:#fff; margin:0 0 4px 0; font-size:1rem; line-height: 1.2;">${classe}</h3>
                                 <div style="font-size:2.2rem; font-weight:900; color:#fff; line-height:1;">${ativo}</div>
                                 <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:var(--neon-color);">${taxa} <span style="color:#aaa; margin-left:10px;">${destaque || ''}</span></div>
                             </div>
@@ -516,7 +514,7 @@
                         const impStars = isAlto ? '★★★ ALTO' : '★★☆ MÉDIO';
                         html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid ${impColor}; box-shadow: 0 0 15px rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px;">
                             <div style="flex:1; text-align:left;">
-                                <h3 style="color:#fff; margin:0 0 2px 0; font-size:1rem;">${dataHora}</h3>
+                                <h3 style="color:#fff; margin:0 0 4px 0; font-size:1rem; line-height: 1.2;">${dataHora}</h3>
                                 <div style="font-size:1.6rem; font-weight:900; color:#fff; line-height:1.2;">${indicador}</div>
                                 <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:${impColor};">${impStars} <span style="color:#aaa; margin-left:10px;">${projecao ? projecao : ''}</span></div>
                             </div>
@@ -598,7 +596,6 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 4000);
-                // ADICIONADOS CNY E CHF AO FETCH DO AWESOMEAPI
                 const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL,CNY-BRL,CHF-BRL', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 if (!r.ok) return;
