@@ -12,6 +12,8 @@
     <meta property="og:url" content="https://tv.boonus.app.br/">
     <meta property="og:type" content="website">
 
+    <!-- Ícones do Google para as Moedas e caso a imagem do GitHub atrase -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
     <style>
@@ -22,6 +24,7 @@
             --dark-bg: #050505; 
             --panel-bg: #111; 
             
+            --card-gradient: linear-gradient(145deg, #1a1a1a 0%, #0d0d0d 100%);
             --glass-border-up: rgba(0, 255, 136, 0.5);
             --glass-border-down: rgba(255, 59, 59, 0.5);
             
@@ -55,41 +58,47 @@
         .macro-grid, .coins-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
         .card-column { display: flex; flex-direction: column; gap: 20px; }
         
-        /* 
-        ========================================================================
-        ESTRUTURA DE SOBREPOSIÇÃO (IMAGE BACKGROUND + DYNAMIC TEXT)
-        ========================================================================
-        */
+        /* LAYOUT FLEXÍVEL DOS CARTÕES COM BORDAS DINÂMICAS */
         .info-card { 
-            background-color: #121212;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
+            background: var(--card-gradient); 
+            padding: 0 20px; 
             border-radius: 12px; 
             border: 2px solid var(--glass-border-up);
             box-shadow: var(--glow-up);
             position: relative; 
             height: 120px; 
             box-sizing: border-box;
+            display: flex; 
+            align-items: center;
+            gap: 15px;
             transition: all 0.4s ease; 
         }
         .info-card.falling { border-color: var(--glass-border-down); box-shadow: var(--glow-down); }
 
-        /* AJUSTE A POSIÇÃO DOS NÚMEROS AQUI */
-        /* Altere o valor de "left" e "top" se precisar mover os números na imagem */
-        .card-dynamic-data { 
-            position: absolute;
-            left: 140px; 
-            top: 50%;
-            transform: translateY(-50%);
+        /* RECIPIENTE DO ÍCONE LIMPO (SEM BORDAS EXTRAS) */
+        .card-icon {
+            width: 85px; 
+            height: 85px; 
+            flex-shrink: 0;
             display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            text-align: left; 
+            align-items: center; 
+            justify-content: center;
+            background: transparent;
+            border: none;
+            box-shadow: none;
         }
+        /* Configuração exata para as imagens de ouro/vidro */
+        .card-icon img { width: 100%; height: 100%; object-fit: contain; drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
         
-        .info-val { font-size: 2.2rem; font-weight: 900; display: block; color: #fff; line-height: 1; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
-        .info-sub { margin-top: 8px; display: inline-flex; align-items: center; }
+        /* Estilos genéricos para caso falhe a imagem e mostre o icone do Google */
+        .material-symbols-outlined { font-size: 40px; font-weight: 300; color: #888; }
+        .currency-icon { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
+
+        .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        .card-data h3 { color: #fff; margin: 0 0 2px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .info-val { font-size: 2.2rem; font-weight: 900; display: block; color: #fff; line-height: 1; }
+        
+        .info-sub { font-size: 0.95rem; font-weight: 600; margin-top: 8px; color: #aaa; display: inline-flex; align-items: center; }
         
         .badge-pill {
             padding: 3px 8px;
@@ -103,14 +112,12 @@
         .badge-up { background-color: rgba(0, 255, 136, 0.15); color: var(--positive-color); }
         .info-card.falling .badge-pill { background-color: var(--negative-color); color: #fff; }
         
-        /* POSIÇÃO DO GRÁFICO DINÂMICO */
-        .sparkline-overlay { 
-            position: absolute;
-            right: 25px;
-            bottom: 25px;
-            width: 100px; 
-            height: 50px; 
-        }
+        .sparkline-box { width: 100px; height: 50px; flex-shrink: 0; margin-left: auto; display: flex; align-items: center; }
+        
+        .country-flag { position: absolute; top: 15px; right: 15px; width: 24px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+
+        .card-with-logo { display: flex; align-items: center; gap: 15px; width: 100%; }
+        .asset-logo { width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0; }
 
         #news-title { font-size: 2.4rem; font-weight: 800; line-height: 1.2; max-width: 90%; margin-top: 15px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
         .news-image { width: auto; max-width: 80%; max-height: 45vh; border-radius: 12px; object-fit: contain; margin-bottom: 10px; border: 2px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -172,49 +179,63 @@
             </div>
 
             <div id="block-macro" class="display-block">
-                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; font-size: 1.8rem;">INDICADORES MACRO E ÍNDICES</h2>
+                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
+                    <span class="material-symbols-outlined" style="color:var(--neon-color);">monitoring</span> INDICADORES MACRO E ÍNDICES
+                </h2>
                 <div class="macro-grid">
                     <div class="card-column">
-                        <div class="info-card" id="card-selic" style="background-image: url('./bg_selic.png');">
-                            <div class="card-dynamic-data">
-                                <div id="selic-val" class="info-val">---</div>
+                        <div class="info-card" id="card-selic">
+                            <div class="card-icon">
+                                <img src="./icone_selic.png" alt="SELIC" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">show_chart</span>
                             </div>
-                            <div class="sparkline-overlay" id="selic-spark"></div>
+                            <div class="card-data"><h3>SELIC (META)</h3><div id="selic-val" class="info-val">---</div><div class="info-sub">Meta Anual</div></div>
+                            <div class="sparkline-box" id="selic-spark"></div>
                         </div>
-                        <div class="info-card" id="card-ipca" style="background-image: url('./bg_ipca.png');">
-                            <div class="card-dynamic-data">
-                                <div id="ipca-val" class="info-val">---</div>
+                        <div class="info-card" id="card-ipca">
+                            <div class="card-icon">
+                                <img src="./icone_ipca.png" alt="IPCA" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">shopping_cart</span>
                             </div>
-                            <div class="sparkline-overlay" id="ipca-spark"></div>
+                            <div class="card-data"><h3>IPCA</h3><div id="ipca-val" class="info-val">---</div><div class="info-sub">Inflação (12M)</div></div>
+                            <div class="sparkline-box" id="ipca-spark"></div>
                         </div>
-                        <div class="info-card" id="card-cdi" style="background-image: url('./bg_cdi.png');">
-                            <div class="card-dynamic-data">
-                                <div id="cdi-val" class="info-val">---</div>
+                        <div class="info-card" id="card-cdi">
+                            <div class="card-icon">
+                                <img src="./icone_cdi.png" alt="CDI" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">description</span>
                             </div>
-                            <div class="sparkline-overlay" id="cdi-spark"></div>
+                            <div class="card-data"><h3>CDI ACUM.</h3><div id="cdi-val" class="info-val">---</div><div class="info-sub">Acumulado</div></div>
+                            <div class="sparkline-box" id="cdi-spark"></div>
                         </div>
                     </div>
                     <div class="card-column">
-                        <div class="info-card" id="card-ibov" style="background-image: url('./bg_ibov.png');">
-                            <div class="card-dynamic-data">
-                                <div id="ibov-val" class="info-val">---</div>
-                                <div class="info-sub"><span id="ibov-var" class="badge-pill badge-up">---</span></div>
+                        <div class="info-card" id="card-ibov">
+                            <img src="https://flagcdn.com/w40/br.png" class="country-flag" alt="BR">
+                            <div class="card-icon">
+                                <img src="./icone_ibov.png" alt="IBOV" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">trending_up</span>
                             </div>
-                            <div class="sparkline-overlay" id="ibov-spark"></div>
+                            <div class="card-data"><h3>IBOVESPA</h3><div id="ibov-val" class="info-val">---</div><div class="info-sub"><span id="ibov-var" class="badge-pill badge-up">---</span></div></div>
+                            <div class="sparkline-box" id="ibov-spark"></div>
                         </div>
-                        <div class="info-card" id="card-sp500" style="background-image: url('./bg_sp500.png');">
-                            <div class="card-dynamic-data">
-                                <div id="sp500-val" class="info-val">---</div>
-                                <div class="info-sub"><span id="sp500-var" class="badge-pill badge-up">---</span></div>
+                        <div class="info-card" id="card-sp500">
+                            <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
+                            <div class="card-icon">
+                                <img src="./icone_sp500.png" alt="S&P 500" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">bar_chart</span>
                             </div>
-                            <div class="sparkline-overlay" id="sp500-spark"></div>
+                            <div class="card-data"><h3>S&amp;P 500</h3><div id="sp500-val" class="info-val">---</div><div class="info-sub"><span id="sp500-var" class="badge-pill badge-up">---</span></div></div>
+                            <div class="sparkline-box" id="sp500-spark"></div>
                         </div>
-                        <div class="info-card" id="card-nasdaq" style="background-image: url('./bg_nasdaq.png');">
-                            <div class="card-dynamic-data">
-                                <div id="nasdaq-val" class="info-val">---</div>
-                                <div class="info-sub"><span id="nasdaq-var" class="badge-pill badge-up">---</span></div>
+                        <div class="info-card" id="card-nasdaq">
+                            <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
+                            <div class="card-icon">
+                                <img src="./icone_nasdaq.png" alt="NASDAQ" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <span class="material-symbols-outlined" style="display:none;">query_stats</span>
                             </div>
-                            <div class="sparkline-overlay" id="nasdaq-spark"></div>
+                            <div class="card-data"><h3>NASDAQ</h3><div id="nasdaq-val" class="info-val">---</div><div class="info-sub"><span id="nasdaq-var" class="badge-pill badge-up">---</span></div></div>
+                            <div class="sparkline-box" id="nasdaq-spark"></div>
                         </div>
                     </div>
                 </div>
@@ -226,35 +247,33 @@
             </div>
 
             <div id="block-coins" class="display-block">
-                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; font-size: 1.8rem;">CÂMBIO GLOBAL (LIVE)</h2>
+                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
+                    <span class="material-symbols-outlined" style="color:var(--neon-color);">public</span> CÂMBIO GLOBAL (LIVE)
+                </h2>
                 <div class="coins-grid">
-                    <div class="info-card" id="card-usd" style="background-image: url('./bg_usd.png');">
-                        <div class="card-dynamic-data">
-                            <div id="usd-val" class="info-val">R$ ---</div>
-                            <div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div>
-                        </div>
-                        <div class="sparkline-overlay" id="usd-spark"></div>
+                    <div class="info-card" id="card-usd">
+                        <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">attach_money</span></div>
+                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.85rem; color: #888; font-weight:600;">(USD/BRL)</span></h3><div id="usd-val" class="info-val">R$ ---</div><div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="usd-spark"></div>
                     </div>
-                    <div class="info-card" id="card-eur" style="background-image: url('./bg_eur.png');">
-                        <div class="card-dynamic-data">
-                            <div id="eur-val" class="info-val">R$ ---</div>
-                            <div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div>
-                        </div>
-                        <div class="sparkline-overlay" id="eur-spark"></div>
+                    <div class="info-card" id="card-eur">
+                        <img src="https://flagcdn.com/w40/eu.png" class="country-flag" alt="EU">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">euro</span></div>
+                        <div class="card-data"><h3>EURO <span style="font-size: 0.85rem; color: #888; font-weight:600;">(EUR/BRL)</span></h3><div id="eur-val" class="info-val">R$ ---</div><div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="eur-spark"></div>
                     </div>
-                    <div class="info-card" id="card-jpy" style="background-image: url('./bg_jpy.png');">
-                        <div class="card-dynamic-data">
-                            <div id="jpy-val" class="info-val">R$ ---</div>
-                            <div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div>
-                        </div>
-                        <div class="sparkline-overlay" id="jpy-spark"></div>
+                    <div class="info-card" id="card-jpy">
+                        <img src="https://flagcdn.com/w40/jp.png" class="country-flag" alt="JP">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yen</span></div>
+                        <div class="card-data"><h3>IENE <span style="font-size: 0.85rem; color: #888; font-weight:600;">(JPY/BRL)</span></h3><div id="jpy-val" class="info-val">R$ ---</div><div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="jpy-spark"></div>
                     </div>
-                    <div class="info-card" id="card-gbp" style="background-image: url('./bg_gbp.png');">
-                        <div class="card-dynamic-data">
-                            <div id="gbp-val" class="info-val">R$ ---</div>
-                            <div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div>
-                        </div>
-                        <div class="sparkline-overlay" id="gbp-spark"></div>
+                    <div class="info-card" id="card-gbp">
+                        <img src="https://flagcdn.com/w40/gb.png" class="country-flag" alt="GB">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_pound</span></div>
+                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.85rem; color: #888; font-weight:600;">(GBP/BRL)</span></h3><div id="gbp-val" class="info-val">R$ ---</div><div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="gbp-spark"></div>
                     </div>
                 </div>
             </div>
@@ -267,7 +286,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.0 (Overlay UI)</div>
+            <div class="version-tag">v: 2.1 (Premium Gold Icons)</div>
         </div>
     </div>
 
@@ -459,7 +478,7 @@
                     if (cols.length >= 3) {
                         const [classe, ativo, taxa, destaque, logoUrl] = cols;
                         
-                        html += `<div style="background-color: #121212; padding: 20px; border-radius: 12px; border: 2px solid var(--glass-border-up); box-shadow: var(--glow-up); display: flex; align-items: center; gap: 15px;">
+                        html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid var(--glass-border-up); box-shadow: var(--glow-up); display: flex; align-items: center; gap: 15px;">
                             ${logoUrl ? `<img src="${logoUrl}" style="width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
                             <div style="flex:1; text-align:left;">
                                 <h3 style="color:#fff; margin:0 0 2px 0; font-size:1rem;">${classe}</h3>
@@ -493,7 +512,7 @@
                         const isAlto = impacto && impacto.toUpperCase().includes('ALTO');
                         const impColor = isAlto ? 'var(--neon-color)' : '#888';
                         const impStars = isAlto ? '★★★ ALTO' : '★★☆ MÉDIO';
-                        html += `<div style="background-color: #121212; padding: 20px; border-radius: 12px; border: 2px solid ${impColor}; display: flex; align-items: center; gap: 15px;">
+                        html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid ${impColor}; box-shadow: 0 0 15px rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px;">
                             <div style="flex:1; text-align:left;">
                                 <h3 style="color:#fff; margin:0 0 2px 0; font-size:1rem;">${dataHora}</h3>
                                 <div style="font-size:1.6rem; font-weight:900; color:#fff; line-height:1.2;">${indicador}</div>
@@ -516,7 +535,6 @@
                 if (!response.ok) return;
                 const data = parseCSV(await response.text());
                 
-                // Variáveis base fixas caso o fetch falhe para não ficar vazio
                 document.getElementById('selic-spark').innerHTML = generateSparklineSvg(true);
                 document.getElementById('ipca-spark').innerHTML = generateSparklineSvg(true);
                 document.getElementById('cdi-spark').innerHTML = generateSparklineSvg(true);
