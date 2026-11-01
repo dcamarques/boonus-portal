@@ -20,6 +20,8 @@
             --warning-bg: rgba(245, 158, 11, 0.1);
             --danger: #ef4444;
             --danger-bg: rgba(239, 68, 68, 0.1);
+            --info: #3b82f6;
+            --info-bg: rgba(59, 130, 246, 0.1);
             --input-bg: #0f172a;
         }
 
@@ -56,21 +58,9 @@
 
         .nav-back:hover { color: var(--text-primary); }
 
-        header { 
-            margin-bottom: 1.5rem; 
-            flex-shrink: 0; 
-        }
-
-        h1 {
-            font-size: 1.8rem;
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.5px;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 0.95rem;
-        }
+        header { margin-bottom: 1.5rem; flex-shrink: 0; }
+        h1 { font-size: 1.8rem; margin-bottom: 0.25rem; letter-spacing: -0.5px; }
+        .subtitle { color: var(--text-secondary); font-size: 0.95rem; }
 
         .card {
             background-color: var(--card-bg);
@@ -86,15 +76,13 @@
             margin-bottom: 0.8rem;
             padding-bottom: 0.4rem;
             border-bottom: 1px solid var(--card-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .form-group { margin-bottom: 0.85rem; }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 
         label {
             display: block;
@@ -116,7 +104,6 @@
         }
 
         .input-wrapper:focus-within { border-color: var(--accent); }
-
         .input-prefix, .input-suffix {
             color: var(--text-secondary);
             font-size: 0.9rem;
@@ -124,7 +111,6 @@
             background-color: rgba(255,255,255,0.02);
             user-select: none;
         }
-
         .input-prefix { border-right: 1px solid var(--card-border); }
         .input-suffix { border-left: 1px solid var(--card-border); }
 
@@ -134,7 +120,7 @@
             border: none;
             background: transparent;
             color: var(--text-primary);
-            font-size: 16px;
+            font-size: 16px; 
             font-weight: 500;
         }
 
@@ -154,6 +140,8 @@
 
         input:focus, select:focus { outline: none; }
 
+        .hidden { display: none !important; }
+
         .btn {
             display: block;
             width: 100%;
@@ -171,10 +159,8 @@
             box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
             grid-column: 1 / -1;
         }
-
         .btn:hover { background-color: var(--accent-hover); transform: translateY(-1px); }
 
-        /* Painel de Resultados Específico do COE */
         .results-panel {
             background: linear-gradient(145deg, rgba(15,23,42,0.6) 0%, rgba(15,23,42,0.9) 100%);
             border-radius: 12px;
@@ -184,6 +170,7 @@
             flex-direction: column;
             gap: 1rem;
             height: 100%;
+            overflow-y: auto;
         }
 
         .scenario-card {
@@ -195,105 +182,62 @@
             position: relative;
             overflow: hidden;
         }
-
-        .scenario-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-        }
-
+        .scenario-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
         .scenario-pessimista { background-color: var(--danger-bg); border-color: rgba(239, 68, 68, 0.3); }
         .scenario-pessimista::before { background-color: var(--danger); }
-        
         .scenario-neutro { background-color: var(--warning-bg); border-color: rgba(245, 158, 11, 0.3); }
         .scenario-neutro::before { background-color: var(--warning); }
-        
         .scenario-otimista { background-color: var(--success-bg); border-color: rgba(16, 185, 129, 0.3); }
         .scenario-otimista::before { background-color: var(--success); }
+        .scenario-fase { background-color: var(--info-bg); border-color: rgba(59, 130, 246, 0.3); }
+        .scenario-fase::before { background-color: var(--info); }
 
-        .scenario-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .scenario-title {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .scenario-condition {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-        }
-
-        .scenario-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin-bottom: 0.25rem;
-        }
-
+        .scenario-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+        .scenario-title { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .scenario-condition { font-size: 0.75rem; color: var(--text-secondary); }
+        .scenario-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); margin-bottom: 0.25rem; }
         .scenario-metrics {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.5rem;
-            padding-top: 0.5rem;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.75rem; color: var(--text-secondary); display: flex; justify-content: space-between;
+            margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255,255,255,0.05);
         }
 
         .disclaimer {
-            margin-top: auto;
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-            text-align: justify;
-            border-top: 1px solid var(--card-border);
-            padding-top: 0.75rem;
+            margin-top: auto; font-size: 0.7rem; color: var(--text-secondary); line-height: 1.4;
+            text-align: justify; border-top: 1px solid var(--card-border); padding-top: 0.75rem;
         }
 
-        /* Responsividade e Travas */
+        /* Layout Baseado nas regras anteriores (Trava desktop, rolagem mobile) */
         @media (min-width: 1024px) {
             body { height: 100vh; overflow: hidden; }
             .container { height: 100%; padding: 1.5rem; }
-            .card {
-                flex: 1; min-height: 0; overflow-y: auto; 
-                display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; padding: 1.5rem 2rem;
-            }
-            .inputs-panel { display: flex; flex-direction: column; justify-content: space-between; }
+            .card { flex: 1; min-height: 0; display: grid; grid-template-columns: 1.2fr 1fr; gap: 2rem; padding: 1.5rem 2rem; }
+            .inputs-panel { display: flex; flex-direction: column; overflow-y: auto; padding-right: 10px; }
+            .results-panel { overflow-y: auto; }
         }
-
         @media (max-width: 1023px) {
-            body {
-                min-height: 100vh; min-height: 100dvh;
-                padding: 1.5rem 1rem; -webkit-overflow-scrolling: touch;
-            }
+            body { min-height: 100vh; min-height: 100dvh; padding: 1.5rem 1rem; -webkit-overflow-scrolling: touch; }
             .card { display: flex; flex-direction: column; gap: 1.5rem; padding: 1.25rem; }
         }
     </style>
 </head>
 <body>
 
+    <!-- Campos Ocultos para armazenar parâmetros da API Oficial -->
+    <input type="hidden" id="cdiProjetado">
+    <input type="hidden" id="ipcaProjetado">
+
     <div class="container">
         <header>
             <a href="index.html" class="nav-back">&larr; Voltar ao Menu</a>
-            <h1>Projeção de COE (Payoff)</h1>
-            <p class="subtitle">Simulação de cenários com foco no custo de oportunidade real.</p>
+            <h1>Projeção de COE</h1>
+            <p class="subtitle">Motor de cálculo estruturado com retenção de IR e projeção líquida.</p>
         </header>
 
         <main class="card">
-            <!-- Coluna 1: Formulário (Inputs) -->
+            <!-- Coluna 1: Formulário Mutante -->
             <div class="inputs-panel">
                 
-                <h2 class="section-title" style="margin-top: 0;">Estrutura do Certificado</h2>
+                <h2 class="section-title" style="margin-top: 0;">Parâmetros Base</h2>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="aporte">Aporte Inicial</label>
@@ -303,7 +247,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="prazo">Prazo até o Vencimento</label>
+                        <label for="prazo">Prazo Total</label>
                         <div class="input-wrapper">
                             <input type="text" id="prazo" placeholder="0" inputmode="numeric" oninput="mascaraInteiro(event)">
                             <span class="input-suffix">meses</span>
@@ -311,96 +255,154 @@
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Capital Protegido (%)</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="protecao" placeholder="100,00" inputmode="numeric" oninput="mascaraPercentual(event)">
-                            <span class="input-suffix">%</span>
-                        </div>
+                <div class="form-group">
+                    <label>Tipo de Estrutura (Regra do COE)</label>
+                    <div class="input-wrapper select-wrapper">
+                        <select id="tipoCoe" onchange="alternarCamposCoe()">
+                            <option value="classico">Alavancado c/ Capital Protegido (Classic)</option>
+                            <option value="ganho_minimo">Ganho Mínimo Garantido</option>
+                            <option value="faixa">Faixa de Ganho (Collar / Range)</option>
+                            <option value="dual_index">COE Renda Fixa (Dual Index / Step-up)</option>
+                        </select>
                     </div>
+                </div>
+
+                <!-- BLOCO 1: Parâmetros Clássicos e Faixa -->
+                <div id="bloco_participacao" class="form-row">
                     <div class="form-group">
-                        <label>Participação na Alta (Alavancagem)</label>
+                        <label>Participação na Alta (Ex: 1,5 = 150%)</label>
                         <div class="input-wrapper">
-                            <input type="text" id="participacao" placeholder="1,5" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <input type="text" id="participacao" placeholder="1,00" inputmode="numeric" oninput="mascaraPercentual(event)">
                             <span class="input-suffix">x</span>
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>Teto de Ganho (Cap Máximo)</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="cap" placeholder="Ilimitado" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            <span class="input-suffix">% abs.</span>
+                        </div>
+                    </div>
                 </div>
 
-                <h2 class="section-title">Cenários do Ativo Subjacente (Ex: S&P500)</h2>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Cenário Otimista (Alta)</label>
-                        <div class="input-wrapper">
-                            <input type="text" id="cenarioAlta" placeholder="30,00" inputmode="numeric" oninput="mascaraPercentual(event)">
-                            <span class="input-suffix">%</span>
+                <!-- BLOCO 2: Ganho Mínimo Garantido -->
+                <div id="bloco_ganho_minimo" class="hidden">
+                    <h2 class="section-title">Regra do Ganho Mínimo</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Indexador Mínimo</label>
+                            <div class="input-wrapper select-wrapper">
+                                <select id="indexadorMinimo">
+                                    <option value="pre">Taxa Fixa (Pré)</option>
+                                    <option value="ipca">IPCA Projetado</option>
+                                    <option value="cdi">CDI Projetado</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Rentabilidade Mínima</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="taxaMinima" placeholder="10,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                                <span class="input-suffix">% a.a.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 3: COE Renda Fixa (Dual Index) -->
+                <div id="bloco_dual_index" class="hidden">
+                    <h2 class="section-title">Período 1 (Início até Mês de Troca)</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Indexador 1</label>
+                            <div class="input-wrapper select-wrapper">
+                                <select id="indexadorDual1">
+                                    <option value="perc_cdi">% do CDI</option>
+                                    <option value="pre">Prefixado</option>
+                                    <option value="ipca_mais">IPCA +</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Taxa / Percentual 1</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="taxaDual1" placeholder="102,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>Cenário Pessimista (Queda)</label>
+                        <label>Duração do Período 1</label>
                         <div class="input-wrapper">
-                            <span class="input-prefix">-</span>
-                            <input type="text" id="cenarioQueda" placeholder="20,00" inputmode="numeric" oninput="mascaraPercentual(event)">
-                            <span class="input-suffix">%</span>
+                            <input type="text" id="mesesDual1" placeholder="12" inputmode="numeric" oninput="mascaraInteiro(event)">
+                            <span class="input-suffix">meses</span>
+                        </div>
+                    </div>
+
+                    <h2 class="section-title">Período 2 (Até o Vencimento)</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Indexador 2</label>
+                            <div class="input-wrapper select-wrapper">
+                                <select id="indexadorDual2">
+                                    <option value="pre">Prefixado</option>
+                                    <option value="perc_cdi">% do CDI</option>
+                                    <option value="ipca_mais">IPCA +</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Taxa / Percentual 2</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="taxaDual2" placeholder="13,75" inputmode="numeric" oninput="mascaraPercentual(event)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO COMUM: Cenários do Ativo (Escondido no Dual Index) -->
+                <div id="bloco_cenarios_ativo">
+                    <h2 class="section-title">Simulação do Ativo Subjacente (Renda Variável)</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Se o ativo CAIR</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">-</span>
+                                <input type="text" id="cenarioQueda" placeholder="20,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                                <span class="input-suffix">%</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Se o ativo SUBIR</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">+</span>
+                                <input type="text" id="cenarioAlta" placeholder="30,00" inputmode="numeric" oninput="mascaraPercentual(event)">
+                                <span class="input-suffix">%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <button class="btn" onclick="simularLayoutVisuais()">Exibir Matriz de Payoff</button>
+                <button class="btn" onclick="executarMotorCoe()">Gerar Matriz de Payoff (Líquido)</button>
             </div>
 
-            <!-- Coluna 2: Resultados (Layout de Payoff) -->
+            <!-- Coluna 2: Resultados Dinâmicos -->
             <div class="results-panel" id="painel-resultado">
+                <div style="text-align: center; color: var(--text-secondary); margin: auto;">
+                    <svg style="width: 48px; height: 48px; margin-bottom: 1rem; opacity: 0.5;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                    <p>Selecione a estrutura do COE e insira os parâmetros para visualizar a rentabilidade líquida projetada.</p>
+                </div>
                 
-                <!-- Card Pessimista -->
-                <div class="scenario-card scenario-pessimista">
-                    <div class="scenario-header">
-                        <span class="scenario-title" style="color: var(--danger);">Cenário Queda</span>
-                        <span class="scenario-condition">Ativo cai 20%</span>
-                    </div>
-                    <div class="scenario-value">R$ 100.000,00</div>
-                    <div class="scenario-metrics">
-                        <span>Retorno: <strong>0%</strong> (Acionou Proteção)</span>
-                        <span>Rentab. Anual: <strong>0,00% a.a.</strong></span>
-                    </div>
-                </div>
-
-                <!-- Card Neutro -->
-                <div class="scenario-card scenario-neutro">
-                    <div class="scenario-header">
-                        <span class="scenario-title" style="color: var(--warning);">Cenário Neutro</span>
-                        <span class="scenario-condition">Ativo fica no 0 a 0</span>
-                    </div>
-                    <div class="scenario-value">R$ 100.000,00</div>
-                    <div class="scenario-metrics">
-                        <span>Retorno: <strong>0%</strong></span>
-                        <span>Rentab. Anual: <strong>0,00% a.a.</strong></span>
-                    </div>
-                </div>
-
-                <!-- Card Otimista -->
-                <div class="scenario-card scenario-otimista">
-                    <div class="scenario-header">
-                        <span class="scenario-title" style="color: var(--success);">Cenário Alta</span>
-                        <span class="scenario-condition">Ativo sobe 30% (x1.5)</span>
-                    </div>
-                    <div class="scenario-value">R$ 145.000,00</div>
-                    <div class="scenario-metrics">
-                        <span>Retorno Bruto: <strong>+45,00%</strong></span>
-                        <span>Rentab. Anual: <strong>+7,71% a.a.</strong></span>
-                    </div>
-                </div>
-
-                <div class="disclaimer">
-                    <strong>Importante:</strong> COEs possuem liquidez no vencimento. O resgate antecipado está sujeito à marcação a mercado (M2M), podendo resultar em perda de parte do capital investido, independentemente do percentual de proteção acordado para o vencimento.
+                <div class="disclaimer" style="margin-top: auto;">
+                    <strong>Compliance:</strong> COEs são tributados pela Tabela Regressiva de Renda Fixa (sobre o lucro). Valores projetados com base nos indexadores oficiais. Resgate antecipado gera marcação a mercado.
                 </div>
             </div>
         </main>
     </div>
 
     <script>
-        // Máscaras preservadas
+        // ==========================================
+        // MÁSCARAS E VALIDAÇÕES (PT-BR)
+        // ==========================================
         function mascaraMoeda(e) {
             let valor = e.target.value.replace(/\D/g, "");
             if (valor === "") { e.target.value = ""; return; }
@@ -422,15 +424,221 @@
             e.target.value = e.target.value.replace(/\D/g, ""); 
         }
 
-        // Função vazia apenas para interagir visualmente com o botão no protótipo
-        function simularLayoutVisuais() {
-            const aporte = document.getElementById('aporte').value;
-            if(!aporte) {
-                alert("Este é o layout preliminar. Digite um valor de aporte e imagine o motor matemático atualizando os 3 cards ao lado.");
-            } else {
-                alert("O layout suportará perfeitamente a renderização simultânea dos três cenários de payoff.");
+        function desformatar(valorString) {
+            if (!valorString) return 0;
+            return parseFloat(valorString.replace(/\./g, "").replace(",", "."));
+        }
+
+        const formatarBRL = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const formatarPerc = (valor) => (valor * 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+
+        // ==========================================
+        // MOTOR DE LAYOUT MUTANTE
+        // ==========================================
+        function alternarCamposCoe() {
+            const tipo = document.getElementById('tipoCoe').value;
+            const bPart = document.getElementById('bloco_participacao');
+            const bGanhoMin = document.getElementById('bloco_ganho_minimo');
+            const bDual = document.getElementById('bloco_dual_index');
+            const bCenarios = document.getElementById('bloco_cenarios_ativo');
+
+            // Reset inicial (tudo oculto, exceto cenarios)
+            bPart.classList.add('hidden');
+            bGanhoMin.classList.add('hidden');
+            bDual.classList.add('hidden');
+            bCenarios.classList.remove('hidden');
+
+            if (tipo === 'classico' || tipo === 'faixa') {
+                bPart.classList.remove('hidden');
+            } else if (tipo === 'ganho_minimo') {
+                bPart.classList.remove('hidden');
+                bGanhoMin.classList.remove('hidden');
+            } else if (tipo === 'dual_index') {
+                bDual.classList.remove('hidden');
+                bCenarios.classList.add('hidden'); // Renda fixa não tem cenário de bolsa
             }
         }
+
+        // ==========================================
+        // API BCB (Background Fetch para Projetar)
+        // ==========================================
+        async function carregarTaxasBcb() {
+            try {
+                const urlSgs = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.432/dados/ultimos/1?formato=json';
+                const resp = await fetch(urlSgs);
+                const dados = await resp.json();
+                document.getElementById('cdiProjetado').value = (parseFloat(dados[0].valor) - 0.10) / 100;
+            } catch (e) { document.getElementById('cdiProjetado').value = 0.104; }
+
+            try {
+                const anoAtual = new Date().getFullYear();
+                const urlFocus = `https://olinda.bcb.gov.br/olinda/servico/Expectativas/versao/v1/odata/ExpectativaMercadoAnuais?$filter=Indicador eq 'IPCA' and DataReferencia eq '${anoAtual}'&$orderby=Data desc&$top=1&$format=json`;
+                const resp = await fetch(urlFocus);
+                const dados = await resp.json();
+                if (dados.value && dados.value.length > 0) {
+                    document.getElementById('ipcaProjetado').value = parseFloat(dados.value[0].Mediana) / 100;
+                } else { document.getElementById('ipcaProjetado').value = 0.045; }
+            } catch (e) { document.getElementById('ipcaProjetado').value = 0.045; }
+        }
+
+        function obterAliquotaIR(meses) {
+            if (meses <= 6) return 0.225;
+            if (meses <= 12) return 0.20;
+            if (meses <= 24) return 0.175;
+            return 0.15;
+        }
+
+        function aplicarIR(aporte, valorBruto, meses) {
+            const lucro = Math.max(0, valorBruto - aporte);
+            const ir = lucro * obterAliquotaIR(meses);
+            return valorBruto - ir;
+        }
+
+        function calcularTaxa(indexador, taxaVal, cdi, ipca) {
+            if (indexador === 'pre') return taxaVal;
+            if (indexador === 'perc_cdi') return cdi * taxaVal;
+            if (indexador === 'ipca_mais') return ((1 + ipca) * (1 + taxaVal)) - 1;
+            if (indexador === 'cdi') return cdi;
+            if (indexador === 'ipca') return ipca;
+            return 0;
+        }
+
+        // ==========================================
+        // MOTOR MATEMÁTICO PRINCIPAL
+        // ==========================================
+        function executarMotorCoe() {
+            const aporte = desformatar(document.getElementById('aporte').value);
+            const prazo = parseInt(document.getElementById('prazo').value);
+            const tipo = document.getElementById('tipoCoe').value;
+            
+            if (!aporte || !prazo) {
+                alert("Preencha o Aporte Inicial e o Prazo Total.");
+                return;
+            }
+
+            const cdiProj = parseFloat(document.getElementById('cdiProjetado').value);
+            const ipcaProj = parseFloat(document.getElementById('ipcaProjetado').value);
+            const painel = document.getElementById('painel-resultado');
+
+            let htmlCards = '';
+
+            // ==========================================
+            // LÓGICA 1: COE DUAL INDEX (RENDA FIXA)
+            // ==========================================
+            if (tipo === 'dual_index') {
+                const meses1 = parseInt(document.getElementById('mesesDual1').value);
+                const meses2 = prazo - meses1;
+
+                if (!meses1 || meses2 < 0) {
+                    alert("Verifique a duração do Período 1. Não pode ser maior que o Prazo Total."); return;
+                }
+
+                const ind1 = document.getElementById('indexadorDual1').value;
+                const tx1 = desformatar(document.getElementById('taxaDual1').value) / 100;
+                const ind2 = document.getElementById('indexadorDual2').value;
+                const tx2 = desformatar(document.getElementById('taxaDual2').value) / 100;
+
+                const taxaAno1 = calcularTaxa(ind1, tx1, cdiProj, ipcaProj);
+                const taxaAno2 = calcularTaxa(ind2, tx2, cdiProj, ipcaProj);
+
+                const brutoFase1 = aporte * Math.pow(1 + (Math.pow(1 + taxaAno1, 1/12) - 1), meses1);
+                const brutoFinal = brutoFase1 * Math.pow(1 + (Math.pow(1 + taxaAno2, 1/12) - 1), meses2);
+                const liqFinal = aplicarIR(aporte, brutoFinal, prazo);
+                const rentabAnual = Math.pow(liqFinal / aporte, 12 / prazo) - 1;
+
+                htmlCards = `
+                    <div class="scenario-card scenario-fase">
+                        <div class="scenario-header">
+                            <span class="scenario-title" style="color: var(--info);">Acumulado Período 1</span>
+                            <span class="scenario-condition">${meses1} meses</span>
+                        </div>
+                        <div class="scenario-value">${formatarBRL(brutoFase1)}</div>
+                        <div class="scenario-metrics"><span>Rendimento Bruto na Fase</span></div>
+                    </div>
+                    <div class="scenario-card scenario-otimista">
+                        <div class="scenario-header">
+                            <span class="scenario-title" style="color: var(--success);">Vencimento (Líquido)</span>
+                            <span class="scenario-condition">Prazo Total: ${prazo} meses</span>
+                        </div>
+                        <div class="scenario-value">${formatarBRL(liqFinal)}</div>
+                        <div class="scenario-metrics">
+                            <span>Retorno Total: <strong>${formatarPerc((liqFinal/aporte)-1)}</strong></span>
+                            <span>Rentab. Líq. Anual: <strong>${formatarPerc(rentabAnual)} a.a.</strong></span>
+                        </div>
+                    </div>
+                `;
+            } 
+            // ==========================================
+            // LÓGICA 2: COEs ATRELADOS A BOLSA/ATIVO
+            // ==========================================
+            else {
+                const quedaAtivo = desformatar(document.getElementById('cenarioQueda').value) / 100;
+                const altaAtivo = desformatar(document.getElementById('cenarioAlta').value) / 100;
+                const part = desformatar(document.getElementById('participacao').value) / 100 || 1;
+                const capInput = document.getElementById('cap').value;
+                const cap = capInput ? desformatar(capInput) / 100 : 9999; // Se ilimitado, joga limite pro infinito
+
+                let rendQueda, rendNeutro, rendAlta;
+
+                if (tipo === 'classico' || tipo === 'faixa') {
+                    rendQueda = 0; // Capital Protegido
+                    rendNeutro = 0;
+                    rendAlta = Math.min(altaAtivo * part, cap);
+                } 
+                else if (tipo === 'ganho_minimo') {
+                    const indMin = document.getElementById('indexadorMinimo').value;
+                    const txMin = desformatar(document.getElementById('taxaMinima').value) / 100;
+                    const taxaMinAno = calcularTaxa(indMin, txMin, cdiProj, ipcaProj);
+                    
+                    // Converte taxa anual pro período total do COE
+                    const rendMinimoPeriodo = Math.pow(1 + taxaMinAno, prazo / 12) - 1;
+
+                    rendQueda = rendMinimoPeriodo;
+                    rendNeutro = rendMinimoPeriodo;
+                    rendAlta = Math.max(rendMinimoPeriodo, altaAtivo * part);
+                }
+
+                // Cálculo Final Financeiro + IR
+                const calcScenario = (rendimento, colorClass, colorVar, title, condition) => {
+                    const bruto = aporte * (1 + rendimento);
+                    const liq = aplicarIR(aporte, bruto, prazo);
+                    const rentabLiqPeriodo = (liq / aporte) - 1;
+                    const rentabLiqAno = Math.pow(liq / aporte, 12 / prazo) - 1;
+                    
+                    return `
+                        <div class="scenario-card ${colorClass}">
+                            <div class="scenario-header">
+                                <span class="scenario-title" style="color: var(--${colorVar});">${title}</span>
+                                <span class="scenario-condition">${condition}</span>
+                            </div>
+                            <div class="scenario-value">${formatarBRL(liq)}</div>
+                            <div class="scenario-metrics">
+                                <span>Retorno Líquido: <strong>${formatarPerc(rentabLiqPeriodo)}</strong></span>
+                                <span>Equiv. Anual: <strong>${formatarPerc(rentabLiqAno)} a.a.</strong></span>
+                            </div>
+                        </div>
+                    `;
+                };
+
+                htmlCards = 
+                    calcScenario(rendQueda, 'scenario-pessimista', 'danger', 'Cenário Queda', 'Ativo cai ' + formatarPerc(quedaAtivo)) +
+                    calcScenario(rendNeutro, 'scenario-neutro', 'warning', 'Cenário Neutro', 'Ativo lateralizado (0%)') +
+                    calcScenario(rendAlta, 'scenario-otimista', 'success', 'Cenário Alta', 'Ativo sobe ' + formatarPerc(altaAtivo));
+            }
+
+            // Injeta o HTML e preserva o disclaimer
+            painel.innerHTML = htmlCards + `
+                <div class="disclaimer" style="margin-top: auto;">
+                    <strong>Compliance:</strong> COEs são tributados pela Tabela Regressiva (calculada sobre o lucro). A rentabilidade "Líquida Anual" representa a equivalência exata considerando os prazos. Resgates antecipados geram marcação a mercado.
+                </div>
+            `;
+        }
+
+        // Executa fetch silencioso no background
+        document.addEventListener('DOMContentLoaded', () => {
+            carregarTaxasBcb();
+            alternarCamposCoe(); // Configura o DOM inicial
+        });
     </script>
 </body>
 </html>
