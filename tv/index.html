@@ -58,7 +58,6 @@
         .macro-grid, .coins-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
         .card-column { display: flex; flex-direction: column; gap: 20px; }
         
-        /* LAYOUT FLEXÍVEL DOS CARTÕES COM BORDAS DINÂMICAS */
         .info-card { 
             background: var(--card-gradient); 
             padding: 0 20px; 
@@ -75,7 +74,6 @@
         }
         .info-card.falling { border-color: var(--glass-border-down); box-shadow: var(--glow-down); }
 
-        /* RECIPIENTE DO ÍCONE LIMPO (SEM BORDAS EXTRAS) */
         .card-icon {
             width: 85px; 
             height: 85px; 
@@ -87,10 +85,8 @@
             border: none;
             box-shadow: none;
         }
-        /* Configuração exata para as imagens de ouro/vidro */
         .card-icon img { width: 100%; height: 100%; object-fit: contain; drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
         
-        /* Estilos genéricos para caso falhe a imagem e mostre o icone do Google */
         .material-symbols-outlined { font-size: 40px; font-weight: 300; color: #888; }
         .currency-icon { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
 
@@ -286,7 +282,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.1 (Premium Gold Icons)</div>
+            <div class="version-tag">v: 2.2 (Smart Cycle & Auto-Refresh)</div>
         </div>
     </div>
 
@@ -300,6 +296,9 @@
         let newsList = [];
         let newsIdx = 0;
         let wakeLock = null;
+        
+        // FLAG PARA O AUTO-REFRESH ESTRATÉGICO
+        let shouldRefresh = false;
 
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
@@ -678,6 +677,21 @@
                 }
             }
         }
+        
+        // FUNÇÃO DE VERIFICAÇÃO DE BLOCOS VAZIOS (SMART SKIP)
+        function hasContent(blockId) {
+            if (blockId === 'block-news') return newsList.length > 0;
+            if (blockId === 'block-opps') {
+                const opps = document.getElementById('opps-container');
+                return opps && opps.innerHTML.trim().length > 0;
+            }
+            if (blockId === 'block-publi') return TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0;
+            if (blockId === 'block-agenda') {
+                const agenda = document.getElementById('agenda-container');
+                return agenda && agenda.innerHTML.trim().length > 0;
+            }
+            return true; // Macro e Coins sempre são exibidos
+        }
 
         function cycle() {
             try {
@@ -691,7 +705,20 @@
                         vid.pause(); vid.removeAttribute('src'); vid.load();
                     }
                     
-                    bIdx = (bIdx + 1) % blocks.length;
+                    // LÓGICA DO AUTO-REFRESH SILENCIOSO
+                    // Se foi dada a ordem de refresh e estamos voltando para o início (bloco zero)
+                    if (bIdx === blocks.length - 1 && shouldRefresh) {
+                        window.location.reload();
+                        return; // Interrompe o ciclo para recarregar
+                    }
+
+                    // PULA BLOCOS VAZIOS
+                    let attempts = 0;
+                    do {
+                        bIdx = (bIdx + 1) % blocks.length;
+                        attempts++;
+                    } while (!hasContent(blocks[bIdx]) && attempts < blocks.length);
+                    
                     const nxt = document.getElementById(blocks[bIdx]);
                     
                     if(blocks[bIdx] === 'block-publi') {
@@ -721,7 +748,8 @@
                     nxt.style.display = 'flex';
                     setTimeout(() => nxt.style.opacity = 1, 50);
                     
-                    const nextTime = blocks[bIdx] === 'block-news' ? 15000 : 25000;
+                    // TEMPO DO RADAR DE NOTÍCIAS ALTERADO PARA 30 SEGUNDOS
+                    const nextTime = blocks[bIdx] === 'block-news' ? 30000 : 25000;
                     cycleTimeout = setTimeout(cycle, nextTime);
                 }, 800);
             } catch(e) { 
@@ -755,6 +783,11 @@
                 document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
                 document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
 
+                // INICIA O CRONÓMETRO PARA O AUTO-REFRESH DEPOIS DE 3 HORAS DE FUNCIONAMENTO
+                setTimeout(() => {
+                    shouldRefresh = true;
+                }, 3 * 60 * 60 * 1000);
+
                 loadTenantConfig();
                 
                 fetchOpportunities(); 
@@ -778,6 +811,7 @@
                 setInterval(fetchAgenda, 300000);         
                 setInterval(fetchNews, 1800000);          
 
+                // ROTAÇÃO INTERNA DAS NOTÍCIAS CONTINUA A CADA 10 SEGUNDOS
                 setInterval(() => {
                     if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
                         const item = newsList[newsIdx];
