@@ -54,7 +54,9 @@
 
         #pause-indicator { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: var(--neon-color); padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; z-index: 100; border: 1px solid var(--neon-color); display: none; }
 
-        .macro-grid, .coins-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
+        /* GRID GERAL E NOVA GRID DE CÂMBIO (3 COLUNAS) */
+        .macro-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
+        .coins-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 95%; max-width: 1500px; align-items: start; }
         .card-column { display: flex; flex-direction: column; gap: 20px; }
         
         .info-card { 
@@ -73,43 +75,31 @@
         }
         .info-card.falling { border-color: var(--glass-border-down); box-shadow: var(--glow-down); }
 
-        .card-icon {
-            width: 85px; 
-            height: 85px; 
-            flex-shrink: 0;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-        }
+        .card-icon { width: 85px; height: 85px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; box-shadow: none; }
         .card-icon img { width: 100%; height: 100%; object-fit: contain; drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
         
         .material-symbols-outlined { font-size: 40px; font-weight: 300; color: #888; }
-        .currency-icon { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
+        .currency-icon { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
 
         .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
         .card-data h3 { color: #fff; margin: 0 0 2px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        
+        /* Ajuste do tamanho da fonte dos valores para a grid de 3 colunas (Câmbio) */
+        .coins-grid .info-val { font-size: 1.8rem; }
         .info-val { font-size: 2.2rem; font-weight: 900; display: block; color: #fff; line-height: 1; }
         
         .info-sub { font-size: 0.95rem; font-weight: 600; margin-top: 8px; color: #aaa; display: inline-flex; align-items: center; }
         
-        .badge-pill {
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
+        .badge-pill { padding: 3px 8px; border-radius: 6px; font-size: 0.9rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
         .badge-up { background-color: rgba(0, 255, 136, 0.15); color: var(--positive-color); }
         .info-card.falling .badge-pill { background-color: var(--negative-color); color: #fff; }
         
         .sparkline-box { width: 100px; height: 50px; flex-shrink: 0; margin-left: auto; display: flex; align-items: center; }
+        /* Ajuste do sparkline para cartões menores */
+        .coins-grid .sparkline-box { width: 70px; height: 40px; margin-left: 0; }
         
-        .country-flag { position: absolute; top: 15px; right: 15px; width: 24px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        /* BANDEIRAS MAIORES: width de 24px para 30px */
+        .country-flag { position: absolute; top: 15px; right: 15px; width: 30px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
         .card-with-logo { display: flex; align-items: center; gap: 15px; width: 100%; }
         .asset-logo { width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0; }
@@ -128,16 +118,6 @@
     </style>
 </head>
 <body>
-
-    <script>
-        window.onerror = function(msg, src, line) {
-            const errBox = document.createElement('div');
-            errBox.style.cssText = 'position:absolute; top:20px; left:20px; background:rgba(220,0,0,0.9); color:#fff; padding:15px; z-index:9999; border-radius:8px; font-weight:bold;';
-            errBox.innerHTML = `ERRO DETETADO <br>Linha: ${line} <br>Mensagem: ${msg}`;
-            document.body.appendChild(errBox);
-            return false;
-        };
-    </script>
 
     <div class="header">
         <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;" onerror="this.style.display='none'"></div>
@@ -245,30 +225,45 @@
                 <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
                     <span class="material-symbols-outlined" style="color:var(--neon-color);">public</span> CÂMBIO GLOBAL (LIVE)
                 </h2>
+                <!-- GRID DE 6 CÂMBIOS -->
                 <div class="coins-grid">
                     <div class="info-card" id="card-usd">
                         <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">attach_money</span></div>
-                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.85rem; color: #888; font-weight:600;">(USD/BRL)</span></h3><div id="usd-val" class="info-val">R$ ---</div><div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.75rem; color: #888;">(USD)</span></h3><div id="usd-val" class="info-val">---</div><div class="info-sub"><span id="usd-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="usd-spark"></div>
                     </div>
                     <div class="info-card" id="card-eur">
                         <img src="https://flagcdn.com/w40/eu.png" class="country-flag" alt="EU">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">euro</span></div>
-                        <div class="card-data"><h3>EURO <span style="font-size: 0.85rem; color: #888; font-weight:600;">(EUR/BRL)</span></h3><div id="eur-val" class="info-val">R$ ---</div><div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>EURO <span style="font-size: 0.75rem; color: #888;">(EUR)</span></h3><div id="eur-val" class="info-val">---</div><div class="info-sub"><span id="eur-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="eur-spark"></div>
-                    </div>
-                    <div class="info-card" id="card-jpy">
-                        <img src="https://flagcdn.com/w40/jp.png" class="country-flag" alt="JP">
-                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yen</span></div>
-                        <div class="card-data"><h3>IENE <span style="font-size: 0.85rem; color: #888; font-weight:600;">(JPY/BRL)</span></h3><div id="jpy-val" class="info-val">R$ ---</div><div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div></div>
-                        <div class="sparkline-box" id="jpy-spark"></div>
                     </div>
                     <div class="info-card" id="card-gbp">
                         <img src="https://flagcdn.com/w40/gb.png" class="country-flag" alt="GB">
                         <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_pound</span></div>
-                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.85rem; color: #888; font-weight:600;">(GBP/BRL)</span></h3><div id="gbp-val" class="info-val">R$ ---</div><div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.75rem; color: #888;">(GBP)</span></h3><div id="gbp-val" class="info-val">---</div><div class="info-sub"><span id="gbp-var" class="badge-pill badge-up">---</span></div></div>
                         <div class="sparkline-box" id="gbp-spark"></div>
+                    </div>
+                    
+                    <div class="info-card" id="card-jpy">
+                        <img src="https://flagcdn.com/w40/jp.png" class="country-flag" alt="JP">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yen</span></div>
+                        <div class="card-data"><h3>IENE <span style="font-size: 0.75rem; color: #888;">(JPY)</span></h3><div id="jpy-val" class="info-val">---</div><div class="info-sub"><span id="jpy-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="jpy-spark"></div>
+                    </div>
+                    <!-- NOVOS CÂMBIOS: CNY E CHF -->
+                    <div class="info-card" id="card-cny">
+                        <img src="https://flagcdn.com/w40/cn.png" class="country-flag" alt="CN">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">currency_yuan</span></div>
+                        <div class="card-data"><h3>YUAN <span style="font-size: 0.75rem; color: #888;">(CNY)</span></h3><div id="cny-val" class="info-val">---</div><div class="info-sub"><span id="cny-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="cny-spark"></div>
+                    </div>
+                    <div class="info-card" id="card-chf">
+                        <img src="https://flagcdn.com/w40/ch.png" class="country-flag" alt="CH">
+                        <div class="card-icon currency-icon"><span class="material-symbols-outlined">account_balance</span></div>
+                        <div class="card-data"><h3>FRANCO <span style="font-size: 0.75rem; color: #888;">(CHF)</span></h3><div id="chf-val" class="info-val">---</div><div class="info-sub"><span id="chf-var" class="badge-pill badge-up">---</span></div></div>
+                        <div class="sparkline-box" id="chf-spark"></div>
                     </div>
                 </div>
             </div>
@@ -281,7 +276,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.3 (Smart Skip Refined)</div>
+            <div class="version-tag">v: 2.4 (6 Moedas e Bandeiras Ajustadas)</div>
         </div>
     </div>
 
@@ -489,7 +484,6 @@
                     }
                 });
                 
-                // NOVIDADE: Só injeta HTML se realmente existirem cartões
                 if (cardCount > 0) {
                     container.innerHTML = html + '</div>';
                 } else {
@@ -531,7 +525,6 @@
                     }
                 });
                 
-                // NOVIDADE: Só injeta HTML se realmente existirem cartões
                 if (cardCount > 0) {
                     container.innerHTML = html + '</div>';
                 } else {
@@ -605,10 +598,12 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 4000);
-                const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL', { signal: controller.signal });
+                // ADICIONADOS CNY E CHF AO FETCH DO AWESOMEAPI
+                const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL,CNY-BRL,CHF-BRL', { signal: controller.signal });
                 clearTimeout(timeoutId);
                 if (!r.ok) return;
                 const dB = await r.json();
+                
                 const updateC = (id, cur) => {
                     document.getElementById(`${id}-val`).innerText = 'R$ ' + parseFloat(cur.bid).toFixed(2);
                     const pct = parseFloat(cur.pctChange);
@@ -617,7 +612,7 @@
                     const sparkEl = document.getElementById(`${id}-spark`);
 
                     const isUp = pct >= 0;
-                    varEl.innerText = (isUp ? '▲ ' : '▼ ') + pct.toFixed(2) + '%';
+                    varEl.innerText = (isUp ? '▲ ' : '▼ ') + Math.abs(pct).toFixed(2) + '%';
                     
                     if(cardEl) {
                         if (isUp) {
@@ -634,6 +629,8 @@
                 if(dB.EURBRL) updateC('eur', dB.EURBRL); 
                 if(dB.JPYBRL) updateC('jpy', dB.JPYBRL); 
                 if(dB.GBPBRL) updateC('gbp', dB.GBPBRL);
+                if(dB.CNYBRL) updateC('cny', dB.CNYBRL); 
+                if(dB.CHFBRL) updateC('chf', dB.CHFBRL);
             } catch(e) {}
         }
 
@@ -694,7 +691,6 @@
             }
         }
         
-        // NOVIDADE: VERIFICAÇÃO REFORÇADA PARA LER O TEXTO REAL DAS DIVS
         function hasContent(blockId) {
             if (blockId === 'block-news') return newsList.length > 0;
             if (blockId === 'block-opps') {
