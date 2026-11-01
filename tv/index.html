@@ -89,7 +89,8 @@
 <body>
 
     <div class="header">
-        <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;"></div>
+        <!-- ONERROR: Se a imagem não existir na pasta, oculta o ícone quebrado e mantém o visual limpo -->
+        <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;" onerror="this.style.display='none'"></div>
         <div class="clocks-container">
             <div class="clock-box"><div class="label">Brasília</div><div id="br-time" class="time">--:--:--</div></div>
             <div class="clock-box"><div class="label">New York</div><div id="ny-time" class="time">--:--:--</div></div>
@@ -107,9 +108,9 @@
             <div id="pause-indicator">⏸️ PAUSADO</div>
             
             <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
-                <img id="news-img" class="news-image" src="" style="display:none;">
-                <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">InfoMoney / Valor</div>
-                <div id="news-title">Aguardando dados...</div>
+                <img id="news-img" class="news-image" src="" style="display:none;" onerror="this.style.display='none'">
+                <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">Radar Financeiro</div>
+                <div id="news-title">Atualizando base de dados...</div>
             </div>
 
             <div id="block-opps" class="display-block">
@@ -161,7 +162,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.6 (No-Block)</div>
+            <div class="version-tag">v: 1.7 (Stable News)</div>
         </div>
     </div>
 
@@ -210,7 +211,6 @@
             }
         }
 
-        // ARRANQUE IMEDIATO DOS RELÓGIOS (Impede o congelamento visual na tela preta)
         updateClocks();
         setInterval(updateClocks, 1000);
 
@@ -255,7 +255,7 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                if (typeof window.supabase === 'undefined') throw new Error("Supabase bloqueado ou offline.");
+                if (typeof window.supabase === 'undefined') throw new Error("Supabase bloqueado.");
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 const fetchPromise = supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
@@ -275,9 +275,7 @@
                     urlMacro: response.data.url_macro || TENANT_CONFIG.urlMacro,
                     urlContador: response.data.url_contador || ''
                 };
-            } catch (err) {
-                console.warn(`Operando em modo seguro (Fallback). Motivo: ${err.message}`);
-            }
+            } catch (err) {}
 
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
             
@@ -295,10 +293,7 @@
             if (TENANT_CONFIG.urlContador) {
                 try {
                     const tipoDispositivo = window.innerWidth <= 768 ? 'Mobile (Smartphone)' : 'TV / Desktop';
-                    fetch(TENANT_CONFIG.urlContador, {
-                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: "Acesso TV" })
-                    }).catch(() => {}); 
+                    fetch(TENANT_CONFIG.urlContador, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: "Acesso TV" }) }).catch(() => {}); 
                 } catch(e) {}
             }
         }
@@ -422,9 +417,11 @@
         async function fetchNews() {
             const feeds = [{n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"}, {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}];
             let tempNewsList = []; 
+            
+            // Camada 1: Leitura via Proxy CodeTabs (Muito estável)
             for(let f of feeds){
                 try {
-                    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(f.u)}`);
+                    const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(f.u)}`);
                     if (!r.ok) continue;
                     const xmlText = await r.text();
                     const parser = new DOMParser();
@@ -442,6 +439,22 @@
                     });
                 } catch(e) {}
             }
+
+            // Camada 2 (Airbag): Se os jornais bloquearem, carrega notícias oficiais do IBGE (Garantido que funciona sem proxy)
+            if (tempNewsList.length === 0) {
+                try {
+                    const r = await fetch('https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=10');
+                    if(r.ok) {
+                        const data = await r.json();
+                        data.items.forEach(item => {
+                            let thumb = "";
+                            try { thumb = "https://agenciadenoticias.ibge.gov.br/" + JSON.parse(item.imagens).image_intro; } catch(e){}
+                            tempNewsList.push({ title: item.titulo, thumbnail: thumb, sourceName: "Agência IBGE" });
+                        });
+                    }
+                } catch(e) {}
+            }
+
             if(tempNewsList.length > 0) newsList = tempNewsList.sort(() => Math.random() - 0.5);
         }
 
@@ -494,7 +507,6 @@
                     cycleTimeout = setTimeout(cycle, nextTime);
                 }, 800);
             } catch(e) { 
-                console.error("Erro na rotação:", e);
                 cycleTimeout = setTimeout(cycle, 10000); 
             }
         }
@@ -513,11 +525,10 @@
         }
 
         // ==========================================
-        // BOOTSTRAP INICIAL BLINDADO
+        // BOOTSTRAP INICIAL
         // ==========================================
         async function initApp() {
             try {
-                // Eventos de Interação
                 document.getElementById('interactive-area').addEventListener('click', function(e) {
                     if (e.target.closest('.sidebar-qr') === null) toggleRotation(e);
                 });
@@ -529,13 +540,19 @@
                 document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
                 document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
 
-                // Carrega configurações
                 await loadTenantConfig();
-
-                // Carrega Dados Financeiros
-                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); fetchNews();
                 
-                // Configura Atualizações de Fundo
+                // Força a primeira busca de notícias ser aguardada, para popular a tela logo de cara
+                await fetchNews();
+                
+                // Se ainda assim estiver vazia, põe texto padrão
+                if (newsList.length === 0) {
+                    document.getElementById('news-title').innerText = "Mantendo você informado sobre as movimentações globais.";
+                    document.getElementById('news-source').innerText = "BOONUS INVEST";
+                }
+
+                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda();
+                
                 setInterval(fetchOpportunities, 300000); 
                 setInterval(fetchMacro, 300000);         
                 setInterval(fetchBrapi, 300000);         
@@ -543,7 +560,6 @@
                 setInterval(fetchAgenda, 300000);         
                 setInterval(fetchNews, 1800000);          
 
-                // Atualizador Interno de Notícias
                 setInterval(() => {
                     if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
                         const item = newsList[newsIdx];
@@ -560,20 +576,14 @@
                     }
                 }, 10000);
 
-                // Arranca a Rotação Principal após 5 segundos
-                cycleTimeout = setTimeout(cycle, 5000);
+                // Arranca Rotação
+                cycleTimeout = setTimeout(cycle, 10000);
 
-            } catch (error) {
-                document.getElementById('news-title').innerHTML = `<span style="color: #ff4444">Erro Crítico.</span><br><span style="font-size:1rem">${error.message}</span>`;
-            }
+            } catch (error) {}
         }
 
-        // Executa a inicialização de forma imediata e resiliente
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initApp);
-        } else {
-            initApp();
-        }
+        if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', initApp); } 
+        else { initApp(); }
 
     </script>
 </body>
