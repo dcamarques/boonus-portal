@@ -12,7 +12,6 @@
     <meta property="og:url" content="https://tv.boonus.app.br/">
     <meta property="og:type" content="website">
 
-    <!-- Ícones do Google para as Moedas e caso a imagem do GitHub atrase -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
 
@@ -282,7 +281,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.2 (Smart Cycle & Auto-Refresh)</div>
+            <div class="version-tag">v: 2.3 (Smart Skip Refined)</div>
         </div>
     </div>
 
@@ -297,7 +296,6 @@
         let newsIdx = 0;
         let wakeLock = null;
         
-        // FLAG PARA O AUTO-REFRESH ESTRATÉGICO
         let shouldRefresh = false;
 
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
@@ -470,13 +468,15 @@
                 if (!response.ok) return;
                 const data = parseCSV(await response.text()).slice(1);
                 const container = document.getElementById('opps-container');
+                
+                let cardCount = 0;
                 let html = '<div class="card-column">';
+                
                 data.forEach((cols, idx) => {
                     if (idx >= 6) return;
-                    if (idx === 3) html += '</div><div class="card-column">';
                     if (cols.length >= 3) {
+                        if (cardCount === 3) html += '</div><div class="card-column">';
                         const [classe, ativo, taxa, destaque, logoUrl] = cols;
-                        
                         html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid var(--glass-border-up); box-shadow: var(--glow-up); display: flex; align-items: center; gap: 15px;">
                             ${logoUrl ? `<img src="${logoUrl}" style="width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
                             <div style="flex:1; text-align:left;">
@@ -485,9 +485,16 @@
                                 <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:var(--neon-color);">${taxa} <span style="color:#aaa; margin-left:10px;">${destaque || ''}</span></div>
                             </div>
                         </div>`;
+                        cardCount++;
                     }
                 });
-                container.innerHTML = html + '</div>';
+                
+                // NOVIDADE: Só injeta HTML se realmente existirem cartões
+                if (cardCount > 0) {
+                    container.innerHTML = html + '</div>';
+                } else {
+                    container.innerHTML = '';
+                }
             } catch (e) { }
         }
 
@@ -501,12 +508,14 @@
                 if (!response.ok) return;
                 const data = parseCSV(await response.text()).slice(1);
                 const container = document.getElementById('agenda-container');
-                if (data.length === 0) return;
+                
+                let cardCount = 0;
                 let html = '<div class="card-column">';
+                
                 data.forEach((cols, idx) => {
                     if (idx >= 6) return;
-                    if (idx === 3) html += '</div><div class="card-column">';
                     if (cols.length >= 2) {
+                        if (cardCount === 3) html += '</div><div class="card-column">';
                         const [dataHora, indicador, impacto, projecao] = cols;
                         const isAlto = impacto && impacto.toUpperCase().includes('ALTO');
                         const impColor = isAlto ? 'var(--neon-color)' : '#888';
@@ -518,9 +527,16 @@
                                 <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:${impColor};">${impStars} <span style="color:#aaa; margin-left:10px;">${projecao ? projecao : ''}</span></div>
                             </div>
                         </div>`;
+                        cardCount++;
                     }
                 });
-                container.innerHTML = html + '</div>';
+                
+                // NOVIDADE: Só injeta HTML se realmente existirem cartões
+                if (cardCount > 0) {
+                    container.innerHTML = html + '</div>';
+                } else {
+                    container.innerHTML = '';
+                }
             } catch (e) { }
         }
 
@@ -678,19 +694,19 @@
             }
         }
         
-        // FUNÇÃO DE VERIFICAÇÃO DE BLOCOS VAZIOS (SMART SKIP)
+        // NOVIDADE: VERIFICAÇÃO REFORÇADA PARA LER O TEXTO REAL DAS DIVS
         function hasContent(blockId) {
             if (blockId === 'block-news') return newsList.length > 0;
             if (blockId === 'block-opps') {
                 const opps = document.getElementById('opps-container');
-                return opps && opps.innerHTML.trim().length > 0;
+                return opps && opps.textContent.trim().length > 0;
             }
             if (blockId === 'block-publi') return TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0;
             if (blockId === 'block-agenda') {
                 const agenda = document.getElementById('agenda-container');
-                return agenda && agenda.innerHTML.trim().length > 0;
+                return agenda && agenda.textContent.trim().length > 0;
             }
-            return true; // Macro e Coins sempre são exibidos
+            return true; // Macro e Coins sempre exibidos
         }
 
         function cycle() {
@@ -705,14 +721,11 @@
                         vid.pause(); vid.removeAttribute('src'); vid.load();
                     }
                     
-                    // LÓGICA DO AUTO-REFRESH SILENCIOSO
-                    // Se foi dada a ordem de refresh e estamos voltando para o início (bloco zero)
                     if (bIdx === blocks.length - 1 && shouldRefresh) {
                         window.location.reload();
-                        return; // Interrompe o ciclo para recarregar
+                        return;
                     }
 
-                    // PULA BLOCOS VAZIOS
                     let attempts = 0;
                     do {
                         bIdx = (bIdx + 1) % blocks.length;
@@ -748,7 +761,6 @@
                     nxt.style.display = 'flex';
                     setTimeout(() => nxt.style.opacity = 1, 50);
                     
-                    // TEMPO DO RADAR DE NOTÍCIAS ALTERADO PARA 30 SEGUNDOS
                     const nextTime = blocks[bIdx] === 'block-news' ? 30000 : 25000;
                     cycleTimeout = setTimeout(cycle, nextTime);
                 }, 800);
@@ -783,7 +795,6 @@
                 document.addEventListener('click', function() { if (!wakeLock) requestWakeLock(); }, { once: true });
                 document.addEventListener('visibilitychange', function() { if (wakeLock !== null && document.visibilityState === 'visible') requestWakeLock(); });
 
-                // INICIA O CRONÓMETRO PARA O AUTO-REFRESH DEPOIS DE 3 HORAS DE FUNCIONAMENTO
                 setTimeout(() => {
                     shouldRefresh = true;
                 }, 3 * 60 * 60 * 1000);
@@ -811,7 +822,6 @@
                 setInterval(fetchAgenda, 300000);         
                 setInterval(fetchNews, 1800000);          
 
-                // ROTAÇÃO INTERNA DAS NOTÍCIAS CONTINUA A CADA 10 SEGUNDOS
                 setInterval(() => {
                     if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
                         const item = newsList[newsIdx];
