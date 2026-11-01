@@ -54,12 +54,10 @@
 
         #pause-indicator { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: var(--neon-color); padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; z-index: 100; border: 1px solid var(--neon-color); display: none; }
 
-        /* GRID GERAL E NOVA GRID DE CÂMBIO (3 COLUNAS) */
         .macro-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
         .coins-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 95%; max-width: 1500px; align-items: start; }
         .card-column { display: flex; flex-direction: column; gap: 20px; }
         
-        /* ALTURA AUMENTADA PARA 145PX PARA EVITAR VAZAMENTO DOS TEXTOS */
         .info-card { 
             background: var(--card-gradient); 
             padding: 0 20px; 
@@ -83,8 +81,6 @@
         .currency-icon { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
 
         .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
-        
-        /* AJUSTE NO TÍTULO (h3) PARA AGRUPAR MELHOR A QUEBRA DE LINHA */
         .card-data h3 { color: #fff; margin: 0 0 4px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
         
         .coins-grid .info-val { font-size: 1.8rem; }
@@ -274,7 +270,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.5 (Fixed Card Heights)</div>
+            <div class="version-tag">v: 2.6 (News API + No Repetition)</div>
         </div>
     </div>
 
@@ -631,35 +627,60 @@
             } catch(e) {}
         }
 
+        // NOVO MOTOR DE BUSCA DE NOTÍCIAS (RSS2JSON + FONTES EXTRAS + FILTRO ANTI-REPETIÇÃO)
         async function fetchNews() {
-            const feeds = [{n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"}, {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}];
+            const feeds = [
+                {n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"},
+                {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"},
+                {n: "InvestNews", u: "https://investnews.com.br/feed/"},
+                {n: "Investing.com", u: "https://br.investing.com/rss/news_25.rss"}
+            ];
+            
             let tempNewsList = []; 
             
             for(let f of feeds){
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 4000);
-                    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(f.u)}`, { signal: controller.signal });
+                    // AUMENTADO O TEMPO DE RESPOSTA PARA 8 SEGUNDOS
+                    const timeoutId = setTimeout(() => controller.abort(), 8000); 
+                    
+                    // USO DO RSS2JSON PARA EVITAR BLOQUEIOS DE CORS DOS PORTAIS
+                    const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`, { signal: controller.signal });
                     clearTimeout(timeoutId);
                     
                     if (!r.ok) continue;
-                    const xmlText = await r.text();
-                    const parser = new DOMParser();
-                    const xml = parser.parseFromString(xmlText, "text/xml");
-                    const items = xml.querySelectorAll("item");
+                    const data = await r.json();
                     
-                    items.forEach(item => {
-                        const title = item.querySelector("title")?.textContent || "";
-                        let thumb = "";
-                        const enclosure = item.querySelector("enclosure");
-                        if (enclosure) thumb = enclosure.getAttribute("url");
-                        if (!thumb) { const media = item.getElementsByTagNameNS("*", "content")[0]; if (media) thumb = media.getAttribute("url"); }
-                        if (!thumb) { const desc = item.querySelector("description")?.textContent || ""; const imgMatch = desc.match(/src="([^"]+)"/); if (imgMatch) thumb = imgMatch[1]; }
-                        if (title) tempNewsList.push({ title, thumbnail: thumb, sourceName: f.n });
-                    });
-                } catch(e) {}
+                    if(data && data.items) {
+                        data.items.forEach(item => {
+                            let thumb = item.thumbnail || "";
+                            if (!thumb && item.enclosure && item.enclosure.link) thumb = item.enclosure.link;
+                            if (!thumb && item.content) {
+                                const imgMatch = item.content.match(/src="([^"]+)"/);
+                                if (imgMatch) thumb = imgMatch[1];
+                            }
+                            if (!thumb && item.description) {
+                                const imgMatch = item.description.match(/src="([^"]+)"/);
+                                if (imgMatch) thumb = imgMatch[1];
+                            }
+                            
+                            // LIMPEZA DO TÍTULO CONTRA CÓDIGOS HTML
+                            let cleanTitle = item.title.replace(/<[^>]*>?/gm, '').trim();
+                            
+                            if (cleanTitle) {
+                                tempNewsList.push({ 
+                                    title: cleanTitle, 
+                                    thumbnail: thumb, 
+                                    sourceName: f.n,
+                                    pubDate: new Date(item.pubDate).getTime() 
+                                });
+                            }
+                        });
+                    }
+                } catch(e) { console.warn("Erro ao carregar " + f.n); }
             }
 
+            // PLANO B: IBGE APENAS SE TUDO FALHAR
             if (tempNewsList.length === 0) {
                 try {
                     const r = await fetch('https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=10');
@@ -668,14 +689,24 @@
                         data.items.forEach(item => {
                             let thumb = "";
                             try { thumb = "https://agenciadenoticias.ibge.gov.br/" + JSON.parse(item.imagens).image_intro; } catch(e){}
-                            tempNewsList.push({ title: item.titulo, thumbnail: thumb, sourceName: "Agência IBGE" });
+                            tempNewsList.push({ title: item.titulo, thumbnail: thumb, sourceName: "Agência IBGE", pubDate: Date.now() });
                         });
                     }
                 } catch(e) {}
             }
 
             if(tempNewsList.length > 0) {
-                newsList = tempNewsList.sort(() => Math.random() - 0.5);
+                // FILTRO 1: REMOVER NOTÍCIAS COM O MESMO TÍTULO
+                const uniqueNews = Array.from(new Map(tempNewsList.map(item => [item.title, item])).values());
+                
+                // FILTRO 2: ORDENAR PELAS MAIS RECENTES (ÚLTIMAS HORAS) E PEGAR AS 40 MELHORES
+                uniqueNews.sort((a, b) => b.pubDate - a.pubDate);
+                const recentNews = uniqueNews.slice(0, 40);
+                
+                // FILTRO 3: EMBARALHAR PARA A TV
+                newsList = recentNews.sort(() => Math.random() - 0.5);
+                newsIdx = 0; // REINICIA A CONTAGEM
+                
                 const titleEl = document.getElementById('news-title');
                 if (titleEl.classList.contains("news-wait-text")) {
                     titleEl.classList.remove("news-wait-text");
@@ -813,7 +844,9 @@
                 setInterval(fetchBrapi, 300000);         
                 setInterval(fetchAwesome, 60000);        
                 setInterval(fetchAgenda, 300000);         
-                setInterval(fetchNews, 1800000);          
+                
+                // ATUALIZAÇÃO REVISADA: DE 30 MINUTOS (1800000) PARA 20 MINUTOS (1200000)
+                setInterval(fetchNews, 1200000);          
 
                 setInterval(() => {
                     if(newsList.length > 0 && document.getElementById('block-news').style.display !== 'none'){
