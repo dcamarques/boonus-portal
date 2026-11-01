@@ -1,254 +1,6 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <title>Boonus TV - Terminal Financeiro</title>
-    <meta property="og:title" content="Boonus TV - Terminal Financeiro">
-    <meta property="og:description" content="Acompanhe as oportunidades, índices e o radar econômico global em tempo real.">
-    <meta property="og:image" content="https://tv.boonus.app.br/logo_boonustv_midia.png">
-    <meta property="og:url" content="https://tv.boonus.app.br/">
-    <meta property="og:type" content="website">
-
-    <!-- Carregamento diferido para não bloquear a interface -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-
-    <style>
-        :root { 
-            --neon-color: #00ff88; 
-            --positive-color: #00ff88; 
-            --negative-color: #ff4444;
-            --dark-bg: #050505; 
-            --panel-bg: #111; 
-            --glass-bg: rgba(20, 20, 20, 0.7);
-            --glass-border-up: rgba(0, 255, 136, 0.3);
-            --glass-border-down: rgba(255, 68, 68, 0.3);
-            --glow-up: 0 0 15px rgba(0, 255, 136, 0.15);
-            --glow-down: 0 0 15px rgba(255, 68, 68, 0.15);
-        }
-        body { background: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 25px; background: var(--panel-bg); border-bottom: 4px solid var(--neon-color); z-index: 10; transition: border-color 0.5s; }
-        .logo img { height: 40px; width: auto; transition: opacity 0.5s; }
-        .clocks-container { display: flex; gap: 15px; }
-        .clock-box { text-align: center; min-width: 85px; }
-        .label { font-size: 0.8rem; color: #FFFFFF; text-transform: uppercase; font-weight: bold; opacity: 0.8; }
-        .time { font-size: 1.6rem; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
-        #br-time { color: var(--neon-color); transition: color 0.5s; }
-
-        .ticker-container { width: 100%; overflow: hidden; background: #1a1a1a; padding: 6px 0; border-bottom: 1px solid #333; min-height: 35px; }
-        .ticker-content { display: inline-flex; animation: marquee 60s linear infinite; white-space: nowrap; }
-        .stock-item { display: inline-flex; align-items: center; margin: 0 25px; font-size: 1.5rem; font-weight: 600; }
-        
-        .up { color: var(--positive-color); } 
-        .down { color: var(--negative-color); }
-
-        .main-container { flex: 1; display: flex; overflow: hidden; position: relative; }
-        .content-area { flex: 4; position: relative; display: flex; justify-content: center; align-items: center; background: var(--dark-bg); cursor: pointer; }
-        .display-block { position: absolute; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 0.8s; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
-
-        #pause-indicator { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: var(--neon-color); padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; z-index: 100; border: 1px solid var(--neon-color); display: none; transition: color 0.5s, border-color 0.5s; letter-spacing: 1px; }
-
-        .macro-grid, .coins-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 95%; text-align: left; }
-        .card-column { display: flex; flex-direction: column; gap: 15px; }
-        
-        .info-card { 
-            background: var(--glass-bg); 
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 15px 20px; 
-            border-radius: 16px; 
-            border: 1.5px solid var(--glass-border-up);
-            box-shadow: var(--glow-up);
-            position: relative; 
-            min-height: 100px; 
-            display: flex; 
-            align-items: center;
-            gap: 15px;
-            transition: border-color 0.5s, box-shadow 0.5s, transform 0.3s; 
-        }
-        .info-card:hover { transform: translateY(-2px); }
-        .info-card.falling { border: 1.5px solid var(--glass-border-down); box-shadow: var(--glow-down); }
-
-        .card-icon {
-            width: 54px; height: 54px; border-radius: 50%;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1.5px solid rgba(0, 255, 136, 0.4);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.6rem; color: var(--neon-color); flex-shrink: 0;
-            transition: border-color 0.5s, color 0.5s;
-        }
-        .info-card.falling .card-icon { border-color: rgba(255, 68, 68, 0.4); color: var(--negative-color); }
-        .card-icon svg, .card-icon img { width: 28px; height: 28px; object-fit: contain; }
-
-        .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .card-data h3 { color: #888; margin: 0 0 3px 0; font-size: 0.8rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-        .info-val { font-size: 1.8rem; font-weight: bold; display: block; white-space: normal; color: #fff; line-height: 1.1; }
-        .info-sub { font-size: 0.9rem; font-weight: 700; margin-top: 4px; color: #888; display: inline-flex; align-items: center; gap: 4px; }
-        
-        .sparkline-box { width: 65px; height: 35px; flex-shrink: 0; opacity: 0.85; }
-
-        .country-flag { position: absolute; top: 15px; right: 18px; width: 20px; height: auto; border-radius: 3px; opacity: 0.7; }
-
-        .card-with-logo { display: flex; align-items: center; gap: 15px; }
-        .asset-logo { width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0; }
-
-        #news-title { font-size: 2.1rem; font-weight: bold; line-height: 1.2; max-width: 90%; margin-top: 10px; }
-        .news-image { width: auto; max-width: 80%; max-height: 45vh; border-radius: 8px; object-fit: contain; margin-bottom: 10px; border: 2px solid #333; }
-        
-        .sidebar-qr { flex: 1.2; background: #0a0a0a; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-left: 2px solid #1a1a1a; padding: 25px 20px 10px 20px; box-sizing: border-box; cursor: pointer; }
-        .qr-section { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
-        .qr-box { background: white; padding: 10px; border-radius: 10px; width: 150px; height: 150px; margin-bottom: 15px; }
-        .qr-text { font-size: 1rem; font-weight: bold; color: var(--neon-color); text-align: center; line-height: 1.2; transition: color 0.5s; }
-        .version-tag { font-size: 0.65rem; color: #444; align-self: flex-end; }
-
-        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-    </style>
-</head>
-<body>
-
-    <!-- ESCUDO DE DIAGNÓSTICO VISUAL: DEVE FICAR AQUI NO TOPO -->
-    <script>
-        window.onerror = function(message, source, lineno, colno, error) {
-            const errorBox = document.createElement('div');
-            errorBox.style.cssText = 'position:absolute; top:20px; left:20px; right:20px; background:rgba(220,0,0,0.95); color:white; padding:25px; z-index:99999; border-radius:12px; font-weight:bold; font-size:1.2rem; border: 2px solid white; box-shadow: 0 10px 30px rgba(0,0,0,0.5);';
-            errorBox.innerHTML = `🚨 ERRO FATAL DE EXECUÇÃO DETETADO <br><br>📍 Linha do erro: ${lineno} <br>🛑 Mensagem: ${message} <br><br><span style="font-size:0.9rem; font-weight:normal;">Por favor, envie uma foto deste ecrã para corrigir o problema com precisão.</span>`;
-            document.body.appendChild(errorBox);
-            return false;
-        };
-    </script>
-
-    <div class="header">
-        <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;" onerror="this.style.display='none'"></div>
-        <div class="clocks-container">
-            <div class="clock-box"><div class="label">Brasília</div><div id="br-time" class="time">--:--:--</div></div>
-            <div class="clock-box"><div class="label">New York</div><div id="ny-time" class="time">--:--:--</div></div>
-            <div class="clock-box"><div class="label">London</div><div id="ld-time" class="time">--:--:--</div></div>
-            <div class="clock-box"><div class="label">Tokyo</div><div id="tk-time" class="time">--:--:--</div></div>
-        </div>
-    </div>
-
-    <div class="ticker-container">
-        <div id="stock-ticker" class="ticker-content">Sincronizando mercados globais...</div>
-    </div>
-
-    <div class="main-container">
-        <div class="content-area" id="interactive-area" title="Toque para pausar a rotação">
-            <div id="pause-indicator">⏸️ PAUSADO</div>
-            
-            <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
-                <img id="news-img" class="news-image" src="" style="display:none;" onerror="this.style.display='none'">
-                <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">Radar Financeiro</div>
-                <div id="news-title" class="news-wait-text">Atualizando base de dados...</div>
-            </div>
-
-            <div id="block-opps" class="display-block">
-                <h2 id="title-opps" style="color:var(--neon-color); margin-bottom:20px;">OPORTUNIDADES DO DIA</h2>
-                <div id="opps-container" class="opportunities-grid"></div>
-            </div>
-
-            <div id="block-publi" class="display-block">
-                <img id="publi-img" src="" style="width:100%; height:100%; object-fit: contain; display:none;" onerror="this.style.display='none'">
-                <video id="publi-vid" style="width:100%; height:100%; object-fit: contain; display:none;" autoplay loop muted playsinline></video>
-            </div>
-
-            <div id="block-macro" class="display-block">
-                <h2 id="title-macro" style="color:var(--neon-color); margin-bottom:20px; display: inline-flex; align-items: center; gap: 10px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg> INDICADORES MACRO &amp; ÍNDICES
-                </h2>
-                <div class="macro-grid">
-                    <div class="card-column">
-                        <div class="info-card">
-                            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-                            <div class="card-data"><h3>SELIC (META)</h3><div id="selic-val" class="info-val">---</div><div class="info-sub">Meta Anual</div></div>
-                            <div class="sparkline-box"><svg viewBox="0 0 100 40" width="100%" height="100%"><path d="M0 35 Q10 20 20 28 T40 18 T60 12 T80 8 T100 5" fill="none" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                        <div class="info-card">
-                            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
-                            <div class="card-data"><h3>IPCA</h3><div id="ipca-val" class="info-val">---</div><div class="info-sub">Inflação (12M)</div></div>
-                            <div class="sparkline-box"><svg viewBox="0 0 100 40" width="100%" height="100%"><path d="M0 38 Q15 30 30 32 T60 22 T90 12 T100 8" fill="none" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                        <div class="info-card">
-                            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                            <div class="card-data"><h3>CDI ACUM.</h3><div id="cdi-val" class="info-val">---</div><div class="info-sub">Acumulado</div></div>
-                            <div class="sparkline-box"><svg viewBox="0 0 100 40" width="100%" height="100%"><line x1="0" y1="35" x2="100" y2="5" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                    </div>
-                    <div class="card-column">
-                        <div class="info-card" id="card-ibov">
-                            <img src="https://flagcdn.com/w40/br.png" class="country-flag" alt="BR">
-                            <div class="card-icon"><img id="ibov-bull" src="https://img.icons8.com/color/48/bull.png" alt="bull" onerror="this.src='https://img.icons8.com/ios-filled/50/00ff88/bull.png'"></div>
-                            <div class="card-data"><h3>IBOVESPA</h3><div id="ibov-val" class="info-val">---</div><div id="ibov-var" class="info-sub">---</div></div>
-                            <div class="sparkline-box" id="ibov-spark"><svg viewBox="0 0 100 40" width="100%" height="100%"><path d="M0 35 L10 20 L25 32 L50 15 L75 22 L100 8" fill="none" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                        <div class="info-card" id="card-sp500">
-                            <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
-                            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
-                            <div class="card-data"><h3>S&amp;P 500</h3><div id="sp500-val" class="info-val">---</div><div id="sp500-var" class="info-sub">---</div></div>
-                            <div class="sparkline-box" id="sp500-spark"><svg viewBox="0 0 100 40" width="100%" height="100%"><path d="M0 35 L10 20 L25 32 L50 15 L75 22 L100 8" fill="none" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                        <div class="info-card" id="card-nasdaq">
-                            <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
-                            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg></div>
-                            <div class="card-data"><h3>NASDAQ</h3><div id="nasdaq-val" class="info-val">---</div><div id="nasdaq-var" class="info-sub">---</div></div>
-                            <div class="sparkline-box" id="nasdaq-spark"><svg viewBox="0 0 100 40" width="100%" height="100%"><path d="M0 35 L10 20 L25 32 L50 15 L75 22 L100 8" fill="none" stroke="var(--neon-color)" stroke-width="2.5"/></svg></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="block-agenda" class="display-block">
-                <h2 id="title-agenda" style="color:var(--neon-color); margin-bottom:20px;">RADAR ECONÔMICO</h2>
-                <div id="agenda-container" class="agenda-grid"></div>
-            </div>
-
-            <div id="block-coins" class="display-block">
-                <h2 id="title-coins" style="color:var(--neon-color); margin-bottom:20px; display: inline-flex; align-items: center; gap: 10px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg> CÂMBIO GLOBAL (LIVE)
-                </h2>
-                <div class="coins-grid">
-                    <div class="info-card" id="card-usd">
-                        <img src="https://flagcdn.com/w40/us.png" class="country-flag" alt="US">
-                        <div class="card-icon">$</div>
-                        <div class="card-data"><h3>DÓLAR <span style="font-size: 0.75rem; color: #666;">(USD/BRL)</span></h3><div id="usd-val" class="info-val">R$ ---</div><div id="usd-var" class="info-sub">---</div></div>
-                        <div class="sparkline-box" id="usd-spark"></div>
-                    </div>
-                    <div class="info-card" id="card-eur">
-                        <img src="https://flagcdn.com/w40/eu.png" class="country-flag" alt="EU">
-                        <div class="card-icon">€</div>
-                        <div class="card-data"><h3>EURO <span style="font-size: 0.75rem; color: #666;">(EUR/BRL)</span></h3><div id="eur-val" class="info-val">R$ ---</div><div id="eur-var" class="info-sub">---</div></div>
-                        <div class="sparkline-box" id="eur-spark"></div>
-                    </div>
-                    <div class="info-card" id="card-jpy">
-                        <img src="https://flagcdn.com/w40/jp.png" class="country-flag" alt="JP">
-                        <div class="card-icon">¥</div>
-                        <div class="card-data"><h3>IENE <span style="font-size: 0.75rem; color: #666;">(JPY/BRL)</span></h3><div id="jpy-val" class="info-val">R$ ---</div><div id="jpy-var" class="info-sub">---</div></div>
-                        <div class="sparkline-box" id="jpy-spark"></div>
-                    </div>
-                    <div class="info-card" id="card-gbp">
-                        <img src="https://flagcdn.com/w40/gb.png" class="country-flag" alt="GB">
-                        <div class="card-icon">£</div>
-                        <div class="card-data"><h3>LIBRA <span style="font-size: 0.75rem; color: #666;">(GBP/BRL)</span></h3><div id="gbp-val" class="info-val">R$ ---</div><div id="gbp-var" class="info-sub">---</div></div>
-                        <div class="sparkline-box" id="gbp-spark"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="sidebar-qr" onclick="toggleFullScreen()">
-            <div class="qr-section">
-                <div class="qr-box">
-                    <img id="qr-sidebar-img" src="" alt="QR Code" style="display:none;">
-                </div>
-                <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
-            </div>
-            <div class="version-tag">v: 1.9.1 (Diagnostic Load)</div>
-        </div>
-    </div>
-
-    <!-- SCRIPT PRINCIPAL DA APLICAÇÃO -->
-    <script>
+// ==========================================
+        // DECLARAÇÃO GLOBAL DE VARIÁVEIS
+        // ==========================================
         let cycleTimeout = null;
         let pauseTimeout = null;
         let isPaused = false;
@@ -281,6 +33,9 @@
             return `<svg viewBox="0 0 100 35" width="100%" height="100%"><path d="${d}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         }
 
+        // ==========================================
+        // FUNÇÕES UTILITÁRIAS E RELÓGIOS (ISOLADOS)
+        // ==========================================
         function updateClocks() {
             try {
                 const now = new Date();
@@ -298,6 +53,7 @@
             }
         }
 
+        // Inicialização imediata dos relógios, independente do initApp
         updateClocks();
         setInterval(updateClocks, 1000);
 
@@ -334,6 +90,9 @@
             try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) {}
         }
 
+        // ==========================================
+        // SUPABASE E DEFINIÇÕES
+        // ==========================================
         async function loadTenantConfig() {
             const urlParams = new URLSearchParams(window.location.search);
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
@@ -383,6 +142,9 @@
             }
         }
 
+        // ==========================================
+        // WORKERS DE DADOS COM CONTORNOS INTERATIVOS
+        // ==========================================
         async function fetchBrapi() {
             try {
                 const controller = new AbortController();
@@ -531,4 +293,89 @@
             const feeds = [{n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"}, {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}];
             let tempNewsList = []; 
             
-            for(let f
+            for(let f of feeds){
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(f.u)}`, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
+                    if (!r.ok) continue;
+                    const xmlText = await r.text();
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(xmlText, "text/xml");
+                    const items = xml.querySelectorAll("item");
+                    
+                    items.forEach(item => {
+                        const title = item.querySelector("title")?.textContent || "";
+                        let thumb = "";
+                        const enclosure = item.querySelector("enclosure");
+                        if (enclosure) thumb = enclosure.getAttribute("url");
+                        if (!thumb) { const media = item.getElementsByTagNameNS("*", "content")[0]; if (media) thumb = media.getAttribute("url"); }
+                        if (!thumb) { const desc = item.querySelector("description")?.textContent || ""; const imgMatch = desc.match(/src="([^"]+)"/); if (imgMatch) thumb = imgMatch[1]; }
+                        if (title) tempNewsList.push({ title, thumbnail: thumb, sourceName: f.n });
+                    });
+                } catch(e) {}
+            }
+
+            if (tempNewsList.length === 0) {
+                try {
+                    const r = await fetch('https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=10');
+                    if(r.ok) {
+                        const data = await r.json();
+                        data.items.forEach(item => {
+                            let thumb = "";
+                            try { thumb = "https://agenciadenoticias.ibge.gov.br/" + JSON.parse(item.imagens).image_intro; } catch(e){}
+                            tempNewsList.push({ title: item.titulo, thumbnail: thumb, sourceName: "Agência IBGE" });
+                        });
+                    }
+                } catch(e) {}
+            }
+
+            if(tempNewsList.length > 0) {
+                newsList = tempNewsList.sort(() => Math.random() - 0.5);
+                const titleEl = document.getElementById('news-title');
+                if (titleEl.classList.contains("news-wait-text")) {
+                    titleEl.classList.remove("news-wait-text");
+                    const item = newsList[0];
+                    document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
+                    titleEl.innerText = item.title;
+                    const img = document.getElementById('news-img');
+                    if(item.thumbnail){ img.src = item.thumbnail; img.style.display = 'block'; }
+                }
+            }
+        }
+
+        // ==========================================
+        // MOTOR DE ROTAÇÃO DA TV
+        // ==========================================
+        function cycle() {
+            try {
+                const cur = document.getElementById(blocks[bIdx]);
+                cur.style.opacity = 0;
+                
+                setTimeout(() => {
+                    cur.style.display = 'none';
+                    if(blocks[bIdx] === 'block-publi') {
+                        const vid = document.getElementById('publi-vid');
+                        vid.pause(); vid.removeAttribute('src'); vid.load();
+                    }
+                    
+                    bIdx = (bIdx + 1) % blocks.length;
+                    const nxt = document.getElementById(blocks[bIdx]);
+                    
+                    if(blocks[bIdx] === 'block-publi') {
+                        const imgPubli = document.getElementById('publi-img');
+                        const vidPubli = document.getElementById('publi-vid');
+                        
+                        if(TENANT_CONFIG.publiImages && TENANT_CONFIG.publiImages.length > 0) {
+                            const currentMedia = TENANT_CONFIG.publiImages[pIdx];
+                            if(currentMedia.toLowerCase().endsWith('.mp4')) {
+                                imgPubli.style.display = 'none';
+                                vidPubli.style.display = 'block';
+                                vidPubli.src = currentMedia;
+                                vidPubli.load(); 
+                                let playPromise = vidPubli.play();
+                                if (playPromise !== undefined) playPromise.catch(error => {});
+                            } else {
+                                vid
