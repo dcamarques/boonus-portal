@@ -89,7 +89,6 @@
 <body>
 
     <div class="header">
-        <!-- ONERROR: Se a imagem não existir na pasta, oculta o ícone quebrado e mantém o visual limpo -->
         <div class="logo"><img id="header-logo" src="" alt="Logo" style="display:none;" onerror="this.style.display='none'"></div>
         <div class="clocks-container">
             <div class="clock-box"><div class="label">Brasília</div><div id="br-time" class="time">--:--:--</div></div>
@@ -110,7 +109,7 @@
             <div id="block-news" class="display-block" style="display: flex; opacity: 1;">
                 <img id="news-img" class="news-image" src="" style="display:none;" onerror="this.style.display='none'">
                 <div id="news-source" style="color:var(--neon-color); font-weight:bold; text-transform:uppercase; font-size: 0.9rem; letter-spacing: 1px;">Radar Financeiro</div>
-                <div id="news-title">Atualizando base de dados...</div>
+                <div id="news-title" class="news-wait-text">Atualizando base de dados...</div>
             </div>
 
             <div id="block-opps" class="display-block">
@@ -162,7 +161,7 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 1.7 (Stable News)</div>
+            <div class="version-tag">v: 1.8 (Fast Load)</div>
         </div>
     </div>
 
@@ -184,7 +183,10 @@
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         
         let TENANT_CONFIG = {
-            neonColor: '#00ff88', logoSrc: '', qrData: 'mailto:contato@boonus.app.br', publiImages: [], 
+            neonColor: '#00ff88', 
+            logoSrc: './LOGO1.png', // Forçado para o ficheiro correto
+            qrData: 'mailto:contato@boonus.app.br', 
+            publiImages: [], 
             urlOpps: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=0&single=true&output=csv',
             urlRadar: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQea0VHfFg2M2BT0KdpN5uEnR_yIPpWD6ASnI8Zn4Ff_vVy0DoytjIh9ebHot-wWJeLoZ_eVg-L1YI/pub?gid=82167012&single=true&output=csv',
             urlMacro: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRAOhT8trYO2BkjzBBZQsBdfuJSo5xA-3OljtFd9JkucbnDtC7J9komg3Glc0HlxUExTVqjapGeM3dY/pub?gid=327977986&single=true&output=csv',
@@ -255,26 +257,28 @@
             const tenantParam = urlParams.get('cliente') ? urlParams.get('cliente').toLowerCase() : 'generic';
             
             try {
-                if (typeof window.supabase === 'undefined') throw new Error("Supabase bloqueado.");
+                if (typeof window.supabase === 'undefined') throw new Error("Supabase ausente.");
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 const fetchPromise = supabaseClient.from('tv_escritorios').select('*').eq('slug', tenantParam).single();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout Supabase')), 4000));
                 
                 const response = await Promise.race([fetchPromise, timeoutPromise]);
                 if (response.error) throw response.error;
-                if (!response.data) throw new Error("Cliente não encontrado.");
                 
-                TENANT_CONFIG = {
-                    neonColor: response.data.neon_color || '#00ff88',
-                    logoSrc: response.data.logo_src || '',
-                    qrData: response.data.qr_data || 'mailto:contato@boonus.app.br',
-                    publiImages: response.data.publi_images || [],
-                    urlOpps: response.data.url_opps || TENANT_CONFIG.urlOpps,
-                    urlRadar: response.data.url_radar || TENANT_CONFIG.urlRadar,
-                    urlMacro: response.data.url_macro || TENANT_CONFIG.urlMacro,
-                    urlContador: response.data.url_contador || ''
-                };
+                if (response.data) {
+                    TENANT_CONFIG.neonColor = response.data.neon_color || TENANT_CONFIG.neonColor;
+                    // Prevenção: Só altera a logo se o Supabase não estiver a enviar a string defeituosa "logo.png"
+                    if (response.data.logo_src && response.data.logo_src !== "logo.png") {
+                        TENANT_CONFIG.logoSrc = response.data.logo_src;
+                    }
+                    TENANT_CONFIG.qrData = response.data.qr_data || TENANT_CONFIG.qrData;
+                    TENANT_CONFIG.publiImages = response.data.publi_images || [];
+                    TENANT_CONFIG.urlOpps = response.data.url_opps || TENANT_CONFIG.urlOpps;
+                    TENANT_CONFIG.urlRadar = response.data.url_radar || TENANT_CONFIG.urlRadar;
+                    TENANT_CONFIG.urlMacro = response.data.url_macro || TENANT_CONFIG.urlMacro;
+                    TENANT_CONFIG.urlContador = response.data.url_contador || '';
+                }
             } catch (err) {}
 
             document.documentElement.style.setProperty('--neon-color', TENANT_CONFIG.neonColor);
@@ -299,8 +303,31 @@
         }
 
         // ==========================================
-        // WORKERS DE DADOS
+        // WORKERS DE DADOS COM TIMEOUTS (FUSÍVEIS)
         // ==========================================
+        
+        async function fetchBrapi() {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 4000); // 4 Segundos Max
+                const res = await fetch('https://brapi.dev/api/quote/list?sortBy=change&sortOrder=desc', { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!res.ok) throw new Error("Brapi limit");
+                const data = await res.json();
+                if (data && data.stocks) {
+                    const actions = data.stocks.filter(s => /^[A-Z]{4}[3456]$/.test(s.stock));
+                    let tickerHtml = '';
+                    actions.slice(0,10).forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="up">▲ ${s.change.toFixed(2)}%</span></span>`);
+                    actions.slice(-10).reverse().forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="down">▼ ${s.change.toFixed(2)}%</span></span>`);
+                    document.getElementById('stock-ticker').innerHTML = tickerHtml + tickerHtml;
+                }
+            } catch(e) {
+                // Ticker Fallback
+                document.getElementById('stock-ticker').innerHTML = `<span class="stock-item">Boonus Invest <span class="up">▲ Conectando o mercado a você</span></span><span class="stock-item">Acompanhe as oportunidades com seu assessor</span>`;
+            }
+        }
+
         async function fetchOpportunities() {
             if (!TENANT_CONFIG.urlOpps) return;
             try {
@@ -378,23 +405,6 @@
             } catch (e) { }
         }
 
-        async function fetchBrapi() {
-            try {
-                const res = await fetch('https://brapi.dev/api/quote/list?sortBy=change&sortOrder=desc');
-                if (!res.ok) throw new Error("Brapi limite excedido");
-                const data = await res.json();
-                if (data && data.stocks) {
-                    const actions = data.stocks.filter(s => /^[A-Z]{4}[3456]$/.test(s.stock));
-                    let tickerHtml = '';
-                    actions.slice(0,10).forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="up">▲ ${s.change.toFixed(2)}%</span></span>`);
-                    actions.slice(-10).reverse().forEach(s => tickerHtml += `<span class="stock-item">${s.stock} <span class="down">▼ ${s.change.toFixed(2)}%</span></span>`);
-                    document.getElementById('stock-ticker').innerHTML = tickerHtml + tickerHtml;
-                }
-            } catch(e) {
-                document.getElementById('stock-ticker').innerHTML = `<span class="stock-item">Boonus Invest <span class="up">▲ Conectando o mercado a você</span></span><span class="stock-item">Acompanhe as oportunidades com seu assessor</span>`;
-            }
-        }
-
         async function fetchAwesome() {
             try {
                 const r = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL,EUR-BRL,JPY-BRL,GBP-BRL');
@@ -418,10 +428,13 @@
             const feeds = [{n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"}, {n: "Valor Econômico", u: "https://valor.globo.com/rss/valor/"}];
             let tempNewsList = []; 
             
-            // Camada 1: Leitura via Proxy CodeTabs (Muito estável)
             for(let f of feeds){
                 try {
-                    const r = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(f.u)}`);
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 4000);
+                    const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(f.u)}`, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    
                     if (!r.ok) continue;
                     const xmlText = await r.text();
                     const parser = new DOMParser();
@@ -440,7 +453,7 @@
                 } catch(e) {}
             }
 
-            // Camada 2 (Airbag): Se os jornais bloquearem, carrega notícias oficiais do IBGE (Garantido que funciona sem proxy)
+            // Airbag Seguro: Notícias Oficiais do IBGE caso a mídia externa bloqueie
             if (tempNewsList.length === 0) {
                 try {
                     const r = await fetch('https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=10');
@@ -455,7 +468,20 @@
                 } catch(e) {}
             }
 
-            if(tempNewsList.length > 0) newsList = tempNewsList.sort(() => Math.random() - 0.5);
+            if(tempNewsList.length > 0) {
+                newsList = tempNewsList.sort(() => Math.random() - 0.5);
+                
+                // INJEÇÃO IMEDIATA: Remove a tela "Atualizando" na mesma hora
+                const titleEl = document.getElementById('news-title');
+                if (titleEl.classList.contains("news-wait-text")) {
+                    titleEl.classList.remove("news-wait-text");
+                    const item = newsList[0];
+                    document.getElementById('news-source').innerText = "FONTE: " + item.sourceName;
+                    titleEl.innerText = item.title;
+                    const img = document.getElementById('news-img');
+                    if(item.thumbnail){ img.src = item.thumbnail; img.style.display = 'block'; }
+                }
+            }
         }
 
         // ==========================================
@@ -542,17 +568,16 @@
 
                 await loadTenantConfig();
                 
-                // Força a primeira busca de notícias ser aguardada, para popular a tela logo de cara
-                await fetchNews();
+                // Disparo Imediato dos Dados com timeout individual
+                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda(); 
                 
-                // Se ainda assim estiver vazia, põe texto padrão
+                await fetchNews(); // Garante o preenchimento da tela atual
                 if (newsList.length === 0) {
                     document.getElementById('news-title').innerText = "Mantendo você informado sobre as movimentações globais.";
                     document.getElementById('news-source').innerText = "BOONUS INVEST";
+                    document.getElementById('news-title').classList.remove("news-wait-text");
                 }
 
-                fetchOpportunities(); fetchMacro(); fetchBrapi(); fetchAwesome(); fetchAgenda();
-                
                 setInterval(fetchOpportunities, 300000); 
                 setInterval(fetchMacro, 300000);         
                 setInterval(fetchBrapi, 300000);         
@@ -576,7 +601,6 @@
                     }
                 }, 10000);
 
-                // Arranca Rotação
                 cycleTimeout = setTimeout(cycle, 10000);
 
             } catch (error) {}
