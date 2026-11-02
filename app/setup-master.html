@@ -3,213 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Primeiro Acesso - Boonus</title>
-    
+    <title>Criar Conta Master - Boonus</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <style>
-        :root {
-            --neon-color: #00ff88;
-            --dark-bg: #050505;
-            --panel-bg: #111;
-            --text-color: #e0e0e0;
-            --negative-color: #ff4444;
-        }
-
-        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        .setup-container { background-color: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-top: 4px solid var(--neon-color); width: 100%; max-width: 500px; position: relative; }
-        
-        .header-box { text-align: center; margin-bottom: 30px; }
-        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; letter-spacing: 2px; }
+        :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --text-color: #e0e0e0; }
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .setup-container { background-color: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-top: 4px solid var(--neon-color); width: 100%; max-width: 450px; }
+        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; text-align: center; letter-spacing: 2px; }
         .logo span { color: var(--neon-color); }
-        .subtitle { font-size: 0.9rem; color: #888; text-transform: uppercase; letter-spacing: 1px; }
-
+        .subtitle { font-size: 0.9rem; color: #888; text-transform: uppercase; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
         .input-group { margin-bottom: 20px; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
-        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; transition: border-color 0.3s; }
+        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; }
         .input-group input:focus { outline: none; border-color: var(--neon-color); }
-        
-        .file-upload-box { background: #1a1a1a; border: 1px dashed #444; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; transition: border-color 0.3s; }
-        .file-upload-box:hover { border-color: var(--neon-color); }
-        .file-upload-text { font-size: 0.85rem; color: #aaa; }
-        #preview-logo { max-width: 120px; max-height: 60px; margin-top: 10px; display: none; border-radius: 4px; }
-
-        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: background-color 0.3s, transform 0.1s; margin-top: 10px; }
-        .btn-submit:hover:not(:disabled) { background-color: #00cc6a; }
-        .btn-submit:active:not(:disabled) { transform: scale(0.98); }
-        .btn-submit:disabled { background-color: #222; color: #555; cursor: not-allowed; }
-
-        .login-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; transition: color 0.3s; }
+        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .login-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; }
         .login-link:hover { color: var(--neon-color); }
-
-        .loader { border: 3px solid #333; border-top: 3px solid #000; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; margin: 0 auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #success-box { display: none; text-align: center; padding: 20px 0; }
+        #success-box h3 { color: var(--neon-color); font-size: 1.5rem; margin-bottom: 10px; }
+        #success-box p { color: #aaa; font-size: 0.95rem; line-height: 1.5; }
     </style>
 </head>
 <body>
-
     <div class="setup-container">
-        <div class="header-box">
-            <div class="logo">BOONUS<span>.TV</span></div>
-            <div class="subtitle">Cadastro de Escritório (Master)</div>
-        </div>
+        <div class="logo">BOONUS<span>.TV</span></div>
+        <div class="subtitle">Passo 1/2: Criar Conta Master</div>
 
         <form id="setup-form">
             <div class="input-group">
-                <label for="nome_responsavel">Seu Nome Completo</label>
+                <label>Seu Nome Completo</label>
                 <input type="text" id="nome_responsavel" required placeholder="Ex: Carlos Silva">
             </div>
-
             <div class="input-group">
-                <label for="email">E-mail Corporativo (Login)</label>
-                <input type="email" id="email" required placeholder="diretoria@escritorio.com.br" autocomplete="username">
+                <label>E-mail Corporativo</label>
+                <input type="email" id="email" required placeholder="diretoria@escritorio.com.br">
             </div>
-
             <div class="input-group">
-                <label for="password">Senha de Acesso</label>
-                <input type="password" id="password" required placeholder="Min. 6 caracteres" minlength="6" autocomplete="new-password">
+                <label>Senha de Acesso</label>
+                <input type="password" id="password" required placeholder="Mínimo de 6 caracteres" minlength="6">
             </div>
-
-            <hr style="border: 0; border-top: 1px dashed #333; margin: 25px 0;">
-
-            <div class="input-group">
-                <label for="nome_escritorio">Nome do Escritório</label>
-                <input type="text" id="nome_escritorio" required placeholder="Ex: Safra Investimentos">
-            </div>
-
-            <div class="input-group">
-                <label>Logomarca da Empresa (Opcional)</label>
-                <div class="file-upload-box" onclick="document.getElementById('logo_upload').click()">
-                    <div class="file-upload-text" id="file-text">Clique para selecionar imagem (PNG ou JPG)</div>
-                    <img id="preview-logo" src="" alt="Preview">
-                </div>
-                <input type="file" id="logo_upload" accept="image/png, image/jpeg" style="display: none;" onchange="previewImagem(event)">
-            </div>
-
-            <button type="submit" class="btn-submit" id="btn-submit">
-                <span id="btn-text">Criar Conta e Escritório</span>
-                <div class="loader" id="btn-loader"></div>
-            </button>
-            
+            <button type="submit" class="btn-submit" id="btn-submit">Criar Conta</button>
             <a href="login.html" class="login-link">Já tem uma conta? Faça login aqui.</a>
         </form>
+
+        <div id="success-box">
+            <h3>Quase lá! 📩</h3>
+            <p>Enviamos um link de confirmação para <br><b id="mail-sent" style="color:#fff;"></b>.</p>
+            <p>Por favor, clique no link enviado para o seu e-mail para ativar a conta e configurar o seu escritório.</p>
+            <a href="login.html" class="btn-submit" style="display:inline-block; text-decoration:none; margin-top:20px; width:80%;">Ir para o Login</a>
+        </div>
     </div>
 
     <script>
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
-        
-        let supabaseClient;
-        try {
-            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        } catch (e) {
-            console.error("Erro ao inicializar Supabase:", e);
-        }
-
-        let arquivoLogo = null;
-
-        function previewImagem(event) {
-            const input = event.target;
-            if (input.files && input.files[0]) {
-                arquivoLogo = input.files[0];
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('preview-logo');
-                    img.src = e.target.result;
-                    img.style.display = 'inline-block';
-                    document.getElementById('file-text').style.display = 'none';
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function toggleLoading(isLoading) {
-            document.getElementById('btn-text').style.display = isLoading ? 'none' : 'block';
-            document.getElementById('btn-loader').style.display = isLoading ? 'block' : 'none';
-            document.getElementById('btn-submit').disabled = isLoading;
-        }
-
-        function gerarSlug(texto) {
-            return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-        }
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         document.getElementById('setup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const nomeResp = document.getElementById('nome_responsavel').value.trim();
+            const nome = document.getElementById('nome_responsavel').value.trim();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            const nomeEscritorio = document.getElementById('nome_escritorio').value.trim();
+            const btn = document.getElementById('btn-submit');
             
-            toggleLoading(true);
+            btn.disabled = true; btn.innerText = 'Aguarde...';
 
             try {
-                // 1. Criação do Usuário no Auth
-                const { data: authData, error: authError } = await supabaseClient.auth.signUp({ email, password });
-                if (authError) throw new Error(authError.message);
-                if (!authData.user) throw new Error("Erro desconhecido ao criar usuário.");
+                // Passamos o nome nos metadados para usá-lo na Etapa 2
+                const { data, error } = await supabaseClient.auth.signUp({
+                    email, password, options: { data: { nome_completo: nome } }
+                });
 
-                const user = authData.user;
-                let logoUrl = null;
+                if (error) throw error;
 
-                // 2. Upload da Logomarca (se selecionada)
-                if (arquivoLogo) {
-                    const ext = arquivoLogo.name.split('.').pop();
-                    const filePath = `logos/${user.id}/logo_${Date.now()}.${ext}`;
-                    
-                    const { error: uploadErr } = await supabaseClient.storage.from('midia_escritorios').upload(filePath, arquivoLogo);
-                    if (!uploadErr) {
-                        const { data: publicUrlData } = supabaseClient.storage.from('midia_escritorios').getPublicUrl(filePath);
-                        logoUrl = publicUrlData.publicUrl;
-                    }
+                if (data.session) {
+                    // Se o Supabase não exigir confirmação de e-mail, já está logado
+                    window.location.href = 'setup-escritorio.html';
+                } else {
+                    // Exige confirmação de e-mail
+                    document.getElementById('setup-form').style.display = 'none';
+                    document.getElementById('mail-sent').innerText = email;
+                    document.getElementById('success-box').style.display = 'block';
                 }
-
-                // 3. Criação do Escritório (Gerando o Slug automático)
-                const slugEscritorio = gerarSlug(nomeEscritorio);
-                
-                const { data: escData, error: escErr } = await supabaseClient.from('ES_escritorios').insert([{
-                    nome: nomeEscritorio,
-                    slug: slugEscritorio,
-                    logo_url: logoUrl,
-                    dono_id: user.id
-                }]).select().single();
-
-                if (escErr) throw new Error("Erro ao criar escritório: " + escErr.message);
-
-                // 4. Atribuição do Perfil Master (Nível 1)
-                const { error: perfErr } = await supabaseClient.from('ES_usuarios_perfis').insert([{
-                    auth_id: user.id,
-                    nome: nomeResp,
-                    email: email,
-                    nivel_acesso: 1, // 1 = MASTER / DONO
-                    escritorio_id: escData.id
-                }]);
-
-                if (perfErr) throw new Error("Erro ao vincular perfil: " + perfErr.message);
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Escritório Criado!',
-                    text: 'A sua conta Master foi configurada com sucesso.',
-                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-                }).then(() => {
-                    // Após sucesso, redireciona para o login (ou direto ao dashboard se a sessão já estiver ativa)
-                    window.location.href = 'dashboard.html';
-                });
-
             } catch (err) {
-                let msgErro = err.message;
-                if (msgErro.includes('already registered')) msgErro = 'Este e-mail já está cadastrado no sistema.';
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Falha no Cadastro',
-                    text: msgErro,
-                    background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
-                });
-            } finally {
-                toggleLoading(false);
+                let msg = err.message;
+                if (msg.includes('already registered')) msg = 'Este e-mail já está cadastrado.';
+                Swal.fire({ icon: 'error', title: 'Erro', text: msg, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                btn.disabled = false; btn.innerText = 'Criar Conta';
             }
         });
     </script>
