@@ -143,22 +143,22 @@
                     localStorage.setItem('boonus_user_nivel', perfilData.nivel_acesso);
                     localStorage.setItem('boonus_escritorio_id', perfilData.escritorio_id);
                     localStorage.setItem('boonus_user_nome', perfilData.nome);
-                } else {
-                    // Fallback de segurança caso o perfil falhe ou esteja incompleto
-                    localStorage.setItem('boonus_user_nivel', '0'); 
-                }
 
-                // 3. Limpeza de bloqueios e Redirecionamento
-                localStorage.removeItem('boonus_login_attempts');
-                localStorage.removeItem('boonus_login_blocked');
-                localStorage.removeItem('boonus_blocked_email');
-                
-                Swal.fire({
-                    icon: 'success', title: 'Autenticado com sucesso!', text: 'Redirecionando...',
-                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88', timer: 1500, showConfirmButton: false
-                }).then(() => {
-                    window.location.href = 'dashboard.html';
-                });
+                    // Limpeza de bloqueios e Redirecionamento
+                    localStorage.removeItem('boonus_login_attempts');
+                    localStorage.removeItem('boonus_login_blocked');
+                    localStorage.removeItem('boonus_blocked_email');
+                    
+                    Swal.fire({
+                        icon: 'success', title: 'Autenticado com sucesso!', text: 'Redirecionando...',
+                        background: '#111', color: '#fff', confirmButtonColor: '#00ff88', timer: 1500, showConfirmButton: false
+                    }).then(() => {
+                        window.location.href = 'dashboard.html';
+                    });
+                } else {
+                    // A CONTA EXISTE MAS O PERFIL NÃO: Redireciona para configurar a logo!
+                    window.location.href = 'setup-escritorio.html'; 
+                }
 
             } catch (err) {
                 failedAttempts++;
