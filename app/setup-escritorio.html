@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurar Escritório - Boonus</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* Mesmos estilos da página anterior para manter a identidade */
+        :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --text-color: #e0e0e0; }
+        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+        .setup-container { background-color: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-top: 4px solid var(--neon-color); width: 100%; max-width: 450px; }
+        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; text-align: center; letter-spacing: 2px; }
+        .logo span { color: var(--neon-color); }
+        .subtitle { font-size: 0.9rem; color: #888; text-transform: uppercase; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
+        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; }
+        .input-group input:focus { outline: none; border-color: var(--neon-color); }
+        .file-upload-box { background: #1a1a1a; border: 1px dashed #444; border-radius: 6px; padding: 15px; text-align: center; cursor: pointer; }
+        .file-upload-box:hover { border-color: var(--neon-color); }
+        #preview-logo { max-width: 120px; max-height: 60px; margin-top: 10px; display: none; }
+        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
+        .btn-submit:disabled { background-color: #222; color: #555; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="logo">BOONUS<span>.TV</span></div>
+        <div class="subtitle">Passo 2/2: Perfil do Escritório</div>
+
+        <form id="escritorio-form">
+            <div class="input-group">
+                <label>Nome do Escritório</label>
+                <input type="text" id="nome_escritorio" required placeholder="Ex: Safra Investimentos">
+            </div>
+
+            <div class="input-group">
+                <label>Logomarca da Empresa (Opcional)</label>
+                <div class="file-upload-box" onclick="document.getElementById('logo_upload').click()">
+                    <div id="file-text" style="font-size:0.85rem; color:#aaa;">Clique para selecionar (PNG ou JPG)</div>
+                    <img id="preview-logo" src="" alt="Preview">
+                </div>
+                <input type="file" id="logo_upload" accept="image/png, image/jpeg" style="display: none;" onchange="previewImagem(event)">
+            </div>
+
+            <button type="submit" class="btn-submit" id="btn-submit">Finalizar e Acessar Painel</button>
+        </form>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let arquivoLogo = null;
+        let sessionUser = null;
+
+        async function verificarAutenticacao() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = 'login.html'; return; }
+            sessionUser = session.user;
+        }
+
+        function previewImagem(event) {
+            const input = event.target;
+            if (input.files && input.files[0]) {
+                arquivoLogo = input.files[0];
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('preview-logo');
+                    img.src = e.target.result;
+                    img.style.display = 'inline-block';
+                    document.getElementById('file-text').style.display = 'none';
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function gerarSlug(texto) { return texto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
+
+        document.getElementById('escritorio-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            btn.disabled = true; btn.innerText = 'A gravar dados...';
+            
+            try {
+                const nomeEscritorio = document.getElementById('nome_escritorio').value.trim();
+                let logoUrl = null;
+
+                // 1. Upload da Logo
+                if (arquivoLogo) {
+                    const ext = arquivoLogo.name.split('.').pop();
+                    const filePath = `logos/${sessionUser.id}/logo_${Date.now()}.${ext}`;
+                    const { error: uploadErr } = await supabaseClient.storage.from('midia_escritorios').upload(filePath, arquivoLogo);
+                    if (!uploadErr) {
+                        const { data: publicUrlData } = supabaseClient.storage.from('midia_escritorios').getPublicUrl(filePath);
+                        logoUrl = publicUrlData.publicUrl;
+                    }
+                }
+
+                // 2. Gravar Escritório
+                const { data: escData, error: escErr } = await supabaseClient.from('ES_escritorios').insert([{
+                    nome: nomeEscritorio, slug: gerarSlug(nomeEscritorio), logo_url: logoUrl, dono_id: sessionUser.id
+                }]).select().single();
+                if (escErr) throw escErr;
+
+                // 3. Gravar Perfil (Nível 1 - Master)
+                const nomeMaster = sessionUser.user_metadata.nome_completo || 'Master';
+                const { error: perfErr } = await supabaseClient.from('ES_usuarios_perfis').insert([{
+                    auth_id: sessionUser.id, nome: nomeMaster, email: sessionUser.email, nivel_acesso: 1, escritorio_id: escData.id
+                }]);
+                if (perfErr) throw perfErr;
+
+                // Salva no cache local para o Dashboard
+                localStorage.setItem('boonus_user_nivel', '1');
+                localStorage.setItem('boonus_escritorio_id', escData.id);
+                localStorage.setItem('boonus_user_nome', nomeMaster);
+
+                Swal.fire({ icon: 'success', title: 'Sucesso!', text: 'Escritório configurado.', background: '#111', color: '#fff', confirmButtonColor: '#00ff88', timer: 1500, showConfirmButton: false })
+                .then(() => { window.location.href = 'dashboard.html'; });
+
+            } catch (err) {
+                Swal.fire({ icon: 'error', title: 'Erro', text: err.message, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                btn.disabled = false; btn.innerText = 'Finalizar e Acessar Painel';
+            }
+        });
+
+        verificarAutenticacao();
+    </script>
+</body>
+</html>
