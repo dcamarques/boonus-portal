@@ -98,7 +98,7 @@
         <input type="date" id="filtro-data" class="filter-input" onchange="carregarPainel()" title="Escolha uma data">
         <select id="filtro-hierarquia" class="filter-input" style="display: none;" onchange="carregarPainel()">
             <option value="meu_perfil">Minha Produção</option>
-            <option value="grupo">Todo o Grupo (Visão Master)</option>
+            <option value="grupo">Todo o Escritório (Visão Master)</option>
         </select>
     </div>
 
@@ -144,7 +144,7 @@
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         
-        let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
+        let sessaoAtual = { usuario_id: null, escritorio_id: null, nivel: 3 };
         let catalogoCache = []; 
         let producoesGlobais = []; 
         let mapaNomesConsultores = {}; 
@@ -157,26 +157,33 @@
             if (error || !session) { window.location.href = 'login.html'; return; }
             
             sessaoAtual.usuario_id = session.user.id;
-            const { data: userDb } = await supabaseClient.from('tv_utilizadores').select('nome_completo, perfil, nivel, escritorio_id, grupo_id').eq('id', session.user.id).single();
+            
+            // LENDO DA NOVA TABELA DE PERFIS (ES_usuarios_perfis)
+            const { data: userDb } = await supabaseClient.from('ES_usuarios_perfis')
+                .select('nome, nivel_acesso, escritorio_id')
+                .eq('auth_id', session.user.id).single();
             
             if (userDb) {
-                document.getElementById('user-name').innerText = (userDb.nome_completo || session.user.email).split(' ')[0];
-                sessaoAtual.escritorio_id = userDb.escritorio_id; sessaoAtual.grupo_id = userDb.grupo_id; sessaoAtual.nivel = userDb.nivel || 1;
+                document.getElementById('user-name').innerText = userDb.nome.split(' ')[0];
+                sessaoAtual.escritorio_id = userDb.escritorio_id; 
+                sessaoAtual.nivel = userDb.nivel_acesso || 3;
                 
-                // --- LÓGICA DOS ÍCONES DE ADMINISTRAÇÃO ---
-                if (userDb.nivel === 3) {
+                // NOVA HIERARQUIA: 1 = Master | 2 = Responsável | 3 = Assessor
+                if (sessaoAtual.nivel === 1) {
                     document.getElementById('user-role').innerText = 'Sócio Diretor (Master)';
-                    document.getElementById('admin-icon').style.display = 'block'; // Engrenagem Catálogo
-                    document.getElementById('admin-metas-icon').style.display = 'block'; // Alvo Metas Padrão
+                    document.getElementById('admin-icon').style.display = 'block'; 
+                    document.getElementById('admin-metas-icon').style.display = 'block'; 
                     document.getElementById('filtro-hierarquia').style.display = 'block'; 
-                } else if (userDb.nivel === 2) {
+                } else if (sessaoAtual.nivel === 2) {
                     document.getElementById('user-role').innerText = 'Gestor de Escritório';
-                    document.getElementById('admin-metas-icon').style.display = 'block'; // Alvo Metas Padrão (Sem engrenagem)
+                    document.getElementById('admin-metas-icon').style.display = 'block'; 
+                    document.getElementById('filtro-hierarquia').style.display = 'block';
                 }
             }
 
-            const { data: usersInfo } = await supabaseClient.from('tv_utilizadores').select('id, nome_completo');
-            if (usersInfo) { usersInfo.forEach(u => mapaNomesConsultores[u.id] = u.nome_completo.split(' ').slice(0, 2).join(' ')); }
+            // Atualiza mapa de nomes com a nova tabela
+            const { data: usersInfo } = await supabaseClient.from('ES_usuarios_perfis').select('auth_id, nome');
+            if (usersInfo) { usersInfo.forEach(u => mapaNomesConsultores[u.auth_id] = u.nome.split(' ').slice(0, 2).join(' ')); }
 
             const hoje = new Date();
             const offset = hoje.getTimezoneOffset() * 60000;
@@ -203,23 +210,23 @@
             const ultimoDiaDoMes = new Date(ano, mes, 0).getDate();
             const visao = document.getElementById('filtro-hierarquia').value;
 
+            // Mantido tv_producao temporariamente até migrarmos as tabelas de dados
             let query = supabaseClient.from('tv_producao').select('*')
                 .eq('ativo', true)
                 .gte('data_producao', `${ano}-${mes}-01`)
                 .lte('data_producao', `${ano}-${mes}-${ultimoDiaDoMes}`); 
 
             if (visao === 'meu_perfil') query = query.eq('utilizador_id', sessaoAtual.usuario_id);
-            else if (visao === 'grupo' && sessaoAtual.nivel === 3) query = query.eq('grupo_id', sessaoAtual.grupo_id);
+            else if (visao === 'grupo' && sessaoAtual.nivel <= 2) query = query.eq('grupo_id', sessaoAtual.escritorio_id); // Adaptado para o ID novo
 
             const { data: producoes, error } = await query;
-            if (error) alert("Erro ao ler dados: " + error.message);
             producoesGlobais = producoes || [];
 
             const container = document.getElementById('cards-container');
             container.innerHTML = '';
 
             if (catalogoCache.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#888;">Catálogo não configurado.</div>';
+                container.innerHTML = '<div style="text-align:center; color:#888; padding-top:40px;">O painel está vazio porque o seu escritório é novo e ainda não possui um catálogo configurado.<br><br>Vá ao ícone de engrenagem ⚙️ (Catálogo) para começar.</div>';
                 document.getElementById('init-loader').style.display = 'none';
                 return;
             }
@@ -422,7 +429,7 @@
                         <input type="text" id="swal-edit-desc" class="swal2-input" value="${prod.descricao || ''}" style="width: 85%;">
                     </div>
                     <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Valor numérico puro (Use ponto para centavos)</label>
+                        <label style="font-size:0.8rem; color:#aaa;">Valor numérico puro</label>
                         <input type="number" id="swal-edit-val" class="swal2-input" value="${prod.tipo_medida === 'valor' ? prod.valor : prod.quantidade}" step="0.01" style="width: 85%;">
                     </div>
                 `,
@@ -450,7 +457,7 @@
 
         async function carregarCatalogoDoBanco() {
             const selectClasse = document.getElementById('form-classe');
-            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
+            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, opcoes_status, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.escritorio_id);
             if (!data) return;
 
             data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
@@ -524,7 +531,7 @@
             const numDigitado = parseFloat(document.getElementById('form-valor').value) || 0;
 
             const payload = {
-                utilizador_id: sessaoAtual.usuario_id, escritorio_id: sessaoAtual.escritorio_id, grupo_id: sessaoAtual.grupo_id,
+                utilizador_id: sessaoAtual.usuario_id, grupo_id: sessaoAtual.escritorio_id, // Adaptado
                 data_producao: document.getElementById('form-data-lancamento').value,
                 classe_nome: classe.nome, item_nome: item.nome, subitem_nome: document.getElementById('box-subitem').style.display === 'block' ? document.getElementById('form-subitem').value : null,
                 status: document.getElementById('form-status').value, pipeline: document.getElementById('box-pipeline').style.display === 'block' ? document.getElementById('form-pipeline').value : null,
