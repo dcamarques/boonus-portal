@@ -13,13 +13,24 @@
         .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; text-align: center; letter-spacing: 2px; }
         .logo span { color: var(--neon-color); }
         .subtitle { font-size: 0.9rem; color: #888; text-transform: uppercase; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
-        .input-group { margin-bottom: 20px; }
+        
+        .input-group { margin-bottom: 20px; text-align: left; }
         .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
         .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; }
         .input-group input:focus { outline: none; border-color: var(--neon-color); }
-        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
-        .login-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; }
+        
+        .password-wrapper { position: relative; display: flex; align-items: center; }
+        .password-wrapper input { padding-right: 45px; } 
+        .toggle-password { position: absolute; right: 12px; cursor: pointer; color: #888; font-size: 1.2rem; user-select: none; transition: color 0.3s; }
+        .toggle-password:hover { color: var(--neon-color); filter: brightness(1.2); }
+
+        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: background-color 0.3s; }
+        .btn-submit:hover:not(:disabled) { background-color: #00cc6a; }
+        .btn-submit:disabled { background-color: #333; color: #666; cursor: not-allowed; }
+        
+        .login-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; transition: color 0.3s; }
         .login-link:hover { color: var(--neon-color); }
+        
         #success-box { display: none; text-align: center; padding: 20px 0; }
         #success-box h3 { color: var(--neon-color); font-size: 1.5rem; margin-bottom: 10px; }
         #success-box p { color: #aaa; font-size: 0.95rem; line-height: 1.5; }
@@ -41,7 +52,10 @@
             </div>
             <div class="input-group">
                 <label>Senha de Acesso</label>
-                <input type="password" id="password" required placeholder="Mínimo de 6 caracteres" minlength="6">
+                <div class="password-wrapper">
+                    <input type="password" id="password" required placeholder="Mínimo de 6 caracteres" minlength="6">
+                    <span class="toggle-password" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar Senha">👁️</span>
+                </div>
             </div>
             <button type="submit" class="btn-submit" id="btn-submit">Criar Conta</button>
             <a href="login.html" class="login-link">Já tem uma conta? Faça login aqui.</a>
@@ -51,7 +65,7 @@
             <h3>Quase lá! 📩</h3>
             <p>Enviamos um link de confirmação para <br><b id="mail-sent" style="color:#fff;"></b>.</p>
             <p>Por favor, clique no link enviado para o seu e-mail para ativar a conta e configurar o seu escritório.</p>
-            <a href="login.html" class="btn-submit" style="display:inline-block; text-decoration:none; margin-top:20px; width:80%;">Ir para o Login</a>
+            <a href="login.html" class="btn-submit" style="display:inline-block; text-decoration:none; margin-top:20px; width:80%; box-sizing:border-box;">Ir para o Login</a>
         </div>
     </div>
 
@@ -59,6 +73,18 @@
         const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        function togglePasswordVisibility() {
+            const pwdInput = document.getElementById('password');
+            const toggleBtn = document.querySelector('.toggle-password');
+            if (pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                toggleBtn.textContent = '🙈';
+            } else {
+                pwdInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
 
         document.getElementById('setup-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -70,7 +96,6 @@
             btn.disabled = true; btn.innerText = 'Aguarde...';
 
             try {
-                // Passamos o nome nos metadados para usá-lo na Etapa 2
                 const { data, error } = await supabaseClient.auth.signUp({
                     email, password, options: { data: { nome_completo: nome } }
                 });
@@ -78,10 +103,8 @@
                 if (error) throw error;
 
                 if (data.session) {
-                    // Se o Supabase não exigir confirmação de e-mail, já está logado
                     window.location.href = 'setup-escritorio.html';
                 } else {
-                    // Exige confirmação de e-mail
                     document.getElementById('setup-form').style.display = 'none';
                     document.getElementById('mail-sent').innerText = email;
                     document.getElementById('success-box').style.display = 'block';
