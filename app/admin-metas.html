@@ -63,7 +63,7 @@
         
         <!-- SESSÃO 1: METAS PADRÃO -->
         <div class="section-box" id="box-padrao" style="display: none;">
-            <h2 class="section-title">1. Template Padrão do Grupo</h2>
+            <h2 class="section-title">1. Template Padrão do Escritório</h2>
             <p style="font-size: 0.8rem; color: var(--muted); margin-bottom: 15px;">Defina a régua de metas base que será aplicada aos consultores.</p>
             <button class="btn-secondary" onclick="abrirModalNovaMetaPadrao()" style="margin-top: 0; margin-bottom: 15px; text-transform: uppercase;">➕ Adicionar Regra Padrão</button>
             
@@ -114,10 +114,10 @@
         const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let sessaoAtual = { usuario_id: null, escritorio_id: null, grupo_id: null, nivel: 1 };
+        let sessaoAtual = { usuario_id: null, escritorio_id: null, nivel: 3 };
         let catalogoCache = [];
         let metasPadraoCache = [];
-        let consultoresCache = []; // Guarda a equipa para as funções de injeção em massa
+        let consultoresCache = [];
 
         const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
@@ -126,33 +126,38 @@
             const { data: { session }, error } = await supabaseClient.auth.getSession();
             if (error || !session) { window.location.href = 'login.html'; return; }
 
-            const { data: userDb } = await supabaseClient.from('tv_utilizadores').select('nivel, escritorio_id, grupo_id').eq('id', session.user.id).single();
-            if (!userDb || userDb.nivel === 1) {
+            const { data: userDb } = await supabaseClient.from('ES_usuarios_perfis')
+                .select('nivel_acesso, escritorio_id')
+                .eq('auth_id', session.user.id).single();
+            
+            // Bloqueia quem for Nível 3 (Assessor)
+            if (!userDb || userDb.nivel_acesso === 3) {
                 alert("Acesso Negado. Apenas Gestores e Diretores podem aceder a este painel.");
                 window.location.href = 'dashboard.html'; return;
             }
 
-            sessaoAtual = { usuario_id: session.user.id, escritorio_id: userDb.escritorio_id, grupo_id: userDb.grupo_id, nivel: userDb.nivel };
-            document.getElementById('nivel-label').innerText = userDb.nivel === 3 ? 'Nível 3 (Master)' : 'Nível 2 (Gestor)';
+            sessaoAtual = { usuario_id: session.user.id, escritorio_id: userDb.escritorio_id, nivel: userDb.nivel_acesso };
+            document.getElementById('nivel-label').innerText = userDb.nivel_acesso === 1 ? 'Nível 1 (Master)' : 'Nível 2 (Gestor)';
 
             const hoje = new Date();
             const offset = hoje.getTimezoneOffset() * 60000;
             document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
 
-            if (sessaoAtual.nivel === 3) {
+            // Apenas o Nível 1 visualiza e edita a régua Padrão
+            if (sessaoAtual.nivel === 1) {
                 document.getElementById('box-padrao').style.display = 'block';
                 await carregarMetasPadrao();
             }
 
             await carregarCatalogoDoBanco();
-            await carregarFiltroConsultores(); // Carrega os nomes no select
+            await carregarFiltroConsultores(); 
 
             document.body.style.display = 'flex';
             document.getElementById('init-loader').style.display = 'none';
         }
 
         async function carregarCatalogoDoBanco() {
-            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.grupo_id);
+            const { data } = await supabaseClient.from('tv_catalogo_classes').select(`id, nome, tv_catalogo_itens (id, nome, tipo_medida, tv_catalogo_subitens (id, nome))`).eq('grupo_id', sessaoAtual.escritorio_id);
             if (data) {
                 data.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
                 data.forEach(cls => { if (cls.tv_catalogo_itens) { cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); cls.tv_catalogo_itens.forEach(i => { if (i.tv_catalogo_subitens) i.tv_catalogo_subitens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')); }); } });
@@ -161,18 +166,17 @@
         }
 
         async function carregarFiltroConsultores() {
-            let query = supabaseClient.from('tv_utilizadores')
-                .select('id, nome_completo, escritorio_id')
-                .eq('grupo_id', sessaoAtual.grupo_id)
-                .eq('nivel', 1)
-                .order('nome_completo', { ascending: true });
+            // Agora lê os nomes e as hierarquias da tabela nova ES_usuarios_perfis
+            let query = supabaseClient.from('ES_usuarios_perfis')
+                .select('auth_id, nome, escritorio_id')
+                .eq('escritorio_id', sessaoAtual.escritorio_id)
+                .order('nome', { ascending: true });
                 
-            if (sessaoAtual.nivel === 2) query = query.eq('escritorio_id', sessaoAtual.escritorio_id); 
-            
             const { data, error } = await query;
             if (error) console.error("Erro ao carregar equipa: ", error);
             
-            consultoresCache = data || [];
+            // Mapeando para o cache de uso geral
+            consultoresCache = (data || []).map(u => ({ id: u.auth_id, nome_completo: u.nome, escritorio_id: u.escritorio_id }));
             
             const select = document.getElementById('filtro-consultor');
             select.innerHTML = '<option value="todos" selected>A TODOS</option>';
@@ -181,13 +185,12 @@
                 select.innerHTML += `<option value="${u.id}">${u.nome_completo}</option>`;
             });
 
-            // Chama a tabela com a visão inicial "A TODOS"
             carregarMetasConsultor();
         }
 
         // --- GESTÃO: METAS PADRÃO ---
         async function carregarMetasPadrao() {
-            const { data } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id).order('classe_nome').order('item_nome');
+            const { data } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.escritorio_id).order('classe_nome').order('item_nome');
             metasPadraoCache = data || [];
             const tbody = document.getElementById('tabela-padrao');
             tbody.innerHTML = '';
@@ -211,7 +214,7 @@
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
                 const [classe_nome, item_nome, subitem_nome, tipo_medida] = formValues.prod.split('|');
-                const payload = { grupo_id: sessaoAtual.grupo_id, classe_nome, item_nome, subitem_nome: subitem_nome || null, tipo_medida, meta_valor: tipo_medida === 'valor' ? formValues.val : 0, meta_quantidade: tipo_medida === 'quantidade' ? formValues.val : 0 };
+                const payload = { grupo_id: sessaoAtual.escritorio_id, classe_nome, item_nome, subitem_nome: subitem_nome || null, tipo_medida, meta_valor: tipo_medida === 'valor' ? formValues.val : 0, meta_quantidade: tipo_medida === 'quantidade' ? formValues.val : 0 };
                 const { error } = await supabaseClient.from('tv_metas_padrao').insert([payload]);
                 document.getElementById('init-loader').style.display = 'none';
                 if (error) { if (error.code === '23505') Swal.fire('Atenção', 'Já existe uma meta padrão configurada para este produto. Edite a existente.', 'warning'); else Swal.fire('Erro', error.message, 'error'); } else { carregarMetasPadrao(); }
@@ -263,32 +266,26 @@
         }
 
         // --- SISTEMA DE INJEÇÃO MÁGICA ---
-        
-        // 1. Injetar Metas Padrão
         async function injetarPadrao() {
             const mesAno = document.getElementById('filtro-mes').value;
             const usrId = document.getElementById('filtro-consultor').value;
-            
-            // Determina os alvos: Um utilizador específico ou toda a cache de consultores carregada
             const targets = usrId === 'todos' ? consultoresCache : consultoresCache.filter(c => c.id === usrId);
             if (targets.length === 0) { Swal.fire('Atenção', 'Nenhum consultor encontrado na equipe.', 'warning'); return; }
 
             document.getElementById('init-loader').style.display = 'flex';
 
-            const { data: padroes } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.grupo_id);
+            const { data: padroes } = await supabaseClient.from('tv_metas_padrao').select('*').eq('grupo_id', sessaoAtual.escritorio_id);
             if (!padroes || padroes.length === 0) {
                 document.getElementById('init-loader').style.display = 'none';
                 Swal.fire('Atenção', 'O Master ainda não definiu as Metas Padrão do Grupo.', 'info'); return;
             }
 
             let inseridas = 0;
-            // Varre a equipa
             for (const alvo of targets) {
                 for (const p of padroes) {
-                    const payload = { utilizador_id: alvo.id, escritorio_id: alvo.escritorio_id, grupo_id: sessaoAtual.grupo_id, mes_ano: mesAno, classe_nome: p.classe_nome, item_nome: p.item_nome, subitem_nome: p.subitem_nome, tipo_medida: p.tipo_medida, meta_valor: p.meta_valor, meta_quantidade: p.meta_quantidade };
+                    const payload = { utilizador_id: alvo.id, escritorio_id: alvo.escritorio_id, grupo_id: sessaoAtual.escritorio_id, mes_ano: mesAno, classe_nome: p.classe_nome, item_nome: p.item_nome, subitem_nome: p.subitem_nome, tipo_medida: p.tipo_medida, meta_valor: p.meta_valor, meta_quantidade: p.meta_quantidade };
                     const { error } = await supabaseClient.from('tv_metas_consultor').insert([payload]);
                     if (!error) inseridas++; 
-                    // O erro de "Unique Constraint" (já existe uma meta igual no mes) é ignorado de propósito pelo if(!error) para não quebrar a máquina.
                 }
             }
 
@@ -297,24 +294,21 @@
             carregarMetasConsultor();
         }
 
-        // 2. Repetir Mês Anterior
         async function repetirMesAnterior() {
-            const mesAno = document.getElementById('filtro-mes').value; // ex: 2026-10
+            const mesAno = document.getElementById('filtro-mes').value; 
             const usrId = document.getElementById('filtro-consultor').value;
             const targets = usrId === 'todos' ? consultoresCache : consultoresCache.filter(c => c.id === usrId);
             
             if (targets.length === 0) { Swal.fire('Atenção', 'Nenhum consultor encontrado na equipe.', 'warning'); return; }
 
-            // Descobrir a competência exata do mês anterior pelo JS (Lida com mudança de ano perfeitamente)
             let [anoStr, mesStr] = mesAno.split('-');
             let datePrev = new Date(parseInt(anoStr), parseInt(mesStr) - 2, 1);
             let prevAno = datePrev.getFullYear();
             let prevMes = String(datePrev.getMonth() + 1).padStart(2, '0');
-            const mesAnoAnterior = `${prevAno}-${prevMes}`; // ex: 2026-09
+            const mesAnoAnterior = `${prevAno}-${prevMes}`; 
 
             document.getElementById('init-loader').style.display = 'flex';
 
-            // Busca na base todas as metas que a equipa alvo tinha no mês passado
             const idsAlvos = targets.map(t => t.id);
             const { data: metasAnteriores } = await supabaseClient.from('tv_metas_consultor')
                 .select('*')
