@@ -26,7 +26,7 @@
             color: var(--text-color);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            display: none;
+            display: flex;
             min-height: 100vh;
             flex-direction: column;
         }
@@ -188,7 +188,6 @@
 
     <main class="main-content">
 
-        <!-- BANNER QUANDO O USUÁRIO PULOU O CADASTRO DO ESCRITÓRIO -->
         <div class="banner-onboarding" id="banner-onboarding">
             <div>
                 <h3>Configuração de Escritório Pendente</h3>
@@ -200,7 +199,6 @@
             </div>
         </div>
 
-        <!-- FILTROS DE VISÃO E PERÍODO -->
         <div class="filter-bar">
             <div class="filter-group">
                 <label for="filtro-mes">Mês de Referência</label>
@@ -220,7 +218,6 @@
             </div>
         </div>
 
-        <!-- INDICADORES RESUMIDOS -->
         <div class="kpi-grid">
             <div class="kpi-card">
                 <div class="kpi-label">Total Realizado (Financeiro)</div>
@@ -239,7 +236,6 @@
             </div>
         </div>
 
-        <!-- TABELA DE ACOMPANHAMENTO DE METAS X REALIZADO -->
         <div class="section-box">
             <div class="section-header">
                 <h2 class="section-title">Acompanhamento de Performance</h2>
@@ -285,61 +281,99 @@
         const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
         const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
 
-        async function iniciar() {
-            const { data: { session }, error } = await supabaseClient.auth.getSession();
-            if (error || !session) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            let { data: perfil } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .select('*')
-                .eq('auth_id', session.user.id)
-                .single();
-
-            if (!perfil) {
-                const nomeMeta = session.user.user_metadata?.nome || session.user.email.split('@')[0];
-                const { data: novoPerfil } = await supabaseClient
-                    .from('ES_usuarios_perfis')
-                    .insert([{
-                        auth_id: session.user.id,
-                        nome: nomeMeta,
-                        email: session.user.email.toLowerCase(),
-                        cargo: 'Sócio Diretor',
-                        nivel_acesso: 1,
-                        escritorio_id: null,
-                        ativo: true
-                    }])
-                    .select()
-                    .single();
-                perfil = novoPerfil;
-            }
-
-            if (perfil && perfil.ativo === false) {
-                await supabaseClient.auth.signOut();
-                alert('Seu acesso está inativo. Entre em contato com o administrador do escritório.');
-                window.location.href = 'login.html';
-                return;
-            }
-
-            sessaoAtual.session = session;
-            sessaoAtual.perfil = perfil;
-            sessaoAtual.usuario_id = session.user.id;
-            sessaoAtual.escritorio_id = perfil?.escritorio_id || null;
-            sessaoAtual.nivel = perfil?.nivel_acesso ?? 1;
-
-            const hoje = new Date();
-            const offset = hoje.getTimezoneOffset() * 60000;
-            document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
-
-            configurarBotoesPorNivel();
-            await carregarEscritoriosDoMaster();
-            await configurarCabecalhoEOnboarding(session, perfil);
-            await carregarDadosDashboard();
-
+        function esconderLoader() {
+            const loader = document.getElementById('init-loader');
+            if (loader) loader.style.display = 'none';
             document.body.style.display = 'flex';
-            document.getElementById('init-loader').style.display = 'none';
+        }
+
+        setTimeout(esconderLoader, 4000);
+
+        async function iniciar() {
+            try {
+                const { data, error } = await supabaseClient.auth.getSession();
+                const session = data ? data.session : null;
+                if (error || !session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const emailUser = (session.user.email || '').toLowerCase();
+                let perfil = null;
+
+                const buscaAuth = await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .select('*')
+                    .eq('auth_id', session.user.id)
+                    .limit(1);
+
+                if (!buscaAuth.error && buscaAuth.data && buscaAuth.data.length > 0) {
+                    perfil = buscaAuth.data[0];
+                } else if (emailUser) {
+                    const buscaEmail = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .select('*')
+                        .ilike('email', emailUser)
+                        .limit(1);
+
+                    if (!buscaEmail.error && buscaEmail.data && buscaEmail.data.length > 0) {
+                        const vinc = await supabaseClient
+                            .from('ES_usuarios_perfis')
+                            .update({ auth_id: session.user.id })
+                            .eq('id', buscaEmail.data[0].id)
+                            .select();
+                        perfil = (vinc.data && vinc.data[0]) ? vinc.data[0] : { ...buscaEmail.data[0], auth_id: session.user.id };
+                    }
+                }
+
+                if (!perfil) {
+                    const nomeMeta = (session.user.user_metadata && session.user.user_metadata.nome)
+                        ? session.user.user_metadata.nome
+                        : (emailUser ? emailUser.split('@')[0] : 'Usuário');
+                    const criado = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .insert([{
+                            auth_id: session.user.id,
+                            nome: nomeMeta,
+                            email: emailUser,
+                            cargo: 'Assessor',
+                            nivel_acesso: 3,
+                            escritorio_id: null,
+                            ativo: true
+                        }])
+                        .select();
+                    if (!criado.error && criado.data && criado.data.length > 0) {
+                        perfil = criado.data[0];
+                    }
+                }
+
+                if (perfil && perfil.ativo === false) {
+                    await supabaseClient.auth.signOut();
+                    esconderLoader();
+                    alert('Seu acesso está inativo. Entre em contato com o administrador do escritório.');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                sessaoAtual.session = session;
+                sessaoAtual.perfil = perfil;
+                sessaoAtual.usuario_id = session.user.id;
+                sessaoAtual.escritorio_id = (perfil && perfil.escritorio_id) ? perfil.escritorio_id : null;
+                sessaoAtual.nivel = (perfil && perfil.nivel_acesso !== undefined && perfil.nivel_acesso !== null) ? perfil.nivel_acesso : 3;
+
+                const hoje = new Date();
+                const offset = hoje.getTimezoneOffset() * 60000;
+                document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
+
+                configurarBotoesPorNivel();
+                await carregarEscritoriosDoMaster();
+                await configurarCabecalhoEOnboarding(session, perfil);
+                await carregarDadosDashboard();
+            } catch (err) {
+                console.error('Erro ao iniciar dashboard:', err);
+            } finally {
+                esconderLoader();
+            }
         }
 
         function configurarBotoesPorNivel() {
@@ -365,7 +399,7 @@
                     .select('escritorio_id')
                     .eq('master_auth_id', sessaoAtual.usuario_id);
 
-                const ids = new Set((vinculos || []).map(v => v.escritorio_id));
+                const ids = new Set((vinculos || []).map(v => v.escritorio_id).filter(Boolean));
                 if (sessaoAtual.escritorio_id) ids.add(sessaoAtual.escritorio_id);
 
                 if (ids.size > 0) {
@@ -393,18 +427,21 @@
         }
 
         async function configurarCabecalhoEOnboarding(session, perfil) {
-            const nomeExibicao = perfil?.nome || session.user.user_metadata?.nome || session.user.email;
-            const nivelTexto = perfil?.nivel_acesso === 0
+            const nomeExibicao = (perfil && perfil.nome)
+                ? perfil.nome
+                : ((session.user.user_metadata && session.user.user_metadata.nome) ? session.user.user_metadata.nome : session.user.email);
+            const nivelAtual = perfil ? perfil.nivel_acesso : 3;
+            const nivelTexto = nivelAtual === 0
                 ? 'Executivo Sênior'
-                : (perfil?.nivel_acesso === 1 ? 'Master' : (perfil?.nivel_acesso === 2 ? 'Responsável' : 'Assessor'));
-            const cargoExibicao = perfil?.cargo ? `${perfil.cargo} • ${nivelTexto}` : nivelTexto;
+                : (nivelAtual === 1 ? 'Master' : (nivelAtual === 2 ? 'Responsável' : 'Assessor'));
+            const cargoExibicao = (perfil && perfil.cargo) ? `${perfil.cargo} • ${nivelTexto}` : nivelTexto;
 
             document.getElementById('user-ola').textContent = `Olá, ${nomeExibicao}`;
             document.getElementById('user-cargo').textContent = cargoExibicao;
 
             await carregarConvitesPendentes(session.user.email);
 
-            if (!perfil?.escritorio_id && perfil?.nivel_acesso !== 0) {
+            if ((!perfil || !perfil.escritorio_id) && nivelAtual !== 0) {
                 document.getElementById('banner-onboarding').style.display = 'flex';
                 document.getElementById('kpi-escritorio-ativo').textContent = 'Escritório: Não vinculado';
 
@@ -427,13 +464,14 @@
                         await abrirModalCadastrarEscritorio(session, perfil);
                     }
                 }
-            } else if (perfil?.escritorio_id) {
-                const { data: escAtual } = await supabaseClient
+            } else if (perfil && perfil.escritorio_id) {
+                const { data: escData } = await supabaseClient
                     .from('ES_escritorios')
                     .select('nome')
                     .eq('id', perfil.escritorio_id)
-                    .single();
-                document.getElementById('kpi-escritorio-ativo').textContent = `Escritório: ${escAtual?.nome || 'Vinculado'}`;
+                    .limit(1);
+                const nomeEsc = (escData && escData[0]) ? escData[0].nome : 'Vinculado';
+                document.getElementById('kpi-escritorio-ativo').textContent = `Escritório: ${nomeEsc}`;
             }
         }
 
@@ -441,11 +479,25 @@
             if (!emailUsuario) return;
             const { data, error } = await supabaseClient
                 .from('ES_convites')
-                .select('*, ES_escritorios(nome)')
+                .select('*')
                 .ilike('email_convidado', emailUsuario.trim())
                 .eq('status', 'pendente');
 
-            convitesPendentesCache = error ? [] : (data || []);
+            let lista = (!error && data) ? data : [];
+            if (lista.length > 0) {
+                const escIds = Array.from(new Set(lista.map(c => c.escritorio_id).filter(Boolean)));
+                if (escIds.length > 0) {
+                    const { data: escs } = await supabaseClient
+                        .from('ES_escritorios')
+                        .select('id, nome')
+                        .in('id', escIds);
+                    const mapaEsc = {};
+                    (escs || []).forEach(e => { mapaEsc[e.id] = e.nome; });
+                    lista = lista.map(c => ({ ...c, nome_escritorio: mapaEsc[c.escritorio_id] || 'Escritório Convidado' }));
+                }
+            }
+
+            convitesPendentesCache = lista;
             const badge = document.getElementById('badge-convites');
             if (badge) {
                 badge.textContent = convitesPendentesCache.length > 0 ? ` (${convitesPendentesCache.length})` : '';
@@ -509,7 +561,7 @@
                         return null;
                     }
                     return {
-                        nome,
+                        nome: nome,
                         documento: document.getElementById('swal-cad-esc-doc').value.trim() || null
                     };
                 }
@@ -520,24 +572,25 @@
             const { data: escCriado, error: errEsc } = await supabaseClient
                 .from('ES_escritorios')
                 .insert([{ nome: formValues.nome, documento: formValues.documento, ativo: true }])
-                .select()
-                .single();
+                .select();
 
-            if (errEsc) {
-                Swal.fire('Erro', errEsc.message, 'error');
+            if (errEsc || !escCriado || escCriado.length === 0) {
+                Swal.fire('Erro', (errEsc && errEsc.message) ? errEsc.message : 'Erro ao criar escritório.', 'error');
                 return;
             }
 
+            const escNovo = escCriado[0];
+
             await supabaseClient
                 .from('ES_master_escritorios')
-                .insert([{ master_auth_id: session.user.id, escritorio_id: escCriado.id }]);
+                .insert([{ master_auth_id: session.user.id, escritorio_id: escNovo.id }]);
 
             const { error: errUpd } = await supabaseClient
                 .from('ES_usuarios_perfis')
                 .update({
-                    escritorio_id: escCriado.id,
+                    escritorio_id: escNovo.id,
                     nivel_acesso: 1,
-                    cargo: perfil?.cargo || 'Sócio Diretor'
+                    cargo: (perfil && perfil.cargo) ? perfil.cargo : 'Sócio Diretor'
                 })
                 .eq('auth_id', session.user.id);
 
@@ -549,7 +602,7 @@
             await Swal.fire({
                 icon: 'success',
                 title: 'Escritório cadastrado!',
-                text: `O escritório "${escCriado.nome}" já está ativo na sua conta Master.`,
+                text: `O escritório "${escNovo.nome}" já está ativo na sua conta Master.`,
                 background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
             });
 
@@ -557,7 +610,7 @@
         }
 
         async function abrirModalConvites() {
-            const emailAtual = sessaoAtual?.session?.user?.email;
+            const emailAtual = sessaoAtual && sessaoAtual.session && sessaoAtual.session.user ? sessaoAtual.session.user.email : null;
             await carregarConvitesPendentes(emailAtual);
 
             if (convitesPendentesCache.length === 0) {
@@ -571,7 +624,7 @@
             }
 
             const convite = convitesPendentesCache[0];
-            const nomeEsc = convite.ES_escritorios?.nome || 'Escritório Convidado';
+            const nomeEsc = convite.nome_escritorio || 'Escritório Convidado';
             const nivelTexto = convite.nivel_acesso === 2 ? 'Nível 2 (Responsável)' : 'Nível 3 (Assessor)';
 
             const res = await Swal.fire({
@@ -631,7 +684,8 @@
             }
 
             const mesAno = document.getElementById('filtro-mes').value;
-            const visao = document.getElementById('filtro-hierarquia')?.value || 'minha';
+            const visaoSelect = document.getElementById('filtro-hierarquia');
+            const visao = (visaoSelect && visaoSelect.value) ? visaoSelect.value : 'minha';
 
             let queryMetas = supabaseClient.from('tv_metas_consultor').select('*').eq('mes_ano', mesAno);
 
