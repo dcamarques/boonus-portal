@@ -26,7 +26,7 @@
             color: var(--text-color);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
-            display: none;
+            display: flex;
             min-height: 100vh;
             flex-direction: column;
         }
@@ -144,7 +144,6 @@
     <main class="main-content">
 
         <div class="grid-top">
-            <!-- MEU PERFIL (MASTER) -->
             <div class="section-box" style="margin-bottom: 0;">
                 <h2 class="section-title">1. Meu Perfil (Master)</h2>
                 <div class="input-group">
@@ -166,7 +165,6 @@
                 <button class="btn-primary" onclick="salvarMeuPerfil()">Salvar Meu Perfil</button>
             </div>
 
-            <!-- MEUS ESCRITÓRIOS -->
             <div class="section-box" style="margin-bottom: 0;">
                 <h2 class="section-title">2. Meus Escritórios</h2>
                 <div id="lista-escritorios" style="margin-bottom: 14px;"></div>
@@ -183,7 +181,6 @@
             </div>
         </div>
 
-        <!-- EQUIPE CADASTRADA -->
         <div class="section-box">
             <div class="toolbar">
                 <h2 class="section-title" style="margin: 0; border: none; padding: 0;">3. Usuários Cadastrados nos Meus Escritórios</h2>
@@ -241,30 +238,43 @@
         let escritoriosCache = [];
         let equipeCache = [];
 
+        function esconderLoader() {
+            const loader = document.getElementById('init-loader');
+            if (loader) loader.style.display = 'none';
+        }
+
+        function mostrarLoader() {
+            const loader = document.getElementById('init-loader');
+            if (loader) loader.style.display = 'flex';
+        }
+
         async function iniciar() {
-            const { data: { session }, error } = await supabaseClient.auth.getSession();
-            if (error || !session) {
-                window.location.href = 'login.html';
-                return;
+            try {
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                if (error || !session) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                masterAuthId = session.user.id;
+                sessionEmail = (session.user.email || '').toLowerCase();
+
+                const perfil = await carregarMeuPerfilDoBanco();
+
+                if (perfil && perfil.nivel_acesso !== undefined && perfil.nivel_acesso !== null && perfil.nivel_acesso !== 1 && perfil.nivel_acesso !== 0) {
+                    alert("Acesso restrito ao usuário Master (Nível 1).");
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                preencherFormularioPerfil();
+                await carregarEscritorios();
+                await carregarEquipe();
+            } catch (err) {
+                console.error('Erro ao iniciar gestão de equipe:', err);
+            } finally {
+                esconderLoader();
             }
-
-            masterAuthId = session.user.id;
-            sessionEmail = (session.user.email || '').toLowerCase();
-
-            const perfil = await carregarMeuPerfilDoBanco();
-
-            if (!perfil || perfil.nivel_acesso !== 1) {
-                alert("Acesso restrito ao usuário Master (Nível 1).");
-                window.location.href = 'dashboard.html';
-                return;
-            }
-
-            preencherFormularioPerfil();
-            await carregarEscritorios();
-            await carregarEquipe();
-
-            document.body.style.display = 'flex';
-            document.getElementById('init-loader').style.display = 'none';
         }
 
         async function carregarMeuPerfilDoBanco() {
@@ -274,12 +284,7 @@
                 .eq('auth_id', masterAuthId)
                 .maybeSingle();
 
-            if (error) {
-                console.error('Erro ao buscar perfil:', error);
-                return meuPerfil;
-            }
-
-            if (data) {
+            if (!error && data) {
                 meuPerfil = data;
                 return meuPerfil;
             }
@@ -289,7 +294,7 @@
                 .insert([{
                     auth_id: masterAuthId,
                     email: sessionEmail,
-                    nome: sessionEmail.split('@')[0],
+                    nome: sessionEmail ? sessionEmail.split('@')[0] : 'Master',
                     cargo: 'Sócio Diretor',
                     nivel_acesso: 1,
                     ativo: true
@@ -320,38 +325,39 @@
                 return;
             }
 
-            document.getElementById('init-loader').style.display = 'flex';
+            mostrarLoader();
+            try {
+                const payload = {
+                    auth_id: masterAuthId,
+                    email: meuPerfil?.email || sessionEmail,
+                    nome,
+                    telefone,
+                    cargo,
+                    nivel_acesso: meuPerfil?.nivel_acesso ?? 1,
+                    escritorio_id: meuPerfil?.escritorio_id || null,
+                    ativo: meuPerfil?.ativo !== false
+                };
 
-            const payload = {
-                auth_id: masterAuthId,
-                email: meuPerfil?.email || sessionEmail,
-                nome,
-                telefone,
-                cargo,
-                nivel_acesso: meuPerfil?.nivel_acesso ?? 1,
-                escritorio_id: meuPerfil?.escritorio_id || null,
-                ativo: meuPerfil?.ativo !== false
-            };
+                const { data: salvo, error } = await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .upsert([payload], { onConflict: 'auth_id' })
+                    .select()
+                    .single();
 
-            const { data: salvo, error } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .upsert([payload], { onConflict: 'auth_id' })
-                .select()
-                .single();
+                if (error || !salvo) {
+                    Swal.fire('Erro ao salvar', error?.message || 'Não foi possível confirmar a gravação no banco.', 'error');
+                    return;
+                }
 
-            if (error || !salvo) {
-                document.getElementById('init-loader').style.display = 'none';
-                Swal.fire('Erro ao salvar', error?.message || 'Não foi possível confirmar a gravação no banco.', 'error');
-                return;
+                await carregarMeuPerfilDoBanco();
+                preencherFormularioPerfil();
+                await carregarEscritorios();
+                await carregarEquipe();
+
+                Swal.fire('Salvo!', 'Seu perfil foi gravado e atualizado.', 'success');
+            } finally {
+                esconderLoader();
             }
-
-            await carregarMeuPerfilDoBanco();
-            preencherFormularioPerfil();
-            await carregarEscritorios();
-            await carregarEquipe();
-
-            document.getElementById('init-loader').style.display = 'none';
-            Swal.fire('Salvo!', 'Seu perfil foi gravado e atualizado.', 'success');
         }
 
         async function carregarEscritorios() {
@@ -417,37 +423,39 @@
                 return;
             }
 
-            document.getElementById('init-loader').style.display = 'flex';
-            const { data: novoEsc, error } = await supabaseClient
-                .from('ES_escritorios')
-                .insert([{ nome, documento: doc || null, ativo: true }])
-                .select()
-                .single();
+            mostrarLoader();
+            try {
+                const { data: novoEsc, error } = await supabaseClient
+                    .from('ES_escritorios')
+                    .insert([{ nome, documento: doc || null, ativo: true }])
+                    .select()
+                    .single();
 
-            if (error) {
-                document.getElementById('init-loader').style.display = 'none';
-                Swal.fire('Erro ao criar escritório', error.message, 'error');
-                return;
-            }
+                if (error) {
+                    Swal.fire('Erro ao criar escritório', error.message, 'error');
+                    return;
+                }
 
-            await supabaseClient
-                .from('ES_master_escritorios')
-                .insert([{ master_auth_id: masterAuthId, escritorio_id: novoEsc.id }]);
-
-            if (!meuPerfil?.escritorio_id) {
                 await supabaseClient
-                    .from('ES_usuarios_perfis')
-                    .update({ escritorio_id: novoEsc.id })
-                    .eq('auth_id', masterAuthId);
-                await carregarMeuPerfilDoBanco();
-            }
+                    .from('ES_master_escritorios')
+                    .insert([{ master_auth_id: masterAuthId, escritorio_id: novoEsc.id }]);
 
-            document.getElementById('novo-escritorio-nome').value = '';
-            document.getElementById('novo-escritorio-doc').value = '';
-            await carregarEscritorios();
-            await carregarEquipe();
-            document.getElementById('init-loader').style.display = 'none';
-            Swal.fire('Sucesso!', `Escritório "${nome}" criado e vinculado ao seu painel.`, 'success');
+                if (!meuPerfil?.escritorio_id) {
+                    await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .update({ escritorio_id: novoEsc.id })
+                        .eq('auth_id', masterAuthId);
+                    await carregarMeuPerfilDoBanco();
+                }
+
+                document.getElementById('novo-escritorio-nome').value = '';
+                document.getElementById('novo-escritorio-doc').value = '';
+                await carregarEscritorios();
+                await carregarEquipe();
+                Swal.fire('Sucesso!', `Escritório "${nome}" criado e vinculado ao seu painel.`, 'success');
+            } finally {
+                esconderLoader();
+            }
         }
 
         async function editarEscritorio(id) {
@@ -534,6 +542,7 @@
         }
 
         function badgeNivel(nivel) {
+            if (nivel === 0) return '<span class="badge badge-n1">Nível 0 - Executivo</span>';
             if (nivel === 1) return '<span class="badge badge-n1">Nível 1 - Master</span>';
             if (nivel === 2) return '<span class="badge badge-n2">Nível 2 - Responsável</span>';
             return '<span class="badge badge-n3">Nível 3 - Assessor</span>';
@@ -775,4 +784,48 @@
                         nome,
                         telefone: document.getElementById('swal-ed-tel').value.trim(),
                         cargo: document.getElementById('swal-ed-cargo').value.trim() || 'Assessor',
-                        nivel_acesso: parseInt
+                        nivel_acesso: parseInt(document.getElementById('swal-ed-nivel').value, 10),
+                        escritorio_id: document.getElementById('swal-ed-esc').value,
+                        ativo: document.getElementById('swal-ed-ativo').value === 'true'
+                    };
+                }
+            });
+
+            if (!formValues) return;
+
+            const ehMeuPerfil = usuario.auth_id === masterAuthId;
+
+            if (ehMeuPerfil && formValues.nivel_acesso !== 1) {
+                const confirmSelf = await Swal.fire({
+                    title: 'Atenção: Alterar seu próprio nível',
+                    text: 'Você está removendo o próprio Nível 1 (Master) desta conta. Confirma?',
+                    icon: 'warning', showCancelButton: true,
+                    confirmButtonColor: '#ff4444', background: '#111', color: '#fff'
+                });
+                if (!confirmSelf.isConfirmed) return;
+            }
+
+            const query = usuario.auth_id
+                ? supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('auth_id', usuario.auth_id)
+                : supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('id', usuario.id);
+
+            const { data: atualizado, error } = await query.select().single();
+
+            if (error || !atualizado) {
+                Swal.fire('Erro ao atualizar', error?.message || 'Não foi possível confirmar a alteração.', 'error');
+                return;
+            }
+
+            if (ehMeuPerfil) {
+                await carregarMeuPerfilDoBanco();
+                preencherFormularioPerfil();
+            }
+
+            await carregarEquipe();
+            Swal.fire('Atualizado!', 'Dados, cargo e nível hierárquico salvos.', 'success');
+        }
+
+        iniciar();
+    </script>
+</body>
+</html>
