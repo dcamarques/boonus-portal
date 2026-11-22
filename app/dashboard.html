@@ -1,216 +1,724 @@
-// --- CONTROLE DE PERFIL, CONVITES E ONBOARDING NO DASHBOARD ---
-let convitesPendentesCache = [];
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dashboard - Boonus</title>
 
-async function configurarCabecalhoEOnboarding(session, perfil) {
-    const nomeExibicao = perfil?.nome || session.user.user_metadata?.nome || session.user.email;
-    const cargoExibicao = perfil?.cargo || (perfil?.nivel_acesso === 1 ? 'Sócio Diretor' : 'Membro');
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    const elOla = document.getElementById('user-ola');
-    const elCargo = document.getElementById('user-cargo');
-    if (elOla) elOla.textContent = `Olá, ${nomeExibicao}`;
-    if (elCargo) elCargo.textContent = cargoExibicao;
+    <style>
+        :root {
+            --neon-color: #00ff88;
+            --dark-bg: #050505;
+            --panel-bg: #111;
+            --card-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --muted: #888;
+            --border: #333;
+            --warn: #ffbb33;
+            --danger: #ff4444;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            display: none;
+            min-height: 100vh;
+            flex-direction: column;
+        }
 
-    await carregarConvitesPendentes(session.user.email);
+        .app-header {
+            padding: 18px 20px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .user-info { display: flex; flex-direction: column; gap: 3px; }
+        .user-ola { font-size: 1.15rem; font-weight: 700; color: #fff; margin: 0; }
+        .user-cargo { font-size: 0.78rem; color: var(--neon-color); text-transform: uppercase; letter-spacing: 0.8px; }
 
-    if (!perfil?.escritorio_id) {
-        if (convitesPendentesCache.length > 0) {
-            await abrirModalConvites();
-        } else {
-            const res = await Swal.fire({
-                title: 'Deseja cadastrar seu escritório agora?',
-                text: 'Você pode cadastrar seu escritório agora ou pular e explorar o painel.',
-                icon: 'info',
+        .header-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .btn-nav {
+            background: #1d1d1d; color: #fff; border: 1px solid #333;
+            padding: 8px 12px; border-radius: 8px; font-size: 0.8rem;
+            font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-nav:hover { border-color: var(--neon-color); color: var(--neon-color); }
+        .btn-nav-highlight {
+            background: rgba(0, 255, 136, 0.12); color: var(--neon-color);
+            border: 1px solid var(--neon-color);
+        }
+        .btn-sair {
+            background: none; color: #ff5555; border: 1px solid #442222;
+            padding: 8px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer;
+        }
+        .btn-sair:hover { background: #2a1111; }
+
+        .main-content { flex: 1; padding: 20px; max-width: 1150px; width: 100%; margin: 0 auto; }
+
+        .banner-onboarding {
+            background: linear-gradient(135deg, #131c17 0%, #161616 100%);
+            border: 1px solid var(--neon-color);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 22px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .banner-onboarding h3 { margin: 0 0 4px 0; color: #fff; font-size: 1rem; }
+        .banner-onboarding p { margin: 0; color: #bbb; font-size: 0.85rem; }
+
+        .filter-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 22px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: flex-end;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+        .filter-group label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .filter-group select, .filter-group input {
+            padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+            background: #0a0a0a; color: #fff; font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            padding: 11px 18px; background: var(--neon-color); color: #000;
+            border: none; border-radius: 8px; font-weight: bold; font-size: 0.85rem;
+            cursor: pointer; text-transform: uppercase;
+        }
+        .btn-primary:hover { opacity: 0.88; }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .kpi-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-top: 3px solid var(--neon-color);
+            border-radius: 12px;
+            padding: 18px;
+        }
+        .kpi-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; }
+        .kpi-value { font-size: 1.55rem; font-weight: 800; color: #fff; margin-top: 8px; }
+        .kpi-sub { font-size: 0.78rem; color: var(--neon-color); margin-top: 6px; }
+
+        .section-box {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            flex-wrap: wrap; gap: 10px;
+            border-bottom: 1px solid #333; padding-bottom: 12px; margin-bottom: 16px;
+        }
+        .section-title { font-size: 1rem; color: var(--neon-color); margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+
+        .table-container { width: 100%; overflow-x: auto; border-radius: 8px; border: 1px solid #333; background: #0a0a0a; }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid #222; text-align: left; }
+        .data-table th { background: #111; color: var(--muted); text-transform: uppercase; font-size: 0.72rem; }
+        .data-table tr:hover { background: #151515; }
+
+        .progress-bg { width: 100%; height: 8px; background: #222; border-radius: 99px; overflow: hidden; margin-top: 6px; }
+        .progress-fill { height: 100%; background: var(--neon-color); border-radius: 99px; transition: width 0.3s; }
+
+        #init-loader {
+            position: fixed; inset: 0; background: var(--dark-bg);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #333;
+            border-top: 4px solid var(--neon-color); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 12px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="init-loader">
+        <div class="spinner"></div>
+        <div style="color: #888; font-size: 0.85rem; letter-spacing: 1px;">CARREGANDO PAINEL...</div>
+    </div>
+
+    <header class="app-header">
+        <div class="user-info">
+            <h1 class="user-ola" id="user-ola">Olá, ...</h1>
+            <div class="user-cargo" id="user-cargo">Carregando perfil...</div>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn-nav" id="btn-convites" onclick="abrirModalConvites()">
+                Convites<span id="badge-convites"></span>
+            </button>
+            <button class="btn-nav" id="btn-equipe" style="display: none;" onclick="navegarProtegido('admin-equipe.html')">
+                Equipe &amp; Escritórios
+            </button>
+            <button class="btn-nav" id="btn-metas" style="display: none;" onclick="navegarProtegido('admin-metas.html')">
+                Metas
+            </button>
+            <button class="btn-nav" id="btn-catalogo" style="display: none;" onclick="navegarProtegido('admin-catalogo.html')">
+                Configurações
+            </button>
+            <button class="btn-sair" onclick="sair()">Sair</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <!-- BANNER QUANDO O USUÁRIO PULOU O CADASTRO DO ESCRITÓRIO -->
+        <div class="banner-onboarding" id="banner-onboarding">
+            <div>
+                <h3>Configuração de Escritório Pendente</h3>
+                <p>Cadastre o seu escritório ou verifique se você possui algum convite para liberar todos os recursos.</p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-primary" onclick="abrirModalCadastrarEscritorio(sessaoAtual.session, sessaoAtual.perfil)">Cadastrar Escritório</button>
+                <button class="btn-nav btn-nav-highlight" onclick="abrirModalConvites()">Ver Convites</button>
+            </div>
+        </div>
+
+        <!-- FILTROS DE VISÃO E PERÍODO -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="filtro-mes">Mês de Referência</label>
+                <input type="month" id="filtro-mes" onchange="carregarDadosDashboard()">
+            </div>
+
+            <div class="filter-group" id="grupo-visao" style="display: none;">
+                <label for="filtro-hierarquia">Visão de Performance</label>
+                <select id="filtro-hierarquia" onchange="carregarDadosDashboard()">
+                    <option value="minha">Minha Produção</option>
+                    <option value="todos_escritorios">Todos os Meus Escritórios (Consolidado)</option>
+                </select>
+            </div>
+
+            <div>
+                <button class="btn-primary" onclick="exigirEscritorioOuConvite(abrirModalNovoLancamento)">+ Novo Lançamento</button>
+            </div>
+        </div>
+
+        <!-- INDICADORES RESUMIDOS -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Realizado (Financeiro)</div>
+                <div class="kpi-value" id="kpi-realizado-valor">R$ 0</div>
+                <div class="kpi-sub" id="kpi-meta-valor">Meta: R$ 0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Total Realizado (Unidades)</div>
+                <div class="kpi-value" id="kpi-realizado-qtd">0</div>
+                <div class="kpi-sub" id="kpi-meta-qtd">Meta: 0 un.</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Atingimento Geral</div>
+                <div class="kpi-value" id="kpi-percentual">0%</div>
+                <div class="kpi-sub" id="kpi-escritorio-ativo">Escritório: Não vinculado</div>
+            </div>
+        </div>
+
+        <!-- TABELA DE ACOMPANHAMENTO DE METAS X REALIZADO -->
+        <div class="section-box">
+            <div class="section-header">
+                <h2 class="section-title">Acompanhamento de Performance</h2>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Classe / Produto</th>
+                            <th>Medida</th>
+                            <th>Meta</th>
+                            <th>Realizado</th>
+                            <th style="width: 170px;">Progresso</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-performance">
+                        <tr>
+                            <td colspan="5" style="text-align:center; color:#888; padding:24px;">Carregando indicadores...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let sessaoAtual = {
+            session: null,
+            perfil: null,
+            usuario_id: null,
+            escritorio_id: null,
+            nivel: 3,
+            escritorios_master: []
+        };
+        let convitesPendentesCache = [];
+
+        const formatadorBRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatadorQtd = new Intl.NumberFormat('pt-BR', { style: 'decimal' });
+
+        async function iniciar() {
+            const { data: { session }, error } = await supabaseClient.auth.getSession();
+            if (error || !session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            let { data: perfil } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .select('*')
+                .eq('auth_id', session.user.id)
+                .single();
+
+            if (!perfil) {
+                const nomeMeta = session.user.user_metadata?.nome || session.user.email.split('@')[0];
+                const { data: novoPerfil } = await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .insert([{
+                        auth_id: session.user.id,
+                        nome: nomeMeta,
+                        email: session.user.email.toLowerCase(),
+                        cargo: 'Sócio Diretor',
+                        nivel_acesso: 1,
+                        escritorio_id: null,
+                        ativo: true
+                    }])
+                    .select()
+                    .single();
+                perfil = novoPerfil;
+            }
+
+            if (perfil && perfil.ativo === false) {
+                await supabaseClient.auth.signOut();
+                alert('Seu acesso está inativo. Entre em contato com o administrador do escritório.');
+                window.location.href = 'login.html';
+                return;
+            }
+
+            sessaoAtual.session = session;
+            sessaoAtual.perfil = perfil;
+            sessaoAtual.usuario_id = session.user.id;
+            sessaoAtual.escritorio_id = perfil?.escritorio_id || null;
+            sessaoAtual.nivel = perfil?.nivel_acesso ?? 1;
+
+            const hoje = new Date();
+            const offset = hoje.getTimezoneOffset() * 60000;
+            document.getElementById('filtro-mes').value = (new Date(hoje - offset)).toISOString().slice(0, 7);
+
+            configurarBotoesPorNivel();
+            await carregarEscritoriosDoMaster();
+            await configurarCabecalhoEOnboarding(session, perfil);
+            await carregarDadosDashboard();
+
+            document.body.style.display = 'flex';
+            document.getElementById('init-loader').style.display = 'none';
+        }
+
+        function configurarBotoesPorNivel() {
+            const nivel = sessaoAtual.nivel;
+            if (nivel === 0 || nivel === 1) {
+                document.getElementById('btn-equipe').style.display = 'inline-block';
+                document.getElementById('btn-metas').style.display = 'inline-block';
+                document.getElementById('btn-catalogo').style.display = 'inline-block';
+                document.getElementById('grupo-visao').style.display = 'flex';
+            } else if (nivel === 2) {
+                document.getElementById('btn-metas').style.display = 'inline-block';
+                document.getElementById('grupo-visao').style.display = 'flex';
+            }
+        }
+
+        async function carregarEscritoriosDoMaster() {
+            const selectVisao = document.getElementById('filtro-hierarquia');
+            if (!selectVisao) return;
+
+            if (sessaoAtual.nivel === 0 || sessaoAtual.nivel === 1) {
+                const { data: vinculos } = await supabaseClient
+                    .from('ES_master_escritorios')
+                    .select('escritorio_id')
+                    .eq('master_auth_id', sessaoAtual.usuario_id);
+
+                const ids = new Set((vinculos || []).map(v => v.escritorio_id));
+                if (sessaoAtual.escritorio_id) ids.add(sessaoAtual.escritorio_id);
+
+                if (ids.size > 0) {
+                    const { data: escritorios } = await supabaseClient
+                        .from('ES_escritorios')
+                        .select('id, nome')
+                        .in('id', Array.from(ids))
+                        .order('nome', { ascending: true });
+
+                    sessaoAtual.escritorios_master = escritorios || [];
+                    selectVisao.innerHTML = `
+                        <option value="todos_escritorios">Todos os Meus Escritórios (Consolidado)</option>
+                        <option value="minha">Minha Produção Individual</option>
+                    `;
+                    sessaoAtual.escritorios_master.forEach(esc => {
+                        selectVisao.innerHTML += `<option value="${esc.id}">Escritório: ${esc.nome}</option>`;
+                    });
+                }
+            } else if (sessaoAtual.nivel === 2 && sessaoAtual.escritorio_id) {
+                selectVisao.innerHTML = `
+                    <option value="${sessaoAtual.escritorio_id}">Equipe do Meu Escritório</option>
+                    <option value="minha">Minha Produção Individual</option>
+                `;
+            }
+        }
+
+        async function configurarCabecalhoEOnboarding(session, perfil) {
+            const nomeExibicao = perfil?.nome || session.user.user_metadata?.nome || session.user.email;
+            const nivelTexto = perfil?.nivel_acesso === 0
+                ? 'Executivo Sênior'
+                : (perfil?.nivel_acesso === 1 ? 'Master' : (perfil?.nivel_acesso === 2 ? 'Responsável' : 'Assessor'));
+            const cargoExibicao = perfil?.cargo ? `${perfil.cargo} • ${nivelTexto}` : nivelTexto;
+
+            document.getElementById('user-ola').textContent = `Olá, ${nomeExibicao}`;
+            document.getElementById('user-cargo').textContent = cargoExibicao;
+
+            await carregarConvitesPendentes(session.user.email);
+
+            if (!perfil?.escritorio_id && perfil?.nivel_acesso !== 0) {
+                document.getElementById('banner-onboarding').style.display = 'flex';
+                document.getElementById('kpi-escritorio-ativo').textContent = 'Escritório: Não vinculado';
+
+                if (convitesPendentesCache.length > 0) {
+                    await abrirModalConvites();
+                } else {
+                    const res = await Swal.fire({
+                        title: 'Deseja cadastrar seu escritório agora?',
+                        text: 'Você pode cadastrar seu escritório agora ou pular e explorar o painel.',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Sim, cadastrar escritório',
+                        cancelButtonText: 'Pular por enquanto',
+                        confirmButtonColor: '#00ff88',
+                        cancelButtonColor: '#333',
+                        background: '#111',
+                        color: '#fff'
+                    });
+                    if (res.isConfirmed) {
+                        await abrirModalCadastrarEscritorio(session, perfil);
+                    }
+                }
+            } else if (perfil?.escritorio_id) {
+                const { data: escAtual } = await supabaseClient
+                    .from('ES_escritorios')
+                    .select('nome')
+                    .eq('id', perfil.escritorio_id)
+                    .single();
+                document.getElementById('kpi-escritorio-ativo').textContent = `Escritório: ${escAtual?.nome || 'Vinculado'}`;
+            }
+        }
+
+        async function carregarConvitesPendentes(emailUsuario) {
+            if (!emailUsuario) return;
+            const { data, error } = await supabaseClient
+                .from('ES_convites')
+                .select('*, ES_escritorios(nome)')
+                .ilike('email_convidado', emailUsuario.trim())
+                .eq('status', 'pendente');
+
+            convitesPendentesCache = error ? [] : (data || []);
+            const badge = document.getElementById('badge-convites');
+            if (badge) {
+                badge.textContent = convitesPendentesCache.length > 0 ? ` (${convitesPendentesCache.length})` : '';
+            }
+        }
+
+        function exigirEscritorioOuConvite(acaoCallback) {
+            if (sessaoAtual.nivel === 0 || (sessaoAtual && sessaoAtual.escritorio_id)) {
+                if (typeof acaoCallback === 'function') acaoCallback();
+                return true;
+            }
+
+            Swal.fire({
+                title: 'Acesso pendente',
+                text: 'Cadastre o seu escritório ou veja se você possui algum convite.',
+                icon: 'warning',
                 showCancelButton: true,
-                confirmButtonText: 'Sim, cadastrar escritório',
-                cancelButtonText: 'Pular por enquanto',
+                showDenyButton: true,
+                confirmButtonText: 'Cadastrar Escritório',
+                denyButtonText: 'Ver Meus Convites',
+                cancelButtonText: 'Fechar',
                 confirmButtonColor: '#00ff88',
+                denyButtonColor: '#2563eb',
                 cancelButtonColor: '#333',
                 background: '#111',
                 color: '#fff'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    await abrirModalCadastrarEscritorio(sessaoAtual.session, sessaoAtual.perfil);
+                } else if (result.isDenied) {
+                    await abrirModalConvites();
+                }
             });
+            return false;
+        }
+
+        function navegarProtegido(destino) {
+            exigirEscritorioOuConvite(() => {
+                window.location.href = destino;
+            });
+        }
+
+        async function abrirModalCadastrarEscritorio(session, perfil) {
+            const { value: formValues } = await Swal.fire({
+                title: 'Cadastrar Meu Escritório',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Nome do Escritório</label>
+                        <input id="swal-cad-esc-nome" class="swal2-input" placeholder="Ex: Marques Investimentos" style="width:85%;">
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">CNPJ / Identificador (Opcional)</label>
+                        <input id="swal-cad-esc-doc" class="swal2-input" placeholder="00.000.000/0001-00" style="width:85%;">
+                    </div>
+                `,
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                preConfirm: () => {
+                    const nome = document.getElementById('swal-cad-esc-nome').value.trim();
+                    if (!nome) {
+                        Swal.showValidationMessage('Informe o nome do escritório.');
+                        return null;
+                    }
+                    return {
+                        nome,
+                        documento: document.getElementById('swal-cad-esc-doc').value.trim() || null
+                    };
+                }
+            });
+
+            if (!formValues) return;
+
+            const { data: escCriado, error: errEsc } = await supabaseClient
+                .from('ES_escritorios')
+                .insert([{ nome: formValues.nome, documento: formValues.documento, ativo: true }])
+                .select()
+                .single();
+
+            if (errEsc) {
+                Swal.fire('Erro', errEsc.message, 'error');
+                return;
+            }
+
+            await supabaseClient
+                .from('ES_master_escritorios')
+                .insert([{ master_auth_id: session.user.id, escritorio_id: escCriado.id }]);
+
+            const { error: errUpd } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .update({
+                    escritorio_id: escCriado.id,
+                    nivel_acesso: 1,
+                    cargo: perfil?.cargo || 'Sócio Diretor'
+                })
+                .eq('auth_id', session.user.id);
+
+            if (errUpd) {
+                Swal.fire('Erro', errUpd.message, 'error');
+                return;
+            }
+
+            await Swal.fire({
+                icon: 'success',
+                title: 'Escritório cadastrado!',
+                text: `O escritório "${escCriado.nome}" já está ativo na sua conta Master.`,
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+            });
+
+            window.location.reload();
+        }
+
+        async function abrirModalConvites() {
+            const emailAtual = sessaoAtual?.session?.user?.email;
+            await carregarConvitesPendentes(emailAtual);
+
+            if (convitesPendentesCache.length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Sem convites pendentes',
+                    text: 'Não há convites pendentes para o seu e-mail no momento. Você pode cadastrar o seu próprio escritório.',
+                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+                });
+                return;
+            }
+
+            const convite = convitesPendentesCache[0];
+            const nomeEsc = convite.ES_escritorios?.nome || 'Escritório Convidado';
+            const nivelTexto = convite.nivel_acesso === 2 ? 'Nível 2 (Responsável)' : 'Nível 3 (Assessor)';
+
+            const res = await Swal.fire({
+                title: 'Convite de Escritório',
+                html: `
+                    <p style="margin:8px 0;"><strong>Escritório:</strong> ${nomeEsc}</p>
+                    <p style="margin:8px 0;"><strong>Cargo:</strong> ${convite.cargo || 'Assessor'}</p>
+                    <p style="margin:8px 0;"><strong>Nível:</strong> ${nivelTexto}</p>
+                `,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Aceitar Convite',
+                cancelButtonText: 'Recusar',
+                confirmButtonColor: '#00ff88',
+                cancelButtonColor: '#ff4444',
+                background: '#111',
+                color: '#fff'
+            });
+
             if (res.isConfirmed) {
-                await abrirModalCadastrarEscritorio(session, perfil);
+                await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .update({
+                        escritorio_id: convite.escritorio_id,
+                        nivel_acesso: convite.nivel_acesso,
+                        cargo: convite.cargo || 'Assessor',
+                        ativo: true
+                    })
+                    .eq('auth_id', sessaoAtual.session.user.id);
+
+                await supabaseClient
+                    .from('ES_convites')
+                    .update({ status: 'aceito' })
+                    .eq('id', convite.id);
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Convite aceito!',
+                    text: `Agora você faz parte do escritório ${nomeEsc}.`,
+                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+                });
+                window.location.reload();
+            } else if (res.dismiss === Swal.DismissReason.cancel) {
+                await supabaseClient
+                    .from('ES_convites')
+                    .update({ status: 'recusado' })
+                    .eq('id', convite.id);
+                await carregarConvitesPendentes(emailAtual);
             }
         }
-    }
-}
 
-async function carregarConvitesPendentes(emailUsuario) {
-    if (!emailUsuario) return;
-    const { data, error } = await supabaseClient
-        .from('ES_convites')
-        .select('*, ES_escritorios(nome)')
-        .ilike('email_convidado', emailUsuario.trim())
-        .eq('status', 'pendente');
-
-    convitesPendentesCache = error ? [] : (data || []);
-    const badge = document.getElementById('badge-convites');
-    if (badge) {
-        badge.textContent = convitesPendentesCache.length > 0 ? ` (${convitesPendentesCache.length})` : '';
-    }
-}
-
-function exigirEscritorioOuConvite(acaoCallback) {
-    if (sessaoAtual && sessaoAtual.escritorio_id) {
-        if (typeof acaoCallback === 'function') acaoCallback();
-        return true;
-    }
-
-    Swal.fire({
-        title: 'Acesso pendente',
-        text: 'Cadastre o seu escritório ou veja se você possui algum convite.',
-        icon: 'warning',
-        showCancelButton: true,
-        showDenyButton: true,
-        confirmButtonText: 'Cadastrar Escritório',
-        denyButtonText: 'Ver Meus Convites',
-        cancelButtonText: 'Fechar',
-        confirmButtonColor: '#00ff88',
-        denyButtonColor: '#2563eb',
-        cancelButtonColor: '#333',
-        background: '#111',
-        color: '#fff'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            await abrirModalCadastrarEscritorio(sessaoAtual.session, sessaoAtual.perfil);
-        } else if (result.isDenied) {
-            await abrirModalConvites();
-        }
-    });
-    return false;
-}
-
-async function abrirModalCadastrarEscritorio(session, perfil) {
-    const { value: formValues } = await Swal.fire({
-        title: 'Cadastrar Meu Escritório',
-        html: `
-            <div style="text-align:left; margin-bottom:10px;">
-                <label style="font-size:0.8rem; color:#aaa;">Nome do Escritório</label>
-                <input id="swal-cad-esc-nome" class="swal2-input" placeholder="Ex: Marques Investimentos" style="width:85%;">
-            </div>
-            <div style="text-align:left;">
-                <label style="font-size:0.8rem; color:#aaa;">CNPJ / Identificador (Opcional)</label>
-                <input id="swal-cad-esc-doc" class="swal2-input" placeholder="00.000.000/0001-00" style="width:85%;">
-            </div>
-        `,
-        background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-        preConfirm: () => {
-            const nome = document.getElementById('swal-cad-esc-nome').value.trim();
-            if (!nome) {
-                Swal.showValidationMessage('Informe o nome do escritório.');
-                return null;
+        async function carregarDadosDashboard() {
+            const tbody = document.getElementById('tabela-performance');
+            if (!sessaoAtual.escritorio_id && sessaoAtual.nivel !== 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888; padding:24px;">Cadastre o seu escritório ou aceite um convite para visualizar os indicadores.</td></tr>';
+                return;
             }
-            return {
-                nome,
-                documento: document.getElementById('swal-cad-esc-doc').value.trim() || null
-            };
+
+            const mesAno = document.getElementById('filtro-mes').value;
+            const visao = document.getElementById('filtro-hierarquia')?.value || 'minha';
+
+            let queryMetas = supabaseClient.from('tv_metas_consultor').select('*').eq('mes_ano', mesAno);
+
+            if (visao === 'minha') {
+                queryMetas = queryMetas.eq('utilizador_id', sessaoAtual.usuario_id);
+            } else if (visao === 'todos_escritorios') {
+                const ids = sessaoAtual.escritorios_master.map(e => e.id);
+                if (ids.length > 0) queryMetas = queryMetas.in('escritorio_id', ids);
+            } else {
+                queryMetas = queryMetas.eq('escritorio_id', visao);
+            }
+
+            const { data: metas } = await queryMetas;
+            const listaMetas = metas || [];
+
+            if (listaMetas.length === 0) {
+                document.getElementById('kpi-realizado-valor').textContent = 'R$ 0';
+                document.getElementById('kpi-meta-valor').textContent = 'Meta: R$ 0';
+                document.getElementById('kpi-realizado-qtd').textContent = '0';
+                document.getElementById('kpi-meta-qtd').textContent = 'Meta: 0 un.';
+                document.getElementById('kpi-percentual').textContent = '0%';
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888; padding:24px;">Nenhuma meta encontrada para este período/visão.</td></tr>';
+                return;
+            }
+
+            const agrupado = {};
+            let totalMetaValor = 0;
+            let totalMetaQtd = 0;
+
+            listaMetas.forEach(m => {
+                const chave = `${m.classe_nome}|${m.item_nome}|${m.subitem_nome || ''}|${m.tipo_medida}`;
+                if (!agrupado[chave]) {
+                    agrupado[chave] = {
+                        classe: m.classe_nome,
+                        item: m.item_nome,
+                        subitem: m.subitem_nome,
+                        tipo: m.tipo_medida,
+                        meta: 0,
+                        realizado: 0
+                    };
+                }
+                const valMeta = m.tipo_medida === 'valor' ? Number(m.meta_valor || 0) : Number(m.meta_quantidade || 0);
+                agrupado[chave].meta += valMeta;
+                if (m.tipo_medida === 'valor') totalMetaValor += valMeta;
+                else totalMetaQtd += valMeta;
+            });
+
+            document.getElementById('kpi-meta-valor').textContent = `Meta: ${formatadorBRL.format(totalMetaValor)}`;
+            document.getElementById('kpi-meta-qtd').textContent = `Meta: ${formatadorQtd.format(totalMetaQtd)} un.`;
+
+            tbody.innerHTML = '';
+            Object.values(agrupado).forEach(row => {
+                const pct = row.meta > 0 ? Math.min(100, Math.round((row.realizado / row.meta) * 100)) : 0;
+                const metaFmt = row.tipo === 'valor' ? formatadorBRL.format(row.meta) : `${formatadorQtd.format(row.meta)} un.`;
+                const realFmt = row.tipo === 'valor' ? formatadorBRL.format(row.realizado) : `${formatadorQtd.format(row.realizado)} un.`;
+                const subLabel = row.subitem ? ` > ${row.subitem}` : '';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${row.classe}</strong> &gt; ${row.item}${subLabel}</td>
+                        <td style="text-transform:uppercase; font-size:0.72rem; color:#888;">${row.tipo}</td>
+                        <td style="color:#ffbb33; font-weight:bold;">${metaFmt}</td>
+                        <td style="color:#00ff88; font-weight:bold;">${realFmt}</td>
+                        <td>
+                            <div style="font-size:0.75rem; color:#aaa;">${pct}%</div>
+                            <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;"></div></div>
+                        </td>
+                    </tr>
+                `;
+            });
         }
-    });
 
-    if (!formValues) return;
+        function abrirModalNovoLancamento() {
+            Swal.fire({
+                icon: 'info',
+                title: 'Novo Lançamento',
+                text: 'Pronto para conectar com a tabela ES_producao no próximo passo da nossa sequência.',
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+            });
+        }
 
-    const { data: escCriado, error: errEsc } = await supabaseClient
-        .from('ES_escritorios')
-        .insert([{ nome: formValues.nome, documento: formValues.documento, ativo: true }])
-        .select()
-        .single();
+        async function sair() {
+            await supabaseClient.auth.signOut();
+            window.location.href = 'login.html';
+        }
 
-    if (errEsc) {
-        Swal.fire('Erro', errEsc.message, 'error');
-        return;
-    }
-
-    await supabaseClient
-        .from('ES_master_escritorios')
-        .insert([{ master_auth_id: session.user.id, escritorio_id: escCriado.id }]);
-
-    const { error: errUpd } = await supabaseClient
-        .from('ES_usuarios_perfis')
-        .update({
-            escritorio_id: escCriado.id,
-            nivel_acesso: 1,
-            cargo: perfil?.cargo || 'Sócio Diretor'
-        })
-        .eq('auth_id', session.user.id);
-
-    if (errUpd) {
-        Swal.fire('Erro', errUpd.message, 'error');
-        return;
-    }
-
-    await Swal.fire({
-        icon: 'success',
-        title: 'Escritório cadastrado!',
-        text: `O escritório "${escCriado.nome}" já está ativo na sua conta Master.`,
-        background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-    });
-
-    window.location.reload();
-}
-
-async function abrirModalConvites() {
-    const emailAtual = sessaoAtual?.session?.user?.email;
-    await carregarConvitesPendentes(emailAtual);
-
-    if (convitesPendentesCache.length === 0) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Sem convites pendentes',
-            text: 'Não há convites pendentes para o seu e-mail no momento. Você pode cadastrar o seu próprio escritório.',
-            background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-        });
-        return;
-    }
-
-    const convite = convitesPendentesCache[0];
-    const nomeEsc = convite.ES_escritorios?.nome || 'Escritório Convidado';
-    const nivelTexto = convite.nivel_acesso === 2 ? 'Nível 2 (Responsável)' : 'Nível 3 (Assessor)';
-
-    const res = await Swal.fire({
-        title: 'Convite de Escritório',
-        html: `
-            <p style="margin:8px 0;"><strong>Escritório:</strong> ${nomeEsc}</p>
-            <p style="margin:8px 0;"><strong>Cargo:</strong> ${convite.cargo || 'Assessor'}</p>
-            <p style="margin:8px 0;"><strong>Nível:</strong> ${nivelTexto}</p>
-        `,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Aceitar Convite',
-        cancelButtonText: 'Recusar',
-        confirmButtonColor: '#00ff88',
-        cancelButtonColor: '#ff4444',
-        background: '#111',
-        color: '#fff'
-    });
-
-    if (res.isConfirmed) {
-        await supabaseClient
-            .from('ES_usuarios_perfis')
-            .update({
-                escritorio_id: convite.escritorio_id,
-                nivel_acesso: convite.nivel_acesso,
-                cargo: convite.cargo || 'Assessor',
-                ativo: true
-            })
-            .eq('auth_id', sessaoAtual.session.user.id);
-
-        await supabaseClient
-            .from('ES_convites')
-            .update({ status: 'aceito' })
-            .eq('id', convite.id);
-
-        await Swal.fire({
-            icon: 'success',
-            title: 'Convite aceito!',
-            text: `Agora você faz parte do escritório ${nomeEsc}.`,
-            background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
-        });
-        window.location.reload();
-    } else if (res.dismiss === Swal.DismissReason.cancel) {
-        await supabaseClient
-            .from('ES_convites')
-            .update({ status: 'recusado' })
-            .eq('id', convite.id);
-        await carregarConvitesPendentes(emailAtual);
-    }
-}
+        iniciar();
+    </script>
+</body>
+</html>
