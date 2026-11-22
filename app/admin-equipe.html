@@ -282,7 +282,7 @@
         }
 
         async function carregarMeuPerfilDoBanco() {
-            const { data, error } = await supabaseClient
+            let { data, error } = await supabaseClient
                 .from('ES_usuarios_perfis')
                 .select('*')
                 .eq('auth_id', masterAuthId)
@@ -291,6 +291,26 @@
             if (!error && data && data.length > 0) {
                 meuPerfil = data[0];
                 return meuPerfil;
+            }
+
+            if (sessionEmail) {
+                const porEmail = await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .select('*')
+                    .ilike('email', sessionEmail)
+                    .limit(1);
+
+                if (!porEmail.error && porEmail.data && porEmail.data.length > 0) {
+                    const linhaExistente = porEmail.data[0];
+                    const vinculado = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .update({ auth_id: masterAuthId })
+                        .eq('id', linhaExistente.id)
+                        .select();
+
+                    meuPerfil = (vinculado.data && vinculado.data[0]) ? vinculado.data[0] : { ...linhaExistente, auth_id: masterAuthId };
+                    return meuPerfil;
+                }
             }
 
             const { data: inserido, error: errIns } = await supabaseClient
@@ -330,7 +350,9 @@
 
             mostrarLoader();
             try {
-                const payload = {
+                await carregarMeuPerfilDoBanco();
+
+                const dadosAtualizados = {
                     auth_id: masterAuthId,
                     email: (meuPerfil && meuPerfil.email) ? meuPerfil.email : sessionEmail,
                     nome: nome,
@@ -341,22 +363,31 @@
                     ativo: meuPerfil ? meuPerfil.ativo !== false : true
                 };
 
-                const { data: salvo, error } = await supabaseClient
-                    .from('ES_usuarios_perfis')
-                    .upsert([payload], { onConflict: 'auth_id' })
-                    .select();
+                let resultado;
+                if (meuPerfil && meuPerfil.id !== undefined && meuPerfil.id !== null) {
+                    resultado = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .update(dadosAtualizados)
+                        .eq('id', meuPerfil.id)
+                        .select();
+                } else {
+                    resultado = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .insert([dadosAtualizados])
+                        .select();
+                }
 
-                if (error || !salvo || salvo.length === 0) {
-                    Swal.fire('Erro ao salvar', (error && error.message) ? error.message : 'Não foi possível confirmar a gravação no banco.', 'error');
+                if (resultado.error || !resultado.data || resultado.data.length === 0) {
+                    Swal.fire('Erro ao salvar', (resultado.error && resultado.error.message) ? resultado.error.message : 'Nenhuma linha foi atualizada no banco.', 'error');
                     return;
                 }
 
-                await carregarMeuPerfilDoBanco();
+                meuPerfil = resultado.data[0];
                 preencherFormularioPerfil();
                 await carregarEscritorios();
                 await carregarEquipe();
 
-                Swal.fire('Salvo!', 'Seu perfil foi gravado e atualizado.', 'success');
+                Swal.fire('Salvo!', `Perfil atualizado: ${meuPerfil.nome} (${meuPerfil.cargo || ''}).`, 'success');
             } finally {
                 esconderLoader();
             }
@@ -530,7 +561,7 @@
                 if (!error && data) lista = data;
             }
 
-            if (meuPerfil && !lista.some(u => u.auth_id === meuPerfil.auth_id)) {
+            if (meuPerfil && !lista.some(u => u.auth_id === meuPerfil.auth_id || String(u.id) === String(meuPerfil.id))) {
                 lista.unshift(meuPerfil);
             }
 
@@ -589,7 +620,7 @@
                         <td>${u.cargo || 'Assessor'}</td>
                         <td>${badgeNivel(u.nivel_acesso)}</td>
                         <td><span class="badge ${isAtivo ? 'badge-ativo' : 'badge-inativo'}">${isAtivo ? 'Ativo' : 'Inativo'}</span></td>
-                        <td><button class="btn-edit" onclick="abrirModalEditarUsuario('${u.auth_id || u.id}')">✏️ Editar</button></td>
+                        <td><button class="btn-edit" onclick="abrirModalEditarUsuario('${u.id}')">✏️ Editar</button></td>
                     </tr>
                 `;
             });
@@ -736,7 +767,7 @@
         }
 
         async function abrirModalEditarUsuario(chaveId) {
-            const usuario = equipeCache.find(u => u.auth_id === chaveId || String(u.id) === String(chaveId));
+            const usuario = equipeCache.find(u => String(u.id) === String(chaveId) || u.auth_id === chaveId);
             if (!usuario) return;
 
             const { value: formValues } = await Swal.fire({
@@ -796,7 +827,7 @@
 
             if (!formValues) return;
 
-            const ehMeuPerfil = usuario.auth_id === masterAuthId;
+            const ehMeuPerfil = meuPerfil && String(usuario.id) === String(meuPerfil.id);
 
             if (ehMeuPerfil && formValues.nivel_acesso !== 1) {
                 const confirmSelf = await Swal.fire({
@@ -808,11 +839,11 @@
                 if (!confirmSelf.isConfirmed) return;
             }
 
-            const query = usuario.auth_id
-                ? supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('auth_id', usuario.auth_id)
-                : supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('id', usuario.id);
-
-            const { data: atualizado, error } = await query.select();
+            const { data: atualizado, error } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .update(formValues)
+                .eq('id', usuario.id)
+                .select();
 
             if (error || !atualizado || atualizado.length === 0) {
                 Swal.fire('Erro ao atualizar', (error && error.message) ? error.message : 'Não foi possível confirmar a alteração.', 'error');
@@ -820,7 +851,7 @@
             }
 
             if (ehMeuPerfil) {
-                await carregarMeuPerfilDoBanco();
+                meuPerfil = atualizado[0];
                 preencherFormularioPerfil();
             }
 
