@@ -248,9 +248,12 @@
             if (loader) loader.style.display = 'flex';
         }
 
+        setTimeout(esconderLoader, 4000);
+
         async function iniciar() {
             try {
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                const { data, error } = await supabaseClient.auth.getSession();
+                const session = data ? data.session : null;
                 if (error || !session) {
                     window.location.href = 'login.html';
                     return;
@@ -262,6 +265,7 @@
                 const perfil = await carregarMeuPerfilDoBanco();
 
                 if (perfil && perfil.nivel_acesso !== undefined && perfil.nivel_acesso !== null && perfil.nivel_acesso !== 1 && perfil.nivel_acesso !== 0) {
+                    esconderLoader();
                     alert("Acesso restrito ao usuário Master (Nível 1).");
                     window.location.href = 'dashboard.html';
                     return;
@@ -282,10 +286,10 @@
                 .from('ES_usuarios_perfis')
                 .select('*')
                 .eq('auth_id', masterAuthId)
-                .maybeSingle();
+                .limit(1);
 
-            if (!error && data) {
-                meuPerfil = data;
+            if (!error && data && data.length > 0) {
+                meuPerfil = data[0];
                 return meuPerfil;
             }
 
@@ -299,20 +303,19 @@
                     nivel_acesso: 1,
                     ativo: true
                 }])
-                .select()
-                .single();
+                .select();
 
-            if (!errIns && inserido) {
-                meuPerfil = inserido;
+            if (!errIns && inserido && inserido.length > 0) {
+                meuPerfil = inserido[0];
             }
             return meuPerfil;
         }
 
         function preencherFormularioPerfil() {
-            document.getElementById('perfil-nome').value = meuPerfil?.nome || '';
-            document.getElementById('perfil-email').value = meuPerfil?.email || sessionEmail || '';
-            document.getElementById('perfil-telefone').value = meuPerfil?.telefone || '';
-            document.getElementById('perfil-cargo').value = meuPerfil?.cargo || 'Sócio Diretor';
+            document.getElementById('perfil-nome').value = meuPerfil && meuPerfil.nome ? meuPerfil.nome : '';
+            document.getElementById('perfil-email').value = meuPerfil && meuPerfil.email ? meuPerfil.email : (sessionEmail || '');
+            document.getElementById('perfil-telefone').value = meuPerfil && meuPerfil.telefone ? meuPerfil.telefone : '';
+            document.getElementById('perfil-cargo').value = meuPerfil && meuPerfil.cargo ? meuPerfil.cargo : 'Sócio Diretor';
         }
 
         async function salvarMeuPerfil() {
@@ -329,23 +332,22 @@
             try {
                 const payload = {
                     auth_id: masterAuthId,
-                    email: meuPerfil?.email || sessionEmail,
-                    nome,
-                    telefone,
-                    cargo,
-                    nivel_acesso: meuPerfil?.nivel_acesso ?? 1,
-                    escritorio_id: meuPerfil?.escritorio_id || null,
-                    ativo: meuPerfil?.ativo !== false
+                    email: (meuPerfil && meuPerfil.email) ? meuPerfil.email : sessionEmail,
+                    nome: nome,
+                    telefone: telefone,
+                    cargo: cargo,
+                    nivel_acesso: (meuPerfil && meuPerfil.nivel_acesso !== undefined && meuPerfil.nivel_acesso !== null) ? meuPerfil.nivel_acesso : 1,
+                    escritorio_id: (meuPerfil && meuPerfil.escritorio_id) ? meuPerfil.escritorio_id : null,
+                    ativo: meuPerfil ? meuPerfil.ativo !== false : true
                 };
 
                 const { data: salvo, error } = await supabaseClient
                     .from('ES_usuarios_perfis')
                     .upsert([payload], { onConflict: 'auth_id' })
-                    .select()
-                    .single();
+                    .select();
 
-                if (error || !salvo) {
-                    Swal.fire('Erro ao salvar', error?.message || 'Não foi possível confirmar a gravação no banco.', 'error');
+                if (error || !salvo || salvo.length === 0) {
+                    Swal.fire('Erro ao salvar', (error && error.message) ? error.message : 'Não foi possível confirmar a gravação no banco.', 'error');
                     return;
                 }
 
@@ -366,8 +368,8 @@
                 .select('escritorio_id')
                 .eq('master_auth_id', masterAuthId);
 
-            const ids = new Set((vinculos || []).map(v => v.escritorio_id));
-            if (meuPerfil?.escritorio_id) ids.add(meuPerfil.escritorio_id);
+            const ids = new Set((vinculos || []).map(v => v.escritorio_id).filter(Boolean));
+            if (meuPerfil && meuPerfil.escritorio_id) ids.add(meuPerfil.escritorio_id);
 
             if (ids.size === 0) {
                 escritoriosCache = [];
@@ -427,23 +429,24 @@
             try {
                 const { data: novoEsc, error } = await supabaseClient
                     .from('ES_escritorios')
-                    .insert([{ nome, documento: doc || null, ativo: true }])
-                    .select()
-                    .single();
+                    .insert([{ nome: nome, documento: doc || null, ativo: true }])
+                    .select();
 
-                if (error) {
-                    Swal.fire('Erro ao criar escritório', error.message, 'error');
+                if (error || !novoEsc || novoEsc.length === 0) {
+                    Swal.fire('Erro ao criar escritório', (error && error.message) ? error.message : 'Falha ao inserir escritório.', 'error');
                     return;
                 }
 
+                const escCriado = novoEsc[0];
+
                 await supabaseClient
                     .from('ES_master_escritorios')
-                    .insert([{ master_auth_id: masterAuthId, escritorio_id: novoEsc.id }]);
+                    .insert([{ master_auth_id: masterAuthId, escritorio_id: escCriado.id }]);
 
-                if (!meuPerfil?.escritorio_id) {
+                if (!meuPerfil || !meuPerfil.escritorio_id) {
                     await supabaseClient
                         .from('ES_usuarios_perfis')
-                        .update({ escritorio_id: novoEsc.id })
+                        .update({ escritorio_id: escCriado.id })
                         .eq('auth_id', masterAuthId);
                     await carregarMeuPerfilDoBanco();
                 }
@@ -489,7 +492,7 @@
                         return null;
                     }
                     return {
-                        nome,
+                        nome: nome,
                         documento: document.getElementById('swal-esc-doc').value.trim() || null,
                         ativo: document.getElementById('swal-esc-ativo').value === 'true'
                     };
@@ -637,7 +640,7 @@
                         return null;
                     }
                     return {
-                        email_convidado,
+                        email_convidado: email_convidado,
                         cargo: document.getElementById('swal-conv-cargo').value.trim() || 'Assessor',
                         nivel_acesso: parseInt(document.getElementById('swal-conv-nivel').value, 10),
                         escritorio_id: document.getElementById('swal-conv-esc').value,
@@ -713,7 +716,7 @@
                         Swal.showValidationMessage('Nome e e-mail são obrigatórios.');
                         return null;
                     }
-                    return { nome, email, telefone, cargo, nivel_acesso, escritorio_id, ativo: true };
+                    return { nome: nome, email: email, telefone: telefone, cargo: cargo, nivel_acesso: nivel_acesso, escritorio_id: escritorio_id, ativo: true };
                 }
             });
 
@@ -781,7 +784,7 @@
                         return null;
                     }
                     return {
-                        nome,
+                        nome: nome,
                         telefone: document.getElementById('swal-ed-tel').value.trim(),
                         cargo: document.getElementById('swal-ed-cargo').value.trim() || 'Assessor',
                         nivel_acesso: parseInt(document.getElementById('swal-ed-nivel').value, 10),
@@ -809,10 +812,10 @@
                 ? supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('auth_id', usuario.auth_id)
                 : supabaseClient.from('ES_usuarios_perfis').update(formValues).eq('id', usuario.id);
 
-            const { data: atualizado, error } = await query.select().single();
+            const { data: atualizado, error } = await query.select();
 
-            if (error || !atualizado) {
-                Swal.fire('Erro ao atualizar', error?.message || 'Não foi possível confirmar a alteração.', 'error');
+            if (error || !atualizado || atualizado.length === 0) {
+                Swal.fire('Erro ao atualizar', (error && error.message) ? error.message : 'Não foi possível confirmar a alteração.', 'error');
                 return;
             }
 
