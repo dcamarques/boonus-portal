@@ -101,12 +101,18 @@
         .badge-n3 { background: rgba(120, 180, 255, 0.15); color: #8ab8ff; border: 1px solid #5588dd; }
         .badge-ativo { background: rgba(0, 255, 136, 0.12); color: var(--neon-color); }
         .badge-inativo { background: rgba(255, 68, 68, 0.15); color: var(--danger); }
+        .badge-pendente { background: rgba(255, 187, 51, 0.15); color: var(--warn); }
 
         .btn-edit {
             background: #222; color: #fff; border: 1px solid #444;
             padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
         }
         .btn-edit:hover { border-color: var(--neon-color); color: var(--neon-color); }
+        .btn-danger-sm {
+            background: #2a1111; color: #ff6666; border: 1px solid #552222;
+            padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+        }
+        .btn-danger-sm:hover { border-color: #ff4444; color: #fff; }
 
         .escritorio-chip {
             display: inline-flex; align-items: center; gap: 8px;
@@ -191,7 +197,7 @@
             </div>
 
             <div class="filters">
-                <select id="filtro-escritorio" onchange="renderizarEquipe()">
+                <select id="filtro-escritorio" onchange="renderizarTudo()">
                     <option value="todos">Todos os Meus Escritórios</option>
                 </select>
                 <select id="filtro-nivel" onchange="renderizarEquipe()">
@@ -225,6 +231,29 @@
             </div>
         </div>
 
+        <div class="section-box">
+            <div class="toolbar">
+                <h2 class="section-title" style="margin: 0; border: none; padding: 0;">4. Convites Enviados (Aguardando Aceite)</h2>
+                <button class="btn-secondary" onclick="abrirModalEnviarConvite()">+ Novo Convite</button>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>E-mail Convidado</th>
+                            <th>Escritório</th>
+                            <th>Cargo</th>
+                            <th>Nível</th>
+                            <th>Status</th>
+                            <th style="width: 110px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-convites"></tbody>
+                </table>
+            </div>
+        </div>
+
     </main>
 
     <script>
@@ -237,6 +266,7 @@
         let meuPerfil = null;
         let escritoriosCache = [];
         let equipeCache = [];
+        let convitesCache = [];
 
         function esconderLoader() {
             const loader = document.getElementById('init-loader');
@@ -274,6 +304,7 @@
                 preencherFormularioPerfil();
                 await carregarEscritorios();
                 await carregarEquipe();
+                await carregarConvites();
             } catch (err) {
                 console.error('Erro ao iniciar gestão de equipe:', err);
             } finally {
@@ -486,6 +517,7 @@
                 document.getElementById('novo-escritorio-doc').value = '';
                 await carregarEscritorios();
                 await carregarEquipe();
+                await carregarConvites();
                 Swal.fire('Sucesso!', `Escritório "${nome}" criado e vinculado ao seu painel.`, 'success');
             } finally {
                 esconderLoader();
@@ -543,7 +575,7 @@
             }
 
             await carregarEscritorios();
-            await carregarEquipe();
+            renderizarTudo();
             Swal.fire('Atualizado!', 'Dados do escritório salvos.', 'success');
         }
 
@@ -567,6 +599,29 @@
 
             equipeCache = lista;
             renderizarEquipe();
+        }
+
+        async function carregarConvites() {
+            const ids = escritoriosCache.map(e => e.id);
+            if (ids.length === 0) {
+                convitesCache = [];
+                renderizarConvites();
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('ES_convites')
+                .select('*')
+                .in('escritorio_id', ids)
+                .order('criado_em', { ascending: false });
+
+            convitesCache = (!error && data) ? data : [];
+            renderizarConvites();
+        }
+
+        function renderizarTudo() {
+            renderizarEquipe();
+            renderizarConvites();
         }
 
         function nomeEscritorio(id) {
@@ -624,6 +679,72 @@
                     </tr>
                 `;
             });
+        }
+
+        function renderizarConvites() {
+            const escFiltro = document.getElementById('filtro-escritorio').value;
+            const tbody = document.getElementById('tabela-convites');
+
+            const filtrados = convitesCache.filter(c => {
+                if (escFiltro !== 'todos' && c.escritorio_id !== escFiltro) return false;
+                return true;
+            });
+
+            tbody.innerHTML = '';
+            if (filtrados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#888; padding:20px;">Nenhum convite enviado para este filtro.</td></tr>';
+                return;
+            }
+
+            filtrados.forEach(c => {
+                let statusBadge = '<span class="badge badge-pendente">Pendente</span>';
+                if (c.status === 'aceito') statusBadge = '<span class="badge badge-ativo">Aceito</span>';
+                else if (c.status === 'recusado' || c.status === 'cancelado') statusBadge = `<span class="badge badge-inativo">${c.status === 'aceito' ? 'Aceito' : (c.status === 'recusado' ? 'Recusado' : 'Cancelado')}</span>`;
+
+                const acaoBtn = c.status === 'pendente'
+                    ? `<button class="btn-danger-sm" onclick="cancelarConvite('${c.id}')">Cancelar</button>`
+                    : '<span style="color:#666; font-size:0.78rem;">—</span>';
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td style="font-weight:bold; color:#fff;">${c.email_convidado}</td>
+                        <td>${nomeEscritorio(c.escritorio_id)}</td>
+                        <td>${c.cargo || 'Assessor'}</td>
+                        <td>${badgeNivel(c.nivel_acesso)}</td>
+                        <td>${statusBadge}</td>
+                        <td>${acaoBtn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function cancelarConvite(conviteId) {
+            const res = await Swal.fire({
+                title: 'Cancelar convite?',
+                text: 'O convidado não poderá mais aceitar este convite.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ff4444',
+                confirmButtonText: 'Sim, cancelar',
+                cancelButtonText: 'Voltar',
+                background: '#111',
+                color: '#fff'
+            });
+
+            if (!res.isConfirmed) return;
+
+            const { error } = await supabaseClient
+                .from('ES_convites')
+                .update({ status: 'cancelado' })
+                .eq('id', conviteId);
+
+            if (error) {
+                Swal.fire('Erro', error.message, 'error');
+                return;
+            }
+
+            await carregarConvites();
+            Swal.fire('Cancelado!', 'O convite foi cancelado.', 'success');
         }
 
         function optionsEscritorios(selecionadoId) {
@@ -692,7 +813,8 @@
                 return;
             }
 
-            Swal.fire('Convite enviado!', `O e-mail ${formValues.email_convidado} já poderá aceitar o convite no sistema.`, 'success');
+            await carregarConvites();
+            Swal.fire('Convite enviado!', `O e-mail ${formValues.email_convidado} já aparece na lista de convites e poderá aceitar ao entrar no sistema.`, 'success');
         }
 
         async function abrirModalNovoUsuario() {
