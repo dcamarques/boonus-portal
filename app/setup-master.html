@@ -2,120 +2,185 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Criar Conta Master - Boonus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Criar Conta - Boonus</title>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        :root { --neon-color: #00ff88; --dark-bg: #050505; --panel-bg: #111; --text-color: #e0e0e0; }
-        body { background-color: var(--dark-bg); color: var(--text-color); font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
-        .setup-container { background-color: var(--panel-bg); padding: 40px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); border-top: 4px solid var(--neon-color); width: 100%; max-width: 450px; }
-        .logo { font-size: 2rem; font-weight: bold; color: #fff; margin-bottom: 5px; text-align: center; letter-spacing: 2px; }
-        .logo span { color: var(--neon-color); }
-        .subtitle { font-size: 0.9rem; color: #888; text-transform: uppercase; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
-        
-        .input-group { margin-bottom: 20px; text-align: left; }
-        .input-group label { display: block; margin-bottom: 8px; font-size: 0.85rem; color: #aaa; text-transform: uppercase; font-weight: 600; }
-        .input-group input { width: 100%; padding: 12px 15px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 1rem; box-sizing: border-box; }
-        .input-group input:focus { outline: none; border-color: var(--neon-color); }
-        
-        .password-wrapper { position: relative; display: flex; align-items: center; }
-        .password-wrapper input { padding-right: 45px; } 
-        .toggle-password { position: absolute; right: 12px; cursor: pointer; color: #888; font-size: 1.2rem; user-select: none; transition: color 0.3s; }
-        .toggle-password:hover { color: var(--neon-color); filter: brightness(1.2); }
 
-        .btn-submit { width: 100%; padding: 14px; background-color: var(--neon-color); color: #000; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; transition: background-color 0.3s; }
-        .btn-submit:hover:not(:disabled) { background-color: #00cc6a; }
-        .btn-submit:disabled { background-color: #333; color: #666; cursor: not-allowed; }
-        
-        .login-link { display: block; text-align: center; margin-top: 20px; color: #888; text-decoration: none; font-size: 0.85rem; transition: color 0.3s; }
-        .login-link:hover { color: var(--neon-color); }
-        
-        #success-box { display: none; text-align: center; padding: 20px 0; }
-        #success-box h3 { color: var(--neon-color); font-size: 1.5rem; margin-bottom: 10px; }
-        #success-box p { color: #aaa; font-size: 0.95rem; line-height: 1.5; }
+    <style>
+        :root {
+            --neon-color: #00ff88;
+            --dark-bg: #050505;
+            --panel-bg: #111;
+            --card-bg: #1a1a1a;
+            --text-color: #e0e0e0;
+            --muted: #888;
+            --border: #333;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 28px 24px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+        }
+        .brand { text-align: center; margin-bottom: 22px; }
+        .brand-title { font-size: 1.5rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: 0.5px; }
+        .brand-title span { color: var(--neon-color); }
+        .brand-sub { font-size: 0.85rem; color: var(--muted); margin-top: 6px; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label {
+            display: block; font-size: 0.75rem; color: var(--muted);
+            margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .input-group input {
+            width: 100%; padding: 12px 14px; border-radius: 8px;
+            border: 1px solid var(--border); background: #0a0a0a; color: #fff; font-size: 0.95rem;
+        }
+        .input-group input:focus { outline: none; border-color: var(--neon-color); }
+
+        .password-wrap { position: relative; }
+        .toggle-pass {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.85rem;
+        }
+
+        .btn-primary {
+            width: 100%; padding: 14px; background: var(--neon-color); color: #000;
+            border: none; border-radius: 8px; font-weight: bold; font-size: 0.95rem;
+            text-transform: uppercase; cursor: pointer; margin-top: 6px;
+        }
+        .btn-primary:hover { opacity: 0.9; }
+
+        .footer-link { text-align: center; margin-top: 18px; font-size: 0.85rem; color: var(--muted); }
+        .footer-link a { color: var(--neon-color); text-decoration: none; font-weight: 600; }
     </style>
 </head>
 <body>
-    <div class="setup-container">
-        <div class="logo">BOONUS<span>.TV</span></div>
-        <div class="subtitle">Passo 1/2: Criar Conta Master</div>
 
-        <form id="setup-form">
+    <div class="auth-card">
+        <div class="brand">
+            <h1 class="brand-title">Boonus <span>App</span></h1>
+            <p class="brand-sub">Crie sua conta para começar</p>
+        </div>
+
+        <form id="form-cadastro" onsubmit="registrarUsuario(event)">
             <div class="input-group">
-                <label>Seu Nome Completo</label>
-                <input type="text" id="nome_responsavel" required placeholder="Ex: Carlos Silva">
+                <label for="nome">Nome Completo</label>
+                <input type="text" id="nome" required placeholder="Ex: Cyntia Marques">
             </div>
+
             <div class="input-group">
-                <label>E-mail Corporativo</label>
-                <input type="email" id="email" required placeholder="diretoria@escritorio.com.br">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" required placeholder="seu@email.com">
             </div>
+
             <div class="input-group">
-                <label>Senha de Acesso</label>
-                <div class="password-wrapper">
-                    <input type="password" id="password" required placeholder="Mínimo de 6 caracteres" minlength="6">
-                    <span class="toggle-password" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar Senha">👁️</span>
+                <label for="senha">Crie uma Senha</label>
+                <div class="password-wrap">
+                    <input type="password" id="senha" required minlength="6" placeholder="Mínimo de 6 caracteres">
+                    <button type="button" class="toggle-pass" onclick="alternarSenha()">Mostrar</button>
                 </div>
             </div>
-            <button type="submit" class="btn-submit" id="btn-submit">Criar Conta</button>
-            <a href="login.html" class="login-link">Já tem uma conta? Faça login aqui.</a>
+
+            <button type="submit" class="btn-primary" id="btn-submit">Criar Conta</button>
         </form>
 
-        <div id="success-box">
-            <h3>Quase lá! 📩</h3>
-            <p>Enviamos um link de confirmação para <br><b id="mail-sent" style="color:#fff;"></b>.</p>
-            <p>Por favor, clique no link enviado para o seu e-mail para ativar a conta e configurar o seu escritório.</p>
-            <a href="login.html" class="btn-submit" style="display:inline-block; text-decoration:none; margin-top:20px; width:80%; box-sizing:border-box;">Ir para o Login</a>
+        <div class="footer-link">
+            Já possui conta? <a href="login.html">Fazer login</a>
         </div>
     </div>
 
     <script>
-        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co'; 
-        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6'; 
+        const SUPABASE_URL = 'https://vlnzhrhzzhbzdvhmsuap.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_fmqGGaxEPBatRTMzL5sTnw_FWrgvqr6';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        function togglePasswordVisibility() {
-            const pwdInput = document.getElementById('password');
-            const toggleBtn = document.querySelector('.toggle-password');
-            if (pwdInput.type === 'password') {
-                pwdInput.type = 'text';
-                toggleBtn.textContent = '🙈';
+        function alternarSenha() {
+            const input = document.getElementById('senha');
+            const btn = document.querySelector('.toggle-pass');
+            if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = 'Ocultar';
             } else {
-                pwdInput.type = 'password';
-                toggleBtn.textContent = '👁️';
+                input.type = 'password';
+                btn.textContent = 'Mostrar';
             }
         }
 
-        document.getElementById('setup-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nome = document.getElementById('nome_responsavel').value.trim();
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+        async function registrarUsuario(event) {
+            event.preventDefault();
             const btn = document.getElementById('btn-submit');
-            
-            btn.disabled = true; btn.innerText = 'Aguarde...';
+            const nome = document.getElementById('nome').value.trim();
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const senha = document.getElementById('senha').value;
+
+            btn.disabled = true;
+            btn.textContent = 'Criando conta...';
 
             try {
-                const { data, error } = await supabaseClient.auth.signUp({
-                    email, password, options: { data: { nome_completo: nome } }
+                const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                    email,
+                    password: senha,
+                    options: { data: { nome } }
                 });
 
-                if (error) throw error;
+                if (authError) throw authError;
 
-                if (data.session) {
-                    window.location.href = 'setup-escritorio.html';
-                } else {
-                    document.getElementById('setup-form').style.display = 'none';
-                    document.getElementById('mail-sent').innerText = email;
-                    document.getElementById('success-box').style.display = 'block';
+                const userId = authData.user?.id;
+                if (userId) {
+                    const { error: perfilError } = await supabaseClient
+                        .from('ES_usuarios_perfis')
+                        .upsert([{
+                            auth_id: userId,
+                            nome,
+                            email,
+                            cargo: 'Sócio Diretor',
+                            nivel_acesso: 1,
+                            escritorio_id: null,
+                            ativo: true
+                        }], { onConflict: 'auth_id' });
+
+                    if (perfilError) {
+                        console.warn('Aviso ao criar perfil inicial:', perfilError.message);
+                    }
                 }
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Conta criada!',
+                    text: 'Agora você será direcionado para o painel, onde verificaremos convites ou o cadastro do seu escritório.',
+                    background: '#111', color: '#fff', confirmButtonColor: '#00ff88'
+                });
+
+                window.location.href = 'dashboard.html';
             } catch (err) {
-                let msg = err.message;
-                if (msg.includes('already registered')) msg = 'Este e-mail já está cadastrado.';
-                Swal.fire({ icon: 'error', title: 'Erro', text: msg, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
-                btn.disabled = false; btn.innerText = 'Criar Conta';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Não foi possível criar a conta',
+                    text: err.message || 'Tente novamente.',
+                    background: '#111', color: '#fff', confirmButtonColor: '#ff4444'
+                });
+                btn.disabled = false;
+                btn.textContent = 'Criar Conta';
             }
-        });
+        }
     </script>
 </body>
 </html>
