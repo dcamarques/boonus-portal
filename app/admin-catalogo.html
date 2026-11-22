@@ -73,7 +73,6 @@
                 .select('nivel_acesso, escritorio_id')
                 .eq('auth_id', session.user.id).single();
 
-            // Bloqueia se não for o Master (Nível 1)
             if (!userDb || userDb.nivel_acesso !== 1) {
                 alert("Acesso Negado. Apenas o Sócio Diretor (Master) pode parametrizar o catálogo.");
                 window.location.href = 'dashboard.html';
@@ -84,7 +83,7 @@
             sessaoAtual.escritorio_id = userDb.escritorio_id;
             
             document.body.style.display = 'flex';
-            carregarCatalogo();
+            await carregarCatalogo();
         }
 
         async function carregarCatalogo() {
@@ -99,10 +98,17 @@
                         tv_catalogo_subitens (id, nome)
                     )
                 `)
-                .eq('grupo_id', sessaoAtual.escritorio_id); // Vincula as tabelas antigas ao novo ID de escritório
+                .eq('grupo_id', sessaoAtual.escritorio_id);
 
             const container = document.getElementById('catalogo-container');
             container.innerHTML = '';
+
+            if (error) {
+                console.error("Erro ao carregar catálogo:", error);
+                container.innerHTML = `<div class="empty-state" style="color:#ff4444;">Erro ao carregar catálogo: ${error.message}</div>`;
+                document.getElementById('init-loader').style.display = 'none';
+                return;
+            }
 
             if (!classes || classes.length === 0) {
                 container.innerHTML = '<div class="empty-state">O catálogo está vazio. Comece adicionando a primeira Classe (ex: Contas, Produtos).</div>';
@@ -111,6 +117,8 @@
 
                 classes.forEach(cls => {
                     let itensHTML = '';
+                    const listaStatus = Array.isArray(cls.opcoes_status) ? cls.opcoes_status.join(', ') : (cls.opcoes_status || '');
+
                     if (cls.tv_catalogo_itens && cls.tv_catalogo_itens.length > 0) {
                         cls.tv_catalogo_itens.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
                         
@@ -156,10 +164,10 @@
                                 <div>
                                     <h3 class="classe-title">
                                         ${cls.nome}
-                                        <button class="btn-edit" title="Editar Classe" onclick="editarClasse('${cls.id}', '${cls.nome}', '${cls.opcoes_status.join(', ')}')">✏️</button>
+                                        <button class="btn-edit" title="Editar Classe" onclick="editarClasse('${cls.id}', '${cls.nome}', '${listaStatus}')">✏️</button>
                                         <button class="btn-delete" title="Excluir Classe" onclick="excluirClasse('${cls.id}', '${cls.nome}')">❌</button>
                                     </h3>
-                                    <span class="classe-status">Status Permitidos: ${cls.opcoes_status.join(', ')}</span>
+                                    <span class="classe-status">Status Permitidos: ${listaStatus}</span>
                                 </div>
                                 <button class="btn-add-item" onclick="criarItem('${cls.id}', '${cls.nome}')">➕ Item</button>
                             </div>
@@ -183,14 +191,27 @@
                     const nome = document.getElementById('swal-nome').value.trim();
                     const statusText = document.getElementById('swal-status').value.trim();
                     if (!nome || !statusText) { Swal.showValidationMessage('Preencha ambos os campos'); return null; }
-                    return { nome, status: statusText.split(',').map(s => s.trim()) };
+                    return { nome, status: statusText.split(',').map(s => s.trim()).filter(s => s !== '') };
                 }
             });
 
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_classes').insert({ grupo_id: sessaoAtual.escritorio_id, nome: formValues.nome, opcoes_status: formValues.status });
-                carregarCatalogo();
+                const { error } = await supabaseClient
+                    .from('tv_catalogo_classes')
+                    .insert([{ 
+                        grupo_id: sessaoAtual.escritorio_id, 
+                        nome: formValues.nome, 
+                        opcoes_status: formValues.status 
+                    }]);
+
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao salvar classe', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                    return;
+                }
+
+                await carregarCatalogo();
             }
         }
 
@@ -212,14 +233,32 @@
 
             if (formValues) {
                 document.getElementById('init-loader').style.display = 'flex';
-                await supabaseClient.from('tv_catalogo_itens').insert({ classe_id: classeId, nome: formValues.nome, tipo_medida: formValues.tipo });
-                carregarCatalogo();
+                const { error } = await supabaseClient
+                    .from('tv_catalogo_itens')
+                    .insert([{ classe_id: classeId, nome: formValues.nome, tipo_medida: formValues.tipo }]);
+
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao salvar item', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                    return;
+                }
+
+                await carregarCatalogo();
             }
         }
 
         async function criarSubitem(itemId, itemNome) {
             const { value: nome } = await Swal.fire({ title: `Subitem para ${itemNome}`, input: 'text', inputLabel: 'Nome do Subitem', background: '#111', color: '#fff', confirmButtonColor: '#00ff88', inputValidator: (value) => { if (!value) return 'O nome é obrigatório!'; } });
-            if (nome) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_catalogo_subitens').insert({ item_id: itemId, nome: nome.trim() }); carregarCatalogo(); }
+            if (nome) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_subitens').insert([{ item_id: itemId, nome: nome.trim() }]); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao salvar subitem', text: error.message, background: '#111', color: '#fff', confirmButtonColor: '#ff4444' });
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function editarClasse(id, nomeAtual, statusAtual) {
@@ -231,15 +270,33 @@
                     const nome = document.getElementById('swal-nome-edit').value.trim();
                     const status = document.getElementById('swal-status-edit').value.trim();
                     if (!nome || !status) { Swal.showValidationMessage('Preencha todos os campos'); return null; }
-                    return { nome, status: status.split(',').map(s => s.trim()) };
+                    return { nome, status: status.split(',').map(s => s.trim()).filter(s => s !== '') };
                 }
             });
-            if (formValues) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_catalogo_classes').update({ nome: formValues.nome, opcoes_status: formValues.status }).eq('id', id); carregarCatalogo(); }
+            if (formValues) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_classes').update({ nome: formValues.nome, opcoes_status: formValues.status }).eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao editar', text: error.message, background: '#111', color: '#fff' });
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function excluirClasse(id, nome) {
             const res = await Swal.fire({ title: `Excluir a classe "${nome}"?`, text: "Não é possível excluir se houver itens associados a ela. Remova os itens primeiro.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim, Excluir', background: '#111', color: '#fff' });
-            if (res.isConfirmed) { document.getElementById('init-loader').style.display = 'flex'; const { error } = await supabaseClient.from('tv_catalogo_classes').delete().eq('id', id); if (error) Swal.fire('Erro', 'Remova os Itens desta classe primeiro.', 'error'); carregarCatalogo(); }
+            if (res.isConfirmed) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_classes').delete().eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire('Erro', 'Remova os Itens desta classe primeiro.', 'error'); 
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function editarItem(id, nomeAtual, tipoAtual) {
@@ -254,22 +311,58 @@
                     return { nome, tipo };
                 }
             });
-            if (formValues) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_catalogo_itens').update({ nome: formValues.nome, tipo_medida: formValues.tipo }).eq('id', id); carregarCatalogo(); }
+            if (formValues) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_itens').update({ nome: formValues.nome, tipo_medida: formValues.tipo }).eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao editar', text: error.message, background: '#111', color: '#fff' });
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function excluirItem(id, nome) {
             const res = await Swal.fire({ title: `Excluir "${nome}"?`, text: "Remova os subitens associados primeiro, se houver.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim, Excluir', background: '#111', color: '#fff' });
-            if (res.isConfirmed) { document.getElementById('init-loader').style.display = 'flex'; const { error } = await supabaseClient.from('tv_catalogo_itens').delete().eq('id', id); if (error) Swal.fire('Erro', 'Remova os Subitens associados primeiro.', 'error'); carregarCatalogo(); }
+            if (res.isConfirmed) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_itens').delete().eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire('Erro', 'Remova os Subitens associados primeiro.', 'error'); 
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function editarSubitem(id, nomeAtual) {
             const { value: nome } = await Swal.fire({ title: 'Editar Subitem', input: 'text', inputValue: nomeAtual, background: '#111', color: '#fff', confirmButtonColor: '#00ff88', inputValidator: (value) => { if (!value) return 'O nome é obrigatório!'; } });
-            if (nome) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_catalogo_subitens').update({ nome: nome.trim() }).eq('id', id); carregarCatalogo(); }
+            if (nome) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_subitens').update({ nome: nome.trim() }).eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao editar', text: error.message, background: '#111', color: '#fff' });
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         async function excluirSubitem(id, nome) {
             const res = await Swal.fire({ title: `Excluir Subitem "${nome}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ff3333', cancelButtonColor: '#333', confirmButtonText: 'Sim', background: '#111', color: '#fff' });
-            if (res.isConfirmed) { document.getElementById('init-loader').style.display = 'flex'; await supabaseClient.from('tv_catalogo_subitens').delete().eq('id', id); carregarCatalogo(); }
+            if (res.isConfirmed) { 
+                document.getElementById('init-loader').style.display = 'flex'; 
+                const { error } = await supabaseClient.from('tv_catalogo_subitens').delete().eq('id', id); 
+                if (error) {
+                    document.getElementById('init-loader').style.display = 'none';
+                    Swal.fire({ icon: 'error', title: 'Erro ao excluir', text: error.message, background: '#111', color: '#fff' });
+                    return;
+                }
+                await carregarCatalogo(); 
+            }
         }
 
         validarSessao();
