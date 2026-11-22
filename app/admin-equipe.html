@@ -136,7 +136,7 @@
     <header class="app-header">
         <button class="btn-back" onclick="window.location.href='dashboard.html'" title="Voltar ao Dashboard">&#8592;</button>
         <div style="text-align: right;">
-            <h1 class="header-title">Gestão de Equipe & Escritórios</h1>
+            <h1 class="header-title">Gestão de Equipe &amp; Escritórios</h1>
             <div class="header-subtitle">Nível 1 - Master</div>
         </div>
     </header>
@@ -187,7 +187,10 @@
         <div class="section-box">
             <div class="toolbar">
                 <h2 class="section-title" style="margin: 0; border: none; padding: 0;">3. Usuários Cadastrados nos Meus Escritórios</h2>
-                <button class="btn-primary" onclick="abrirModalNovoUsuario()">+ Cadastrar Membro</button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button class="btn-secondary" onclick="abrirModalEnviarConvite()">✉️ Enviar Convite</button>
+                    <button class="btn-primary" onclick="abrirModalNovoUsuario()">+ Cadastrar Membro</button>
+                </div>
             </div>
 
             <div class="filters">
@@ -528,6 +531,69 @@
             ).join('');
         }
 
+        async function abrirModalEnviarConvite() {
+            if (escritoriosCache.length === 0) {
+                Swal.fire('Atenção', 'Crie pelo menos um escritório antes de enviar convites.', 'warning');
+                return;
+            }
+
+            const { value: formValues } = await Swal.fire({
+                title: 'Enviar Convite de Escritório',
+                html: `
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">E-mail do Convidado</label>
+                        <input id="swal-conv-email" type="email" class="swal2-input" placeholder="convidado@email.com" style="width:85%;">
+                    </div>
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Cargo / Função Sugerida</label>
+                        <input id="swal-conv-cargo" class="swal2-input" placeholder="Ex: Assessor de Investimentos" style="width:85%;">
+                    </div>
+                    <div style="text-align:left; margin-bottom:10px;">
+                        <label style="font-size:0.8rem; color:#aaa;">Nível de Acesso do Convite</label>
+                        <select id="swal-conv-nivel" class="swal2-input" style="width:85%;">
+                            <option value="3" selected>Nível 3 - Assessor</option>
+                            <option value="2">Nível 2 - Responsável</option>
+                        </select>
+                    </div>
+                    <div style="text-align:left;">
+                        <label style="font-size:0.8rem; color:#aaa;">Escritório</label>
+                        <select id="swal-conv-esc" class="swal2-input" style="width:85%;">
+                            ${optionsEscritorios(escritoriosCache[0].id)}
+                        </select>
+                    </div>
+                `,
+                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
+                preConfirm: () => {
+                    const email_convidado = document.getElementById('swal-conv-email').value.trim().toLowerCase();
+                    if (!email_convidado) {
+                        Swal.showValidationMessage('Informe o e-mail do convidado.');
+                        return null;
+                    }
+                    return {
+                        email_convidado,
+                        cargo: document.getElementById('swal-conv-cargo').value.trim() || 'Assessor',
+                        nivel_acesso: parseInt(document.getElementById('swal-conv-nivel').value, 10),
+                        escritorio_id: document.getElementById('swal-conv-esc').value,
+                        convidado_por: masterAuthId,
+                        status: 'pendente'
+                    };
+                }
+            });
+
+            if (!formValues) return;
+
+            const { error } = await supabaseClient
+                .from('ES_convites')
+                .insert([formValues]);
+
+            if (error) {
+                Swal.fire('Erro ao enviar convite', error.message, 'error');
+                return;
+            }
+
+            Swal.fire('Convite enviado!', `O e-mail ${formValues.email_convidado} já poderá aceitar o convite no sistema.`, 'success');
+        }
+
         async function abrirModalNovoUsuario() {
             if (escritoriosCache.length === 0) {
                 Swal.fire('Atenção', 'Crie pelo menos um escritório antes de cadastrar membros.', 'warning');
@@ -571,7 +637,7 @@
                 background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
                 preConfirm: () => {
                     const nome = document.getElementById('swal-u-nome').value.trim();
-                    const email = document.getElementById('swal-u-email').value.trim();
+                    const email = document.getElementById('swal-u-email').value.trim().toLowerCase();
                     const telefone = document.getElementById('swal-u-tel').value.trim();
                     const cargo = document.getElementById('swal-u-cargo').value.trim() || 'Assessor';
                     const nivel_acesso = parseInt(document.getElementById('swal-u-nivel').value, 10);
