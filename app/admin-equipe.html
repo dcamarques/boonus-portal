@@ -236,6 +236,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let masterAuthId = null;
+        let sessionEmail = null;
         let meuPerfil = null;
         let escritoriosCache = [];
         let equipeCache = [];
@@ -248,20 +249,16 @@
             }
 
             masterAuthId = session.user.id;
+            sessionEmail = (session.user.email || '').toLowerCase();
 
-            const { data: perfil, error: errPerfil } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .select('*')
-                .eq('auth_id', masterAuthId)
-                .single();
+            const perfil = await carregarMeuPerfilDoBanco();
 
-            if (errPerfil || !perfil || perfil.nivel_acesso !== 1) {
+            if (!perfil || perfil.nivel_acesso !== 1) {
                 alert("Acesso restrito ao usuário Master (Nível 1).");
                 window.location.href = 'dashboard.html';
                 return;
             }
 
-            meuPerfil = perfil;
             preencherFormularioPerfil();
             await carregarEscritorios();
             await carregarEquipe();
@@ -270,11 +267,47 @@
             document.getElementById('init-loader').style.display = 'none';
         }
 
+        async function carregarMeuPerfilDoBanco() {
+            const { data, error } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .select('*')
+                .eq('auth_id', masterAuthId)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Erro ao buscar perfil:', error);
+                return meuPerfil;
+            }
+
+            if (data) {
+                meuPerfil = data;
+                return meuPerfil;
+            }
+
+            const { data: inserido, error: errIns } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .insert([{
+                    auth_id: masterAuthId,
+                    email: sessionEmail,
+                    nome: sessionEmail.split('@')[0],
+                    cargo: 'Sócio Diretor',
+                    nivel_acesso: 1,
+                    ativo: true
+                }])
+                .select()
+                .single();
+
+            if (!errIns && inserido) {
+                meuPerfil = inserido;
+            }
+            return meuPerfil;
+        }
+
         function preencherFormularioPerfil() {
-            document.getElementById('perfil-nome').value = meuPerfil.nome || '';
-            document.getElementById('perfil-email').value = meuPerfil.email || '';
-            document.getElementById('perfil-telefone').value = meuPerfil.telefone || '';
-            document.getElementById('perfil-cargo').value = meuPerfil.cargo || 'Sócio Diretor';
+            document.getElementById('perfil-nome').value = meuPerfil?.nome || '';
+            document.getElementById('perfil-email').value = meuPerfil?.email || sessionEmail || '';
+            document.getElementById('perfil-telefone').value = meuPerfil?.telefone || '';
+            document.getElementById('perfil-cargo').value = meuPerfil?.cargo || 'Sócio Diretor';
         }
 
         async function salvarMeuPerfil() {
@@ -287,21 +320,38 @@
                 return;
             }
 
-            const { error } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .update({ nome, telefone, cargo })
-                .eq('id', meuPerfil.id);
+            document.getElementById('init-loader').style.display = 'flex';
 
-            if (error) {
-                Swal.fire('Erro', error.message, 'error');
+            const payload = {
+                auth_id: masterAuthId,
+                email: meuPerfil?.email || sessionEmail,
+                nome,
+                telefone,
+                cargo,
+                nivel_acesso: meuPerfil?.nivel_acesso ?? 1,
+                escritorio_id: meuPerfil?.escritorio_id || null,
+                ativo: meuPerfil?.ativo !== false
+            };
+
+            const { data: salvo, error } = await supabaseClient
+                .from('ES_usuarios_perfis')
+                .upsert([payload], { onConflict: 'auth_id' })
+                .select()
+                .single();
+
+            if (error || !salvo) {
+                document.getElementById('init-loader').style.display = 'none';
+                Swal.fire('Erro ao salvar', error?.message || 'Não foi possível confirmar a gravação no banco.', 'error');
                 return;
             }
 
-            meuPerfil.nome = nome;
-            meuPerfil.telefone = telefone;
-            meuPerfil.cargo = cargo;
+            await carregarMeuPerfilDoBanco();
+            preencherFormularioPerfil();
+            await carregarEscritorios();
             await carregarEquipe();
-            Swal.fire('Salvo!', 'Seu perfil Master foi atualizado.', 'success');
+
+            document.getElementById('init-loader').style.display = 'none';
+            Swal.fire('Salvo!', 'Seu perfil foi gravado e atualizado.', 'success');
         }
 
         async function carregarEscritorios() {
@@ -311,7 +361,7 @@
                 .eq('master_auth_id', masterAuthId);
 
             const ids = new Set((vinculos || []).map(v => v.escritorio_id));
-            if (meuPerfil.escritorio_id) ids.add(meuPerfil.escritorio_id);
+            if (meuPerfil?.escritorio_id) ids.add(meuPerfil.escritorio_id);
 
             if (ids.size === 0) {
                 escritoriosCache = [];
@@ -384,6 +434,14 @@
                 .from('ES_master_escritorios')
                 .insert([{ master_auth_id: masterAuthId, escritorio_id: novoEsc.id }]);
 
+            if (!meuPerfil?.escritorio_id) {
+                await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .update({ escritorio_id: novoEsc.id })
+                    .eq('auth_id', masterAuthId);
+                await carregarMeuPerfilDoBanco();
+            }
+
             document.getElementById('novo-escritorio-nome').value = '';
             document.getElementById('novo-escritorio-doc').value = '';
             await carregarEscritorios();
@@ -449,28 +507,28 @@
 
         async function carregarEquipe() {
             const ids = escritoriosCache.map(e => e.id);
-            if (ids.length === 0) {
-                equipeCache = [];
-                renderizarEquipe();
-                return;
+            let lista = [];
+
+            if (ids.length > 0) {
+                const { data, error } = await supabaseClient
+                    .from('ES_usuarios_perfis')
+                    .select('*')
+                    .in('escritorio_id', ids)
+                    .order('nome', { ascending: true });
+
+                if (!error && data) lista = data;
             }
 
-            const { data, error } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .select('*')
-                .in('escritorio_id', ids)
-                .order('nome', { ascending: true });
-
-            if (error) {
-                console.error(error);
-                return;
+            if (meuPerfil && !lista.some(u => u.auth_id === meuPerfil.auth_id)) {
+                lista.unshift(meuPerfil);
             }
 
-            equipeCache = data || [];
+            equipeCache = lista;
             renderizarEquipe();
         }
 
         function nomeEscritorio(id) {
+            if (!id) return 'Sem escritório vinculado';
             const found = escritoriosCache.find(e => e.id === id);
             return found ? found.nome : 'Escritório não identificado';
         }
@@ -519,7 +577,7 @@
                         <td>${u.cargo || 'Assessor'}</td>
                         <td>${badgeNivel(u.nivel_acesso)}</td>
                         <td><span class="badge ${isAtivo ? 'badge-ativo' : 'badge-inativo'}">${isAtivo ? 'Ativo' : 'Inativo'}</span></td>
-                        <td><button class="btn-edit" onclick="abrirModalEditarUsuario('${u.id}')">✏️ Editar</button></td>
+                        <td><button class="btn-edit" onclick="abrirModalEditarUsuario('${u.auth_id || u.id}')">✏️ Editar</button></td>
                     </tr>
                 `;
             });
@@ -665,8 +723,8 @@
             Swal.fire('Cadastrado!', 'Membro adicionado ao escritório.', 'success');
         }
 
-        async function abrirModalEditarUsuario(id) {
-            const usuario = equipeCache.find(u => u.id === id);
+        async function abrirModalEditarUsuario(chaveId) {
+            const usuario = equipeCache.find(u => u.auth_id === chaveId || String(u.id) === String(chaveId));
             if (!usuario) return;
 
             const { value: formValues } = await Swal.fire({
@@ -717,45 +775,4 @@
                         nome,
                         telefone: document.getElementById('swal-ed-tel').value.trim(),
                         cargo: document.getElementById('swal-ed-cargo').value.trim() || 'Assessor',
-                        nivel_acesso: parseInt(document.getElementById('swal-ed-nivel').value, 10),
-                        escritorio_id: document.getElementById('swal-ed-esc').value,
-                        ativo: document.getElementById('swal-ed-ativo').value === 'true'
-                    };
-                }
-            });
-
-            if (!formValues) return;
-
-            if (usuario.id === meuPerfil.id && formValues.nivel_acesso !== 1) {
-                const confirmSelf = await Swal.fire({
-                    title: 'Atenção: Alterar seu próprio nível',
-                    text: 'Você está removendo o próprio Nível 1 (Master) desta conta. Confirma?',
-                    icon: 'warning', showCancelButton: true,
-                    confirmButtonColor: '#ff4444', background: '#111', color: '#fff'
-                });
-                if (!confirmSelf.isConfirmed) return;
-            }
-
-            const { error } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .update(formValues)
-                .eq('id', id);
-
-            if (error) {
-                Swal.fire('Erro ao atualizar', error.message, 'error');
-                return;
-            }
-
-            if (usuario.id === meuPerfil.id) {
-                meuPerfil = { ...meuPerfil, ...formValues };
-                preencherFormularioPerfil();
-            }
-
-            await carregarEquipe();
-            Swal.fire('Atualizado!', 'Dados, cargo e nível hierárquico salvos.', 'success');
-        }
-
-        iniciar();
-    </script>
-</body>
-</html>
+                        nivel_acesso: parseInt
