@@ -174,7 +174,7 @@
                 Convites<span id="badge-convites"></span>
             </button>
             <button class="btn-nav" id="btn-equipe" style="display: none;" onclick="navegarProtegido('admin-equipe.html')">
-                Equipe &amp; Escritórios
+                Equipe &amp; Escritório
             </button>
             <button class="btn-nav" id="btn-metas" style="display: none;" onclick="navegarProtegido('admin-metas.html')">
                 Metas
@@ -380,10 +380,13 @@
             const nivel = sessaoAtual.nivel;
             if (nivel === 0 || nivel === 1) {
                 document.getElementById('btn-equipe').style.display = 'inline-block';
+                document.getElementById('btn-equipe').textContent = 'Equipe & Escritórios';
                 document.getElementById('btn-metas').style.display = 'inline-block';
                 document.getElementById('btn-catalogo').style.display = 'inline-block';
                 document.getElementById('grupo-visao').style.display = 'flex';
             } else if (nivel === 2) {
+                document.getElementById('btn-equipe').style.display = 'inline-block';
+                document.getElementById('btn-equipe').textContent = 'Minha Equipe';
                 document.getElementById('btn-metas').style.display = 'inline-block';
                 document.getElementById('grupo-visao').style.display = 'flex';
             }
