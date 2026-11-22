@@ -190,7 +190,6 @@
                 <h2 class="section-title" id="titulo-escritorios">2. Meus Escritórios</h2>
                 <div id="lista-escritorios" style="margin-bottom: 14px;"></div>
 
-                <!-- BLOCO DE INCLUSÃO DE ESCRITÓRIO (EXCLUSIVO NÍVEL 0 / NÍVEL 1) -->
                 <div id="form-novo-escritorio">
                     <div class="input-group">
                         <label>Novo Escritório (Nome)</label>
@@ -297,11 +296,13 @@
         }
 
         function ehMasterOuExecutivo() {
-            return meuPerfil && (meuPerfil.nivel_acesso === 1 || meuPerfil.nivel_acesso === 0);
+            const n = Number(meuPerfil && meuPerfil.nivel_acesso);
+            return n === 1 || n === 0;
         }
 
         function ehResponsavelNivel2() {
-            return meuPerfil && meuPerfil.nivel_acesso === 2;
+            const n = Number(meuPerfil && meuPerfil.nivel_acesso);
+            return n === 2;
         }
 
         setTimeout(esconderLoader, 4000);
@@ -319,8 +320,9 @@
                 sessionEmail = (session.user.email || '').toLowerCase();
 
                 const perfil = await carregarMeuPerfilDoBanco();
+                const nivelNum = Number(perfil && perfil.nivel_acesso);
 
-                if (!perfil || (perfil.nivel_acesso !== 0 && perfil.nivel_acesso !== 1 && perfil.nivel_acesso !== 2)) {
+                if (!perfil || ![0, 1, 2].includes(nivelNum)) {
                     esconderLoader();
                     alert("Acesso restrito a Master (Nível 1) e Responsáveis (Nível 2).");
                     window.location.href = 'dashboard.html';
@@ -349,7 +351,7 @@
                 document.getElementById('filtro-escritorio').style.display = 'none';
             } else {
                 document.getElementById('header-title').textContent = 'Gestão de Equipe & Escritórios';
-                document.getElementById('header-subtitle').textContent = meuPerfil.nivel_acesso === 0 ? 'Nível 0 - Executivo' : 'Nível 1 - Master';
+                document.getElementById('header-subtitle').textContent = Number(meuPerfil.nivel_acesso) === 0 ? 'Nível 0 - Executivo' : 'Nível 1 - Master';
                 document.getElementById('titulo-meu-perfil').textContent = '1. Meu Perfil (Master)';
                 document.getElementById('titulo-escritorios').textContent = '2. Meus Escritórios';
                 document.getElementById('form-novo-escritorio').style.display = 'block';
@@ -413,15 +415,9 @@
             try {
                 await carregarMeuPerfilDoBanco();
 
-                const dadosAtualizados = {
-                    nome: nome,
-                    telefone: telefone,
-                    cargo: cargo
-                };
-
                 const resultado = await supabaseClient
                     .from('ES_usuarios_perfis')
-                    .update(dadosAtualizados)
+                    .update({ nome: nome, telefone: telefone, cargo: cargo })
                     .eq('id', meuPerfil.id)
                     .select();
 
@@ -517,57 +513,7 @@
                         <button class="btn-edit" style="padding:3px 7px; font-size:0.72rem;" onclick="editarEscritorio('${esc.id}')">Editar</button>
                     </div>
                 `;
-                filtroEsc.innerHTML += `<option value="${esc.id}">${esc.nome}</option>`;
-            });
-
-            if (Array.from(filtroEsc.options).some(o => o.value === valorAtualFiltro)) {
-                filtroEsc.value = valorAtualFiltro;
-            }
-        }
-
-        async function criarNovoEscritorio() {
-            if (!ehMasterOuExecutivo()) return;
-
-            const nome = document.getElementById('novo-escritorio-nome').value.trim();
-            const doc = document.getElementById('novo-escritorio-doc').value.trim();
-
-            if (!nome) {
-                Swal.fire('Atenção', 'Informe o nome do novo escritório.', 'warning');
-                return;
-            }
-
-            mostrarLoader();
-            try {
-                const { data: novoEsc, error } = await supabaseClient
-                    .from('ES_escritorios')
-                    .insert([{ nome: nome, documento: doc || null, ativo: true }])
-                    .select();
-
-                if (error || !novoEsc || novoEsc.length === 0) {
-                    Swal.fire('Erro ao criar escritório', (error && error.message) ? error.message : 'Falha ao inserir escritório.', 'error');
-                    return;
-                }
-
-                const escCriado = novoEsc[0];
-
-                await supabaseClient
-                    .from('ES_master_escritorios')
-                    .insert([{ master_auth_id: userAuthId, escritorio_id: escCriado.id }]);
-
-                if (!meuPerfil || !meuPerfil.escritorio_id) {
-                    await supabaseClient
-                        .from('ES_usuarios_perfis')
-                        .update({ escritorio_id: escCriado.id })
-                        .eq('auth_id', userAuthId);
-                    await carregarMeuPerfilDoBanco();
-                }
-
-                document.getElementById('novo-escritorio-nome').value = '';
-                document.getElementById('novo-escritorio-doc').value = '';
-                await carregarEscritorios();
-                await carregarEquipe();
-                await carregarConvites();
-                Swal.fire('Sucesso!', `Escritório "${nome}" criado e vinculado ao seu painel.`, 'success');
+                filtroEsc.innerHTML += `<option value="${esc.id}">${esc.nome}</option>`; });  if (Array.from(filtroEsc.options).some(o => o.value === valorAtualFiltro)) { filtroEsc.value = valorAtualFiltro; } }  async function criarNovoEscritorio() { if (!ehMasterOuExecutivo()) return;  const nome = document.getElementById('novo-escritorio-nome').value.trim(); const doc = document.getElementById('novo-escritorio-doc').value.trim();  if (!nome) { Swal.fire('Atenção', 'Informe o nome do novo escritório.', 'warning'); return; }  mostrarLoader(); try { const { data: novoEsc, error } = await supabaseClient .from('ES_escritorios') .insert([{ nome: nome, documento: doc \vert{}\vert{} null, ativo: true }]) .select();  if (error \vert{}\vert{} !novoEsc \vert{}\vert{} novoEsc.length === 0) { Swal.fire('Erro ao criar escritório', (error && error.message) ? error.message : 'Falha ao inserir escritório.', 'error'); return; }  const escCriado = novoEsc[0];  await supabaseClient .from('ES_master_escritorios') .insert([{ master_auth_id: userAuthId, escritorio_id: escCriado.id }]);  if (!meuPerfil \vert{}\vert{} !meuPerfil.escritorio_id) { await supabaseClient .from('ES_usuarios_perfis') .update({ escritorio_id: escCriado.id }) .eq('auth_id', userAuthId); await carregarMeuPerfilDoBanco(); }  document.getElementById('novo-escritorio-nome').value = ''; document.getElementById('novo-escritorio-doc').value = ''; await carregarEscritorios(); await carregarEquipe(); await carregarConvites(); Swal.fire('Sucesso!', `Escritório "${nome}" criado e vinculado ao seu painel.`, 'success');
             } finally {
                 esconderLoader();
             }
@@ -687,16 +633,17 @@
         }
 
         function badgeNivel(nivel) {
-            if (nivel === 0) return '<span class="badge badge-n1">Nível 0 - Executivo</span>';
-            if (nivel === 1) return '<span class="badge badge-n1">Nível 1 - Master</span>';
-            if (nivel === 2) return '<span class="badge badge-n2">Nível 2 - Responsável</span>';
+            const n = Number(nivel);
+            if (n === 0) return '<span class="badge badge-n1">Nível 0 - Executivo</span>';
+            if (n === 1) return '<span class="badge badge-n1">Nível 1 - Master</span>';
+            if (n === 2) return '<span class="badge badge-n2">Nível 2 - Responsável</span>';
             return '<span class="badge badge-n3">Nível 3 - Assessor</span>';
         }
 
         function podeEditarUsuario(usuarioAlvo) {
             if (ehMasterOuExecutivo()) return true;
             if (ehResponsavelNivel2()) {
-                return usuarioAlvo.nivel_acesso === 3;
+                return Number(usuarioAlvo.nivel_acesso) === 3;
             }
             return false;
         }
@@ -715,7 +662,7 @@
                 if (statusFiltro === 'ativo' && !isAtivo) return false;
                 if (statusFiltro === 'inativo' && isAtivo) return false;
                 if (busca) {
-                    const alvo = `${u.nome || ''} ${u.email || ''} ${u.cargo || ''}`.toLowerCase();
+                    const alvo = `${u.nome || ''} ${u.email \vert{}\vert{} ''}${u.cargo || ''}`.toLowerCase();
                     if (!alvo.includes(busca)) return false;
                 }
                 return true;
@@ -771,7 +718,7 @@
                     statusBadge = `<span class="badge badge-inativo">${c.status === 'recusado' ? 'Recusado' : 'Cancelado'}</span>`;
                 }
 
-                const podeCancelar = c.status === 'pendente' && (ehMasterOuExecutivo() || (ehResponsavelNivel2() && c.nivel_acesso === 3));
+                const podeCancelar = c.status === 'pendente' && (ehMasterOuExecutivo() || (ehResponsavelNivel2() && Number(c.nivel_acesso) === 3));
                 const acaoBtn = podeCancelar
                     ? `<button class="btn-danger-sm" onclick="cancelarConvite('${c.id}')">Cancelar</button>`
                     : '<span style="color:#666; font-size:0.78rem;">—</span>';
@@ -857,8 +804,7 @@
                     </div>
                     <div style="text-align:left; margin-bottom:10px;">
                         <label style="font-size:0.8rem; color:#aaa;">Nível de Acesso do Convite</label>
-                        <select id="swal-conv-nivel" class="swal2-input" style="width:85%;" ${ehResponsavelNivel2() ? 'disabled' : ''}>
-                            ${opcoesNivel}
+                        <select id="swal-conv-nivel" class="swal2-input" style="width:85%;" ${ehResponsavelNivel2() ? 'disabled' : ''}>${opcoesNivel}
                         </select>
                     </div>
                     <div style="text-align:left;">
@@ -948,8 +894,7 @@
                     </div>
                     <div style="text-align:left; margin-bottom:10px;">
                         <label style="font-size:0.8rem; color:#aaa;">Nível Hierárquico</label>
-                        <select id="swal-u-nivel" class="swal2-input" style="width:85%;" ${ehResponsavelNivel2() ? 'disabled' : ''}>
-                            ${opcoesNivel}
+                        <select id="swal-u-nivel" class="swal2-input" style="width:85%;" ${ehResponsavelNivel2() ? 'disabled' : ''}>${opcoesNivel}
                         </select>
                     </div>
                     <div style="text-align:left;">
@@ -995,104 +940,13 @@
             const opcoesNivel = ehResponsavelNivel2()
                 ? `<option value="3" selected>Nível 3 - Assessor</option>`
                 : `
-                    <option value="1" ${usuario.nivel_acesso === 1 ? 'selected' : ''}>Nível 1 - Master</option>
-                    <option value="2" ${usuario.nivel_acesso === 2 ? 'selected' : ''}>Nível 2 - Responsável</option>
-                    <option value="3" ${usuario.nivel_acesso === 3 ? 'selected' : ''}>Nível 3 - Assessor</option>
+                    <option value="1" ${Number(usuario.nivel_acesso) === 1 ? 'selected' : ''}>Nível 1 - Master</option>
+                    <option value="2" ${Number(usuario.nivel_acesso) === 2 ? 'selected' : ''}>Nível 2 - Responsável</option>
+                    <option value="3" ${Number(usuario.nivel_acesso) === 3 ? 'selected' : ''}>Nível 3 - Assessor</option>
                   `;
 
             const seletorEscritorioHtml = ehResponsavelNivel2()
                 ? `<input class="swal2-input" value="${nomeEscritorio(usuario.escritorio_id)}" disabled style="width:85%; opacity:0.7;">
                    <input type="hidden" id="swal-ed-esc" value="${usuario.escritorio_id}">`
                 : `<select id="swal-ed-esc" class="swal2-input" style="width:85%;">
-                       ${optionsEscritorios(usuario.escritorio_id)}
-                   </select>`;
-
-            const { value: formValues } = await Swal.fire({
-                title: `Editar: ${usuario.nome || usuario.email}`,
-                html: `
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Nome Completo</label>
-                        <input id="swal-ed-nome" class="swal2-input" value="${usuario.nome || ''}" style="width:85%;">
-                    </div>
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Telefone</label>
-                        <input id="swal-ed-tel" class="swal2-input" value="${usuario.telefone || ''}" style="width:85%;">
-                    </div>
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Cargo / Função</label>
-                        <input id="swal-ed-cargo" class="swal2-input" value="${usuario.cargo || ''}" style="width:85%;">
-                    </div>
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Nível Hierárquico</label>
-                        <select id="swal-ed-nivel" class="swal2-input" style="width:85%;" ${ehResponsavelNivel2() ? 'disabled' : ''}>
-                            ${opcoesNivel}
-                        </select>
-                    </div>
-                    <div style="text-align:left; margin-bottom:10px;">
-                        <label style="font-size:0.8rem; color:#aaa;">Escritório</label>
-                        ${seletorEscritorioHtml}
-                    </div>
-                    <div style="text-align:left;">
-                        <label style="font-size:0.8rem; color:#aaa;">Status de Acesso</label>
-                        <select id="swal-ed-ativo" class="swal2-input" style="width:85%;">
-                            <option value="true" ${usuario.ativo !== false ? 'selected' : ''}>Ativo</option>
-                            <option value="false" ${usuario.ativo === false ? 'selected' : ''}>Inativo (Bloqueado sem perder histórico)</option>
-                        </select>
-                    </div>
-                `,
-                background: '#111', color: '#fff', confirmButtonColor: '#00ff88',
-                preConfirm: () => {
-                    const nome = document.getElementById('swal-ed-nome').value.trim();
-                    if (!nome) {
-                        Swal.showValidationMessage('O nome é obrigatório.');
-                        return null;
-                    }
-                    return {
-                        nome: nome,
-                        telefone: document.getElementById('swal-ed-tel').value.trim(),
-                        cargo: document.getElementById('swal-ed-cargo').value.trim() || 'Assessor',
-                        nivel_acesso: ehResponsavelNivel2() ? 3 : parseInt(document.getElementById('swal-ed-nivel').value, 10),
-                        escritorio_id: ehResponsavelNivel2() ? usuario.escritorio_id : document.getElementById('swal-ed-esc').value,
-                        ativo: document.getElementById('swal-ed-ativo').value === 'true'
-                    };
-                }
-            });
-
-            if (!formValues) return;
-
-            const ehMeuPerfil = meuPerfil && String(usuario.id) === String(meuPerfil.id);
-
-            if (ehMeuPerfil && ehMasterOuExecutivo() && formValues.nivel_acesso !== 1) {
-                const confirmSelf = await Swal.fire({
-                    title: 'Atenção: Alterar seu próprio nível',
-                    text: 'Você está removendo o próprio Nível 1 (Master) desta conta. Confirma?',
-                    icon: 'warning', showCancelButton: true,
-                    confirmButtonColor: '#ff4444', background: '#111', color: '#fff'
-                });
-                if (!confirmSelf.isConfirmed) return;
-            }
-
-            const { data: atualizado, error } = await supabaseClient
-                .from('ES_usuarios_perfis')
-                .update(formValues)
-                .eq('id', usuario.id)
-                .select();
-
-            if (error || !atualizado || atualizado.length === 0) {
-                Swal.fire('Erro ao atualizar', (error && error.message) ? error.message : 'Não foi possível confirmar a alteração.', 'error');
-                return;
-            }
-
-            if (ehMeuPerfil) {
-                meuPerfil = atualizado[0];
-                preencherFormularioPerfil();
-            }
-
-            await carregarEquipe();
-            Swal.fire('Atualizado!', 'Dados salvos com sucesso.', 'success');
-        }
-
-        iniciar();
-    </script>
-</body>
-</html>
+                       ${optionsEscritorios
