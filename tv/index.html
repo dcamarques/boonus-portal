@@ -2,7 +2,10 @@
 <html lang="pt-br" translate="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#050505">
     <meta name="google" content="notranslate">
     
     <title>Boonus TV - Terminal Financeiro</title>
@@ -30,87 +33,261 @@
             --glow-up: 0 0 20px rgba(0, 255, 136, 0.15), inset 0 0 10px rgba(0, 255, 136, 0.05);
             --glow-down: 0 0 20px rgba(255, 59, 59, 0.15), inset 0 0 10px rgba(255, 59, 59, 0.05);
         }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            background: var(--dark-bg);
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
         
-        body { background: var(--dark-bg); color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden; margin: 0; height: 100vh; display: flex; flex-direction: column; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 25px; background: var(--panel-bg); border-bottom: 4px solid var(--neon-color); z-index: 10; transition: border-color 0.5s; height: 60px; box-sizing: border-box; }
-        .logo img { height: 35px; width: auto; transition: opacity 0.5s; }
-        .clocks-container { display: flex; gap: 20px; align-items: center; }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 25px;
+            background: var(--panel-bg);
+            border-bottom: 4px solid var(--neon-color);
+            z-index: 10;
+            transition: border-color 0.5s;
+            min-height: 60px;
+            flex-shrink: 0;
+            gap: 12px;
+        }
+        .logo { display: flex; align-items: center; flex-shrink: 0; }
+        .logo img { height: 35px; width: auto; max-width: 160px; object-fit: contain; transition: opacity 0.5s; }
+        .clocks-container { display: flex; gap: 20px; align-items: center; justify-content: flex-end; }
         .clock-box { text-align: center; min-width: 85px; }
         .label { font-size: 0.75rem; color: #FFFFFF; text-transform: uppercase; font-weight: bold; opacity: 0.8; letter-spacing: 0.5px; margin-bottom: 2px; }
         .time { font-size: 1.5rem; font-weight: bold; font-variant-numeric: tabular-nums; letter-spacing: 1px; }
         #br-time { color: var(--neon-color); transition: color 0.5s; }
 
-        .ticker-container { width: 100%; overflow: hidden; background: #151515; padding: 8px 0; border-bottom: 1px solid #222; height: 40px; box-sizing: border-box; display: flex; align-items: center; }
-        .ticker-content { display: inline-flex; animation: marquee 60s linear infinite; white-space: nowrap; }
+        .ticker-container {
+            width: 100%;
+            overflow: hidden;
+            background: #151515;
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+            height: 40px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        .ticker-content { display: inline-flex; animation: marquee 60s linear infinite; white-space: nowrap; will-change: transform; }
         .stock-item { display: inline-flex; align-items: center; margin: 0 25px; font-size: 1.3rem; font-weight: 700; color: #eee; }
         
         .up { color: var(--positive-color); margin-left: 6px; } 
         .down { color: var(--negative-color); margin-left: 6px; }
 
-        .main-container { flex: 1; display: flex; overflow: hidden; position: relative; }
-        .content-area { flex: 4; position: relative; display: flex; justify-content: center; align-items: center; background: var(--dark-bg); cursor: pointer; }
-        .display-block { position: absolute; width: 100%; height: 100%; display: none; opacity: 0; transition: opacity 0.8s; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
+        .main-container { flex: 1; display: flex; overflow: hidden; position: relative; min-height: 0; }
+        .content-area { flex: 4; position: relative; display: flex; justify-content: center; align-items: center; background: var(--dark-bg); cursor: pointer; min-width: 0; min-height: 0; }
+        .display-block {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.8s;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
 
-        #pause-indicator { position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.8); color: var(--neon-color); padding: 8px 15px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; z-index: 100; border: 1px solid var(--neon-color); display: none; }
+        .block-heading {
+            color: var(--neon-color);
+            margin: 0 0 25px 0;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+            flex-shrink: 0;
+        }
+
+        #pause-indicator { position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.85); color: var(--neon-color); padding: 7px 13px; border-radius: 8px; font-weight: bold; font-size: 0.85rem; z-index: 100; border: 1px solid var(--neon-color); display: none; }
 
         .macro-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 92%; max-width: 1400px; align-items: start; }
-        .coins-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; width: 95%; max-width: 1500px; align-items: start; }
-        .card-column { display: flex; flex-direction: column; gap: 20px; }
+        .coins-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 95%; max-width: 1500px; align-items: start; }
+        .card-column { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
         
         .info-card { 
             background: var(--card-gradient); 
-            padding: 0 20px; 
+            padding: 14px 20px; 
             border-radius: 12px; 
             border: 2px solid var(--glass-border-up);
             box-shadow: var(--glow-up);
             position: relative; 
-            height: 145px; 
-            box-sizing: border-box;
+            min-height: 145px; 
             display: flex; 
             align-items: center;
             gap: 15px;
-            transition: all 0.4s ease; 
+            transition: all 0.4s ease;
+            min-width: 0;
         }
         .info-card.falling { border-color: var(--glass-border-down); box-shadow: var(--glow-down); }
 
         .card-icon { width: 85px; height: 85px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: none; box-shadow: none; }
-        .card-icon img { width: 100%; height: 100%; object-fit: contain; drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
+        .card-icon img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6)); }
         
         .material-symbols-outlined { font-size: 40px; font-weight: 300; color: #888; }
         .currency-icon { width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.03); border: 1px solid #333; display:flex; align-items:center; justify-content:center; }
 
-        .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; }
+        .card-data { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: left; min-width: 0; }
         .card-data h3 { color: #fff; margin: 0 0 4px 0; font-size: 1rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; line-height: 1.2; }
         
-        .coins-grid .info-val { font-size: 1.8rem; }
-        .info-val { font-size: 2.2rem; font-weight: 900; display: block; color: #fff; line-height: 1; }
+        .coins-grid .info-val { font-size: clamp(1.35rem, 2vw, 1.8rem); }
+        .info-val { font-size: clamp(1.5rem, 2.5vw, 2.2rem); font-weight: 900; display: block; color: #fff; line-height: 1.05; word-break: break-word; }
         
-        .info-sub { font-size: 0.95rem; font-weight: 600; margin-top: 8px; color: #aaa; display: inline-flex; align-items: center; }
+        .info-sub { font-size: 0.95rem; font-weight: 600; margin-top: 8px; color: #aaa; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
         
-        .badge-pill { padding: 3px 8px; border-radius: 6px; font-size: 0.9rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-pill { padding: 3px 8px; border-radius: 6px; font-size: 0.88rem; font-weight: 800; display: inline-flex; align-items: center; gap: 4px; }
         .badge-up { background-color: rgba(0, 255, 136, 0.15); color: var(--positive-color); }
         .info-card.falling .badge-pill { background-color: var(--negative-color); color: #fff; }
         
         .sparkline-box { width: 100px; height: 50px; flex-shrink: 0; margin-left: auto; display: flex; align-items: center; }
         .coins-grid .sparkline-box { width: 70px; height: 40px; margin-left: 0; }
         
-        .country-flag { position: absolute; top: 15px; right: 15px; width: 30px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .country-flag { position: absolute; top: 12px; right: 12px; width: 28px; height: auto; border-radius: 3px; opacity: 0.95; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-        .card-with-logo { display: flex; align-items: center; gap: 15px; width: 100%; }
-        .asset-logo { width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0; }
+        .dynamic-card {
+            background: var(--card-gradient);
+            padding: 18px 20px;
+            border-radius: 12px;
+            border: 2px solid var(--glass-border-up);
+            box-shadow: var(--glow-up);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            min-width: 0;
+        }
+        .dynamic-card-logo {
+            width: 56px;
+            height: 56px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 8px;
+            padding: 5px;
+            flex-shrink: 0;
+        }
+        .dynamic-card-body { flex: 1; text-align: left; min-width: 0; }
+        .dynamic-card-kicker { color: #fff; margin: 0 0 4px 0; font-size: 0.95rem; line-height: 1.2; }
+        .dynamic-card-title { font-size: clamp(1.3rem, 2.2vw, 2.1rem); font-weight: 900; color: #fff; line-height: 1.1; word-break: break-word; }
+        .dynamic-card-sub { font-size: 0.92rem; font-weight: 600; margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 
-        #news-title { font-size: 2.4rem; font-weight: 800; line-height: 1.2; max-width: 90%; margin-top: 15px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
-        .news-image { width: auto; max-width: 80%; max-height: 45vh; border-radius: 12px; object-fit: contain; margin-bottom: 10px; border: 2px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        #news-title { font-size: clamp(1.25rem, 2.6vw, 2.4rem); font-weight: 800; line-height: 1.25; max-width: 92%; margin-top: 15px; text-shadow: 0 4px 15px rgba(0,0,0,0.8); }
+        .news-image { width: auto; max-width: 85%; max-height: 42vh; border-radius: 12px; object-fit: contain; margin-bottom: 10px; border: 2px solid #333; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         
-        .sidebar-qr { flex: 1.2; background: #0a0a0a; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 2px solid #1a1a1a; padding: 20px; box-sizing: border-box; cursor: pointer; position: relative; }
+        .sidebar-qr { flex: 1.2; background: #0a0a0a; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 2px solid #1a1a1a; padding: 20px; cursor: pointer; position: relative; flex-shrink: 0; }
         .qr-section { display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .qr-box { background: white; padding: 12px; border-radius: 12px; width: 180px; height: 180px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
+        .qr-box { background: white; padding: 12px; border-radius: 12px; width: 180px; height: 180px; margin-bottom: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .qr-box img { width: 100%; height: 100%; object-fit: contain; }
-        .qr-text { font-size: 1.1rem; font-weight: 800; color: var(--neon-color); text-align: center; line-height: 1.3; }
-        .version-tag { font-size: 0.65rem; color: #444; position: absolute; bottom: 10px; right: 10px; }
+        .qr-text { font-size: 1.05rem; font-weight: 800; color: var(--neon-color); text-align: center; line-height: 1.3; }
+        .version-tag { font-size: 0.65rem; color: #444; position: absolute; bottom: 8px; right: 10px; }
 
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+        /* TABLETS E TELAS MÉDIAS (iPad, Galaxy Tab, Laptops compactos) */
+        @media (max-width: 1024px) {
+            .header { padding: 10px 16px; }
+            .clocks-container { gap: 12px; }
+            .clock-box { min-width: 68px; }
+            .time { font-size: 1.2rem; }
+            .label { font-size: 0.68rem; }
+
+            .main-container { flex-direction: column; }
+            .content-area { flex: 1; width: 100%; }
+            .display-block { justify-content: flex-start; padding: 16px; }
+            #block-news { justify-content: center; }
+
+            .coins-grid { grid-template-columns: repeat(2, 1fr); width: 96%; }
+            .macro-grid, .agenda-grid, .opportunities-grid { width: 96%; gap: 14px; }
+            .card-column { gap: 14px; }
+            .info-card { min-height: 120px; padding: 12px 15px; }
+            .card-icon { width: 62px; height: 62px; }
+
+            .sidebar-qr {
+                flex: none;
+                width: 100%;
+                flex-direction: row;
+                justify-content: center;
+                border-left: none;
+                border-top: 2px solid #1a1a1a;
+                padding: 10px 16px;
+            }
+            .qr-section { flex-direction: row; gap: 14px; }
+            .qr-box { width: 64px; height: 64px; padding: 6px; margin-bottom: 0; border-radius: 8px; }
+            .qr-text { text-align: left; font-size: 0.92rem; }
+            .qr-text br { display: none; }
+            .version-tag { bottom: 4px; right: 8px; font-size: 0.6rem; }
+        }
+
+        /* SMARTPHONES (Android e iPhone - Retrato e Paisagem compacto) */
+        @media (max-width: 680px) {
+            .header { padding: 8px 12px; min-height: 52px; }
+            .logo img { height: 28px; max-width: 110px; }
+            .clocks-container { gap: 8px; }
+            .clock-box { min-width: 54px; }
+            .label { font-size: 0.6rem; letter-spacing: 0; }
+            .time { font-size: 0.95rem; letter-spacing: 0; }
+            /* Em telas muito estreitas (<390px), prioriza Brasília, NY e Londres */
+            @media (max-width: 390px) {
+                .clocks-container .clock-box:last-child { display: none; }
+            }
+
+            .ticker-container { height: 34px; padding: 5px 0; }
+            .stock-item { margin: 0 16px; font-size: 1rem; }
+
+            .display-block { padding: 14px 12px 24px 12px; }
+            .block-heading { margin-bottom: 14px; font-size: 1.1rem; }
+
+            .macro-grid, .agenda-grid, .opportunities-grid, .coins-grid {
+                grid-template-columns: 1fr;
+                width: 100%;
+                gap: 10px;
+            }
+            .card-column { gap: 10px; }
+
+            .info-card { min-height: 104px; padding: 12px 14px; gap: 12px; }
+            .card-icon { width: 50px; height: 50px; }
+            .currency-icon { width: 44px; height: 44px; }
+            .material-symbols-outlined { font-size: 30px; }
+            .card-data h3 { font-size: 0.85rem; }
+            .info-sub { font-size: 0.82rem; margin-top: 5px; }
+            .badge-pill { font-size: 0.78rem; padding: 2px 6px; }
+            .sparkline-box, .coins-grid .sparkline-box { width: 64px; height: 36px; }
+            .country-flag { top: 10px; right: 10px; width: 22px; }
+
+            .dynamic-card { padding: 14px; gap: 12px; }
+            .dynamic-card-logo { width: 46px; height: 46px; }
+            .dynamic-card-kicker { font-size: 0.85rem; }
+            .dynamic-card-sub { font-size: 0.82rem; }
+
+            .news-image { max-width: 95%; max-height: 32vh; }
+            #news-title { max-width: 96%; margin-top: 10px; }
+
+            .sidebar-qr { padding: 8px 12px; }
+            .qr-box { width: 52px; height: 52px; padding: 5px; }
+            .qr-text { font-size: 0.82rem; }
+        }
     </style>
 </head>
 <body>
@@ -140,7 +317,7 @@
             </div>
 
             <div id="block-opps" class="display-block">
-                <h2 id="title-opps" style="color:var(--neon-color); margin-bottom:25px; font-weight: 800;">OPORTUNIDADES DO DIA</h2>
+                <h2 id="title-opps" class="block-heading">OPORTUNIDADES DO DIA</h2>
                 <div id="opps-container" class="opportunities-grid"></div>
             </div>
 
@@ -150,7 +327,7 @@
             </div>
 
             <div id="block-macro" class="display-block">
-                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
+                <h2 class="block-heading">
                     <span class="material-symbols-outlined" style="color:var(--neon-color);">monitoring</span> INDICADORES MACRO E ÍNDICES
                 </h2>
                 <div class="macro-grid">
@@ -213,12 +390,12 @@
             </div>
 
             <div id="block-agenda" class="display-block">
-                <h2 id="title-agenda" style="color:var(--neon-color); margin-bottom:25px; font-weight: 800; font-size: 1.8rem;">RADAR ECONÔMICO</h2>
+                <h2 id="title-agenda" class="block-heading">RADAR ECONÔMICO</h2>
                 <div id="agenda-container" class="agenda-grid"></div>
             </div>
 
             <div id="block-coins" class="display-block">
-                <h2 style="color:var(--neon-color); margin-bottom:30px; font-weight: 800; display: inline-flex; align-items: center; gap: 12px; font-size: 1.8rem;">
+                <h2 class="block-heading">
                     <span class="material-symbols-outlined" style="color:var(--neon-color);">public</span> CÂMBIO GLOBAL (LIVE)
                 </h2>
                 <div class="coins-grid">
@@ -263,14 +440,14 @@
             </div>
         </div>
 
-        <div class="sidebar-qr" onclick="toggleFullScreen()">
+        <div class="sidebar-qr" onclick="handleSidebarAction()">
             <div class="qr-section">
                 <div class="qr-box">
                     <img id="qr-sidebar-img" src="" alt="QR Code" style="display:none;">
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.6 (News API + No Repetition)</div>
+            <div class="version-tag">v: 2.7 (Responsive Cross-Platform)</div>
         </div>
     </div>
 
@@ -369,8 +546,24 @@
         }
 
         function toggleFullScreen() {
-            if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(e => {}); } 
-            else { if (document.exitFullscreen) document.exitFullscreen(); }
+            const docEl = document.documentElement;
+            const requestFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
+            const exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+            const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
+
+            if (!fsEl && requestFs) {
+                requestFs.call(docEl).catch(() => {});
+            } else if (fsEl && exitFs) {
+                exitFs.call(document).catch(() => {});
+            }
+        }
+
+        function handleSidebarAction() {
+            if (window.innerWidth <= 1024 && TENANT_CONFIG.qrData) {
+                window.open(TENANT_CONFIG.qrData, '_blank', 'noopener');
+            } else {
+                toggleFullScreen();
+            }
         }
 
         async function requestWakeLock() {
@@ -416,11 +609,14 @@
                 const qrImg = document.getElementById('qr-sidebar-img');
                 qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(TENANT_CONFIG.qrData)}`;
                 qrImg.style.display = 'block';
+                if (window.innerWidth <= 1024) {
+                    document.getElementById('qr-sidebar-text').innerHTML = 'DÚVIDAS? TOQUE AQUI<br>FALE COM O ASSESSOR';
+                }
             }
             
             if (TENANT_CONFIG.urlContador) {
                 try {
-                    const tipoDispositivo = window.innerWidth <= 768 ? 'Mobile' : 'TV';
+                    const tipoDispositivo = window.innerWidth <= 1024 ? 'Mobile/Tablet' : 'TV';
                     fetch(TENANT_CONFIG.urlContador, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dispositivo: tipoDispositivo, regiao: "Acesso TV" }) }).catch(() => {}); 
                 } catch(e) {}
             }
@@ -466,12 +662,12 @@
                     if (cols.length >= 3) {
                         if (cardCount === 3) html += '</div><div class="card-column">';
                         const [classe, ativo, taxa, destaque, logoUrl] = cols;
-                        html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid var(--glass-border-up); box-shadow: var(--glow-up); display: flex; align-items: center; gap: 15px;">
-                            ${logoUrl ? `<img src="${logoUrl}" style="width: 60px; height: 60px; object-fit: contain; background: #fff; border-radius: 8px; padding: 5px; flex-shrink: 0;" onerror="this.style.display='none'">` : ''}
-                            <div style="flex:1; text-align:left;">
-                                <h3 style="color:#fff; margin:0 0 4px 0; font-size:1rem; line-height: 1.2;">${classe}</h3>
-                                <div style="font-size:2.2rem; font-weight:900; color:#fff; line-height:1;">${ativo}</div>
-                                <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:var(--neon-color);">${taxa} <span style="color:#aaa; margin-left:10px;">${destaque || ''}</span></div>
+                        html += `<div class="dynamic-card">
+                            ${logoUrl ? `<img src="${logoUrl}" class="dynamic-card-logo" onerror="this.style.display='none'">` : ''}
+                            <div class="dynamic-card-body">
+                                <h3 class="dynamic-card-kicker">${classe}</h3>
+                                <div class="dynamic-card-title">${ativo}</div>
+                                <div class="dynamic-card-sub" style="color:var(--neon-color);">${taxa} <span style="color:#aaa;">${destaque || ''}</span></div>
                             </div>
                         </div>`;
                         cardCount++;
@@ -508,11 +704,11 @@
                         const isAlto = impacto && impacto.toUpperCase().includes('ALTO');
                         const impColor = isAlto ? 'var(--neon-color)' : '#888';
                         const impStars = isAlto ? '★★★ ALTO' : '★★☆ MÉDIO';
-                        html += `<div style="background: var(--card-gradient); padding: 20px; border-radius: 12px; border: 2px solid ${impColor}; box-shadow: 0 0 15px rgba(255,255,255,0.05); display: flex; align-items: center; gap: 15px;">
-                            <div style="flex:1; text-align:left;">
-                                <h3 style="color:#fff; margin:0 0 4px 0; font-size:1rem; line-height: 1.2;">${dataHora}</h3>
-                                <div style="font-size:1.6rem; font-weight:900; color:#fff; line-height:1.2;">${indicador}</div>
-                                <div style="font-size:0.95rem; font-weight:600; margin-top:8px; color:${impColor};">${impStars} <span style="color:#aaa; margin-left:10px;">${projecao ? projecao : ''}</span></div>
+                        html += `<div class="dynamic-card" style="border-color:${impColor}; box-shadow: 0 0 15px rgba(255,255,255,0.05);">
+                            <div class="dynamic-card-body">
+                                <h3 class="dynamic-card-kicker">${dataHora}</h3>
+                                <div class="dynamic-card-title" style="font-size:clamp(1.15rem, 1.8vw, 1.6rem); line-height:1.2;">${indicador}</div>
+                                <div class="dynamic-card-sub" style="color:${impColor};">${impStars} <span style="color:#aaa;">${projecao ? projecao : ''}</span></div>
                             </div>
                         </div>`;
                         cardCount++;
@@ -627,7 +823,6 @@
             } catch(e) {}
         }
 
-        // NOVO MOTOR DE BUSCA DE NOTÍCIAS (RSS2JSON + FONTES EXTRAS + FILTRO ANTI-REPETIÇÃO)
         async function fetchNews() {
             const feeds = [
                 {n: "InfoMoney", u: "https://www.infomoney.com.br/feed/"},
@@ -641,10 +836,7 @@
             for(let f of feeds){
                 try {
                     const controller = new AbortController();
-                    // AUMENTADO O TEMPO DE RESPOSTA PARA 8 SEGUNDOS
                     const timeoutId = setTimeout(() => controller.abort(), 8000); 
-                    
-                    // USO DO RSS2JSON PARA EVITAR BLOQUEIOS DE CORS DOS PORTAIS
                     const r = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(f.u)}`, { signal: controller.signal });
                     clearTimeout(timeoutId);
                     
@@ -664,7 +856,6 @@
                                 if (imgMatch) thumb = imgMatch[1];
                             }
                             
-                            // LIMPEZA DO TÍTULO CONTRA CÓDIGOS HTML
                             let cleanTitle = item.title.replace(/<[^>]*>?/gm, '').trim();
                             
                             if (cleanTitle) {
@@ -680,7 +871,6 @@
                 } catch(e) { console.warn("Erro ao carregar " + f.n); }
             }
 
-            // PLANO B: IBGE APENAS SE TUDO FALHAR
             if (tempNewsList.length === 0) {
                 try {
                     const r = await fetch('https://servicodados.ibge.gov.br/api/v3/noticias/?qtd=10');
@@ -696,16 +886,12 @@
             }
 
             if(tempNewsList.length > 0) {
-                // FILTRO 1: REMOVER NOTÍCIAS COM O MESMO TÍTULO
                 const uniqueNews = Array.from(new Map(tempNewsList.map(item => [item.title, item])).values());
-                
-                // FILTRO 2: ORDENAR PELAS MAIS RECENTES (ÚLTIMAS HORAS) E PEGAR AS 40 MELHORES
                 uniqueNews.sort((a, b) => b.pubDate - a.pubDate);
                 const recentNews = uniqueNews.slice(0, 40);
                 
-                // FILTRO 3: EMBARALHAR PARA A TV
                 newsList = recentNews.sort(() => Math.random() - 0.5);
-                newsIdx = 0; // REINICIA A CONTAGEM
+                newsIdx = 0;
                 
                 const titleEl = document.getElementById('news-title');
                 if (titleEl.classList.contains("news-wait-text")) {
@@ -730,7 +916,7 @@
                 const agenda = document.getElementById('agenda-container');
                 return agenda && agenda.textContent.trim().length > 0;
             }
-            return true; // Macro e Coins sempre exibidos
+            return true;
         }
 
         function cycle() {
@@ -783,6 +969,7 @@
                     }
                     
                     nxt.style.display = 'flex';
+                    nxt.scrollTop = 0;
                     setTimeout(() => nxt.style.opacity = 1, 50);
                     
                     const nextTime = blocks[bIdx] === 'block-news' ? 30000 : 25000;
@@ -844,8 +1031,6 @@
                 setInterval(fetchBrapi, 300000);         
                 setInterval(fetchAwesome, 60000);        
                 setInterval(fetchAgenda, 300000);         
-                
-                // ATUALIZAÇÃO REVISADA: DE 30 MINUTOS (1800000) PARA 20 MINUTOS (1200000)
                 setInterval(fetchNews, 1200000);          
 
                 setInterval(() => {
