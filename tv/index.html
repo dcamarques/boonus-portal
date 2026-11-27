@@ -129,19 +129,17 @@
             bottom: 10px;
             left: 12px;
             z-index: 120;
-            background: rgba(17, 17, 17, 0.75);
+            width: 30px;
+            height: 30px;
+            padding: 0;
+            background: rgba(17, 17, 17, 0.8);
             color: #999;
             border: 1px solid #2b2b2b;
             border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.4px;
-            text-transform: uppercase;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            justify-content: center;
             opacity: 0.65;
             transition: opacity 0.2s, border-color 0.2s, color 0.2s, background 0.2s;
         }
@@ -150,9 +148,9 @@
             opacity: 0.9;
             color: var(--neon-color);
             border-color: var(--neon-color);
-            background: rgba(0, 255, 136, 0.08);
+            background: rgba(0, 255, 136, 0.1);
         }
-        #fullscreen-toggle-btn .material-symbols-outlined { font-size: 14px; color: inherit; }
+        #fullscreen-toggle-btn .material-symbols-outlined { font-size: 16px; color: inherit; }
 
         .macro-grid, .agenda-grid, .opportunities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 92%; max-width: 1400px; align-items: stretch; }
         .coins-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 95%; max-width: 1500px; align-items: stretch; }
@@ -265,7 +263,7 @@
                 justify-content: center;
                 border-left: none;
                 border-top: 2px solid #1a1a1a;
-                padding: 8px 16px 8px 96px;
+                padding: 8px 16px 8px 56px;
             }
             .qr-section { flex-direction: row; gap: 12px; }
             .qr-box { width: 54px; height: 54px; padding: 5px; margin-bottom: 0; border-radius: 8px; }
@@ -328,7 +326,7 @@
                 justify-content: center;
                 border-left: none;
                 border-top: 2px solid #1a1a1a;
-                padding: 8px 12px 8px 96px;
+                padding: 8px 12px 8px 54px;
             }
             .qr-section { flex-direction: row; gap: 12px; }
             .qr-box { width: 52px; height: 52px; padding: 5px; margin-bottom: 0; border-radius: 8px; }
@@ -495,13 +493,12 @@
                 </div>
                 <div class="qr-text" id="qr-sidebar-text">DÚVIDAS? ESCANEIE<br>FALE COM O ASSESSOR</div>
             </div>
-            <div class="version-tag">v: 2.8 (Responsive Cross-Platform)</div>
+            <div class="version-tag">v: 2.9 (Responsive Cross-Platform)</div>
         </div>
     </div>
 
-    <button id="fullscreen-toggle-btn" type="button" onclick="toggleFullScreen()" title="Alternar Tela Cheia">
+    <button id="fullscreen-toggle-btn" type="button" onclick="toggleFullScreen(event)" aria-label="Tela Cheia" title="Tela Cheia">
         <span class="material-symbols-outlined" id="fs-icon">fullscreen</span>
-        <span id="fs-label">Tela Cheia: OFF</span>
     </button>
 
     <script>
@@ -602,21 +599,19 @@
             const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
             const btn = document.getElementById('fullscreen-toggle-btn');
             const icon = document.getElementById('fs-icon');
-            const label = document.getElementById('fs-label');
-            if (!btn || !icon || !label) return;
+            if (!btn || !icon) return;
 
             if (fsEl) {
                 btn.classList.add('active');
                 icon.textContent = 'fullscreen_exit';
-                label.textContent = 'Tela Cheia: ON';
             } else {
                 btn.classList.remove('active');
                 icon.textContent = 'fullscreen';
-                label.textContent = 'Tela Cheia: OFF';
             }
         }
 
-        function toggleFullScreen() {
+        function toggleFullScreen(e) {
+            if (e) e.stopPropagation();
             const docEl = document.documentElement;
             const requestFs = docEl.requestFullscreen || docEl.webkitRequestFullscreen || docEl.msRequestFullscreen;
             const exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
